@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Claude Code
+.claude/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Uploads
+uploads/
+
+# Backups
+backups/
+
+# Build
+client/build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+
+# Temp
+tmp/
+temp/
+nul
+
+# Docker data (local)
+mongodb_data/
+
+# SSL certs
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt

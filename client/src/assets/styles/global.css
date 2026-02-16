@@ -1,0 +1,263 @@
+/* Global styles for ERP Senegal */
+
+:root {
+  --primary: #1a56db;
+  --primary-dark: #1648b5;
+  --secondary: #6b7280;
+  --success: #059669;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --info: #0891b2;
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 70px;
+  --header-height: 60px;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background-color: #1e293b;
+  color: #e2e8f0;
+  z-index: 1040;
+  transition: width 0.3s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  height: var(--header-height);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-brand h5 {
+  margin: 0;
+  color: #fff;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sidebar-nav {
+  padding: 0.5rem 0;
+}
+
+.sidebar-nav .nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.875rem;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.sidebar-nav .nav-link:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-nav .nav-link.active {
+  color: #fff;
+  background-color: rgba(26, 86, 219, 0.2);
+  border-left-color: var(--primary);
+}
+
+.sidebar-nav .nav-link .nav-icon {
+  width: 20px;
+  margin-right: 0.75rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sidebar-nav .nav-section {
+  padding: 1rem 1rem 0.25rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* Header */
+.main-header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: var(--sidebar-width);
+  height: var(--header-height);
+  background-color: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 1030;
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  transition: left 0.3s ease;
+}
+
+.sidebar.collapsed ~ .main-content .main-header,
+.sidebar.collapsed ~ .main-header {
+  left: var(--sidebar-collapsed-width);
+}
+
+/* Main content */
+.main-content {
+  margin-left: var(--sidebar-width);
+  padding-top: var(--header-height);
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+.sidebar.collapsed ~ .main-content {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+.page-content {
+  padding: 1.5rem;
+}
+
+/* Page header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Stat cards */
+.stat-card {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card .stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.stat-card .stat-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+/* DataTable */
+.data-table {
+  background-color: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.data-table .table {
+  margin-bottom: 0;
+}
+
+.data-table .table th {
+  background-color: #f9fafb;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  font-weight: 600;
+  border-bottom-width: 1px;
+  padding: 0.75rem 1rem;
+}
+
+.data-table .table td {
+  padding: 0.75rem 1rem;
+  vertical-align: middle;
+  font-size: 0.875rem;
+}
+
+/* Status badge */
+.badge-status {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+  border-radius: 50rem;
+}
+
+/* Money display */
+.money {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.money-positive {
+  color: var(--success);
+}
+
+.money-negative {
+  color: var(--danger);
+}
+
+/* Form styles */
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Breadcrumbs */
+.breadcrumb {
+  font-size: 0.8rem;
+  margin-bottom: 0;
+  background: transparent;
+  padding: 0;
+}
+
+/* Print styles */
+@media print {
+  .sidebar,
+  .main-header,
+  .no-print {
+    display: none !important;
+  }
+  .main-content {
+    margin-left: 0 !important;
+    padding-top: 0 !important;
+  }
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .main-content {
+    margin-left: 0;
+  }
+  .main-header {
+    left: 0;
+  }
+}

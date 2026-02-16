@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+logs
+uploads
+backups
+coverage
+.env
+.env.*
+.git
+.gitignore
+.eslintrc.json
+.prettierrc
+.prettierignore
+Dockerfile
+.dockerignore
+README.md

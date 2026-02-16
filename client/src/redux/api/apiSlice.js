@@ -1,0 +1,73 @@
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+
+const baseQuery = fetchBaseQuery({
+  baseUrl: '/api',
+  credentials: 'include',
+  prepareHeaders: (headers, { getState }) => {
+    const token = getState().auth.accessToken;
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    return headers;
+  },
+});
+
+const baseQueryWithReauth = async (args, api, extraOptions) => {
+  let result = await baseQuery(args, api, extraOptions);
+
+  if (result?.error?.status === 401) {
+    // Try to refresh the token
+    const refreshResult = await baseQuery(
+      { url: '/auth/refresh-token', method: 'POST' },
+      api,
+      extraOptions
+    );
+
+    if (refreshResult?.data) {
+      // Store the new token
+      api.dispatch({
+        type: 'auth/setAccessToken',
+        payload: refreshResult.data.data.accessToken,
+      });
+      // Retry the original request
+      result = await baseQuery(args, api, extraOptions);
+    } else {
+      // Refresh failed, logout
+      api.dispatch({ type: 'auth/logout' });
+    }
+  }
+
+  return result;
+};
+
+export const apiSlice = createApi({
+  reducerPath: 'api',
+  baseQuery: baseQueryWithReauth,
+  tagTypes: [
+    'Client',
+    'Fournisseur',
+    'Produit',
+    'Category',
+    'Facture',
+    'Devis',
+    'Commande',
+    'BonLivraison',
+    'Stock',
+    'StockMovement',
+    'Warehouse',
+    'Paiement',
+    'BankAccount',
+    'Ecriture',
+    'CompteComptable',
+    'Exercice',
+    'PurchaseOrder',
+    'PurchaseInvoice',
+    'Dashboard',
+    'User',
+    'Role',
+    'AuditLog',
+    'Settings',
+    'Company',
+  ],
+  endpoints: () => ({}),
+});

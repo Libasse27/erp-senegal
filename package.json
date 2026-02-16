@@ -1,0 +1,19 @@
+{
+  "name": "erp-commercial-comptable-senegal",
+  "version": "1.0.0",
+  "description": "ERP Commercial & Comptable pour PME/TPE au Senegal (SYSCOHADA/OHADA)",
+  "private": true,
+  "scripts": {
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm start",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:reset": "docker-compose down -v && docker-compose up -d",
+    "seed": "cd server && npm run seed"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
