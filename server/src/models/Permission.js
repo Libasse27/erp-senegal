@@ -51,9 +51,17 @@ const permissionSchema = new mongoose.Schema(
 permissionSchema.index({ module: 1, action: 1 }, { unique: true });
 permissionSchema.index({ code: 1 });
 
-// Exclure les soft-deleted
-permissionSchema.pre(/^find/, function () {
-  this.where({ deletedAt: { $exists: false } });
+// Index compose isActive + createdAt
+permissionSchema.index({ isActive: 1, createdAt: -1 });
+
+// Exclure les soft-deleted par defaut
+permissionSchema.pre(/^find/, function (next) {
+  if (!this.getQuery().includeDeleted) {
+    this.where({ isActive: true });
+  } else {
+    delete this._conditions.includeDeleted;
+  }
+  next();
 });
 
 // Methode softDelete

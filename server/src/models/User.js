@@ -97,9 +97,17 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// Exclure les soft-deleted
-userSchema.pre(/^find/, function () {
-  this.where({ deletedAt: { $exists: false } });
+// Index compose isActive + createdAt
+userSchema.index({ isActive: 1, createdAt: -1 });
+
+// Exclure les soft-deleted par defaut
+userSchema.pre(/^find/, function (next) {
+  if (!this.getQuery().includeDeleted) {
+    this.where({ isActive: true });
+  } else {
+    delete this._conditions.includeDeleted;
+  }
+  next();
 });
 
 // Methode: comparer les mots de passe

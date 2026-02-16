@@ -106,9 +106,17 @@ companySchema.virtual('fullAddress').get(function () {
   return parts.join(', ');
 });
 
-// Exclure les soft-deleted
-companySchema.pre(/^find/, function () {
-  this.where({ deletedAt: { $exists: false } });
+// Index compose isActive + createdAt
+companySchema.index({ isActive: 1, createdAt: -1 });
+
+// Exclure les soft-deleted par defaut
+companySchema.pre(/^find/, function (next) {
+  if (!this.getQuery().includeDeleted) {
+    this.where({ isActive: true });
+  } else {
+    delete this._conditions.includeDeleted;
+  }
+  next();
 });
 
 // Methode softDelete

@@ -86,9 +86,14 @@ const settingsSchema = new mongoose.Schema(
   }
 );
 
-// Exclure les soft-deleted
-settingsSchema.pre(/^find/, function () {
-  this.where({ deletedAt: { $exists: false } });
+// Exclure les soft-deleted par defaut
+settingsSchema.pre(/^find/, function (next) {
+  if (!this.getQuery().includeDeleted) {
+    this.where({ isActive: true });
+  } else {
+    delete this._conditions.includeDeleted;
+  }
+  next();
 });
 
 // Methode softDelete

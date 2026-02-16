@@ -2,7 +2,7 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
 
 const mongoose = require('mongoose');
-const connectDB = require('../config/database');
+const { connectDB } = require('../config/database');
 
 // Models
 const Permission = require('../models/Permission');
@@ -16,6 +16,7 @@ const generatePermissions = require('./permissions.seed');
 const getRolesData = require('./roles.seed');
 const getUsersData = require('./users.seed');
 const getCompanyData = require('./company.seed');
+const getSettingsData = require('./settings.seed');
 
 const seed = async () => {
   try {
@@ -73,7 +74,8 @@ const seed = async () => {
 
     // 6. Creer les parametres par defaut
     console.log('\nCreation des parametres par defaut...');
-    await Settings.create({});
+    const settingsData = getSettingsData();
+    await Settings.create(settingsData);
     console.log('Parametres par defaut crees.');
 
     // Resume

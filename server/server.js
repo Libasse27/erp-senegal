@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../.env' });
 
 const app = require('./app');
-const connectDB = require('./src/config/database');
+const { connectDB, disconnectDB } = require('./src/config/database');
 const logger = require('./src/config/logger');
 
 // Creer le serveur HTTP
@@ -62,6 +62,20 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// Graceful shutdown
+const gracefulShutdown = async (signal) => {
+  logger.info(`Signal ${signal} recu. Arret gracieux...`);
+  server.close(async () => {
+    await disconnectDB();
+    process.exit(0);
+  });
+  // Force exit after 10 seconds
+  setTimeout(() => process.exit(1), 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Gestion des erreurs non capturees
 process.on('unhandledRejection', (err) => {

@@ -56,9 +56,17 @@ const roleSchema = new mongoose.Schema(
 roleSchema.index({ name: 1 });
 roleSchema.index({ isActive: 1 });
 
-// Exclure les soft-deleted
-roleSchema.pre(/^find/, function () {
-  this.where({ deletedAt: { $exists: false } });
+// Index compose isActive + createdAt
+roleSchema.index({ isActive: 1, createdAt: -1 });
+
+// Exclure les soft-deleted par defaut
+roleSchema.pre(/^find/, function (next) {
+  if (!this.getQuery().includeDeleted) {
+    this.where({ isActive: true });
+  } else {
+    delete this._conditions.includeDeleted;
+  }
+  next();
 });
 
 // Methode softDelete
