@@ -4,19 +4,35 @@ dotenv.config({ path: '../../.env' });
 const mongoose = require('mongoose');
 const { connectDB } = require('../config/database');
 
-// Models
+// Phase 1 Models
 const Permission = require('../models/Permission');
 const Role = require('../models/Role');
 const User = require('../models/User');
 const Company = require('../models/Company');
 const Settings = require('../models/Settings');
+const AuditLog = require('../models/AuditLog');
 
-// Seed data generators
+// Phase 2 Models
+const Client = require('../models/Client');
+const Fournisseur = require('../models/Fournisseur');
+const Category = require('../models/Category');
+const Product = require('../models/Product');
+const Warehouse = require('../models/Warehouse');
+const Stock = require('../models/Stock');
+const StockMovement = require('../models/StockMovement');
+
+// Phase 1 Seed data generators
 const generatePermissions = require('./permissions.seed');
 const getRolesData = require('./roles.seed');
 const getUsersData = require('./users.seed');
 const getCompanyData = require('./company.seed');
 const getSettingsData = require('./settings.seed');
+
+// Phase 2 Seed data generators
+const getClientsData = require('./clients.seed');
+const getFournisseursData = require('./fournisseurs.seed');
+const { getCategoriesData, getProductsData } = require('./products.seed');
+const { getWarehousesData, getStocksData } = require('./stocks.seed');
 
 const seed = async () => {
   try {
@@ -25,7 +41,7 @@ const seed = async () => {
 
     console.log('=== Debut du seeding ===\n');
 
-    // 1. Nettoyer les collections existantes
+    // 1. Nettoyer toutes les collections
     console.log('Nettoyage des collections...');
     await Promise.all([
       Permission.deleteMany({}),
@@ -33,8 +49,20 @@ const seed = async () => {
       User.deleteMany({}),
       Company.deleteMany({}),
       Settings.deleteMany({}),
+      AuditLog.deleteMany({}),
+      Client.deleteMany({}),
+      Fournisseur.deleteMany({}),
+      Category.deleteMany({}),
+      Product.deleteMany({}),
+      Warehouse.deleteMany({}),
+      Stock.deleteMany({}),
+      StockMovement.deleteMany({}),
     ]);
     console.log('Collections nettoyees.\n');
+
+    // ========================================
+    // PHASE 1 — Fondations
+    // ========================================
 
     // 2. Creer les permissions
     console.log('Creation des permissions...');
@@ -66,26 +94,109 @@ const seed = async () => {
     }
     console.log(`${users.length} utilisateurs crees.`);
 
+    const adminUser = users[0]; // First user is admin
+
     // 5. Creer l'entreprise demo
     console.log('\nCreation de l\'entreprise demo...');
     const companyData = getCompanyData();
-    await Company.create(companyData);
+    await Company.create({ ...companyData, createdBy: adminUser._id });
     console.log('Entreprise demo creee.');
 
     // 6. Creer les parametres par defaut
     console.log('\nCreation des parametres par defaut...');
     const settingsData = getSettingsData();
-    await Settings.create(settingsData);
+    await Settings.create({ ...settingsData, createdBy: adminUser._id });
     console.log('Parametres par defaut crees.');
 
-    // Resume
+    // ========================================
+    // PHASE 2 — Modules Commerciaux
+    // ========================================
+    console.log('\n--- Phase 2: Modules Commerciaux ---\n');
+
+    // 7. Creer les clients
+    console.log('Creation des clients...');
+    const clientsData = getClientsData(adminUser._id);
+    const clients = [];
+    for (const clientData of clientsData) {
+      const client = await Client.create(clientData);
+      clients.push(client);
+    }
+    console.log(`${clients.length} clients crees.`);
+
+    // 8. Creer les fournisseurs
+    console.log('\nCreation des fournisseurs...');
+    const fournisseursData = getFournisseursData(adminUser._id);
+    const fournisseurs = [];
+    for (const fournisseurData of fournisseursData) {
+      const fournisseur = await Fournisseur.create(fournisseurData);
+      fournisseurs.push(fournisseur);
+    }
+    console.log(`${fournisseurs.length} fournisseurs crees.`);
+
+    // 9. Creer les categories
+    console.log('\nCreation des categories...');
+    const categoriesData = getCategoriesData(adminUser._id);
+    const categories = [];
+    for (const catData of categoriesData) {
+      const category = await Category.create(catData);
+      categories.push(category);
+    }
+    console.log(`${categories.length} categories creees.`);
+
+    // Creer une map name -> id pour les categories
+    const categoryMap = new Map();
+    categories.forEach((c) => categoryMap.set(c.name, c._id));
+
+    // 10. Creer les produits
+    console.log('\nCreation des produits...');
+    const productsData = getProductsData(categoryMap, adminUser._id);
+    const products = [];
+    for (const prodData of productsData) {
+      const product = await Product.create(prodData);
+      products.push(product);
+    }
+    console.log(`${products.length} produits crees.`);
+
+    // 11. Creer les depots
+    console.log('\nCreation des depots...');
+    const warehousesData = getWarehousesData(adminUser._id);
+    const warehouses = [];
+    for (const whData of warehousesData) {
+      const warehouse = await Warehouse.create(whData);
+      warehouses.push(warehouse);
+    }
+    console.log(`${warehouses.length} depots crees.`);
+
+    const mainWarehouse = warehouses[0]; // First warehouse is the default
+
+    // 12. Creer les stocks initiaux
+    console.log('\nCreation des stocks initiaux...');
+    const stocksData = getStocksData(products, mainWarehouse, adminUser._id);
+    const stocks = await Stock.insertMany(stocksData);
+    console.log(`${stocks.length} lignes de stock creees.`);
+
+    // Calculate total stock value
+    const totalStockValue = stocks.reduce((sum, s) => sum + s.valeurStock, 0);
+
+    // ========================================
+    // RESUME
+    // ========================================
     console.log('\n=== Seeding termine avec succes ===');
     console.log(`\nResume:`);
-    console.log(`  - ${permissions.length} permissions`);
-    console.log(`  - ${roles.length} roles`);
-    console.log(`  - ${users.length} utilisateurs`);
-    console.log(`  - 1 entreprise`);
-    console.log(`  - 1 configuration\n`);
+    console.log(`  Phase 1:`);
+    console.log(`    - ${permissions.length} permissions`);
+    console.log(`    - ${roles.length} roles`);
+    console.log(`    - ${users.length} utilisateurs`);
+    console.log(`    - 1 entreprise`);
+    console.log(`    - 1 configuration`);
+    console.log(`  Phase 2:`);
+    console.log(`    - ${clients.length} clients (A: 10, B: 15, C: 25)`);
+    console.log(`    - ${fournisseurs.length} fournisseurs`);
+    console.log(`    - ${categories.length} categories`);
+    console.log(`    - ${products.length} produits`);
+    console.log(`    - ${warehouses.length} depots`);
+    console.log(`    - ${stocks.length} lignes de stock`);
+    console.log(`    - Valeur totale stock: ${new Intl.NumberFormat('fr-FR').format(totalStockValue)} FCFA\n`);
 
     console.log('Comptes de test:');
     console.log('  admin@erp-senegal.com / Admin@2026 (Administrateur)');

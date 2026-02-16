@@ -49,7 +49,6 @@ const permissionSchema = new mongoose.Schema(
 
 // Index compose module + action
 permissionSchema.index({ module: 1, action: 1 }, { unique: true });
-permissionSchema.index({ code: 1 });
 
 // Index compose isActive + createdAt
 permissionSchema.index({ isActive: 1, createdAt: -1 });
