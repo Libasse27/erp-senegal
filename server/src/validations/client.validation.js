@@ -43,6 +43,7 @@ const createClient = Joi.object({
   website: Joi.string().trim().max(200).allow('').optional(),
   contactPerson: contactPersonSchema.optional(),
   address: addressSchema.optional(),
+  segment: Joi.string().valid('A', 'B', 'C').optional(),
   category: Joi.string()
     .valid('grossiste', 'detaillant', 'distributeur', 'institutionnel', 'particulier', 'autre')
     .optional(),
@@ -69,6 +70,7 @@ const updateClient = Joi.object({
   website: Joi.string().trim().max(200).allow('').optional(),
   contactPerson: contactPersonSchema.optional(),
   address: addressSchema.optional(),
+  segment: Joi.string().valid('A', 'B', 'C').optional(),
   category: Joi.string()
     .valid('grossiste', 'detaillant', 'distributeur', 'institutionnel', 'particulier', 'autre')
     .optional(),

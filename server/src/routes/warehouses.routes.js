@@ -11,7 +11,7 @@ const {
 const { protect } = require('../middlewares/auth');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
-const { createWarehouse: createSchema, updateWarehouse: updateSchema } = require('../validations/stock.validation');
+const { createWarehouse: createSchema, updateWarehouse: updateSchema } = require('../validations/warehouse.validation');
 const audit = require('../middlewares/audit');
 
 // All routes require authentication

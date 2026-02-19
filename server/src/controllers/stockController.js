@@ -61,6 +61,56 @@ const getStocks = async (req, res, next) => {
 };
 
 /**
+ * @desc    Get single stock entry by ID
+ * @route   GET /api/stocks/:id
+ * @access  Private
+ */
+const getStock = async (req, res, next) => {
+  try {
+    const stock = await Stock.findById(req.params.id)
+      .populate('product', 'name code prixVente prixAchat stockMinimum stockAlerte unite isStockable')
+      .populate('warehouse', 'name code type');
+
+    if (!stock) {
+      return next(new AppError('Enregistrement de stock non trouve.', 404));
+    }
+
+    res.json({
+      success: true,
+      data: stock,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Get single stock movement by ID
+ * @route   GET /api/stocks/movements/:id
+ * @access  Private
+ */
+const getMovement = async (req, res, next) => {
+  try {
+    const movement = await StockMovement.findById(req.params.id)
+      .populate('product', 'name code unite')
+      .populate('warehouseSource', 'name code')
+      .populate('warehouseDestination', 'name code')
+      .populate('createdBy', 'firstName lastName');
+
+    if (!movement) {
+      return next(new AppError('Mouvement de stock non trouve.', 404));
+    }
+
+    res.json({
+      success: true,
+      data: movement,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @desc    Get stock alerts (rupture, seuil, peremption)
  * @route   GET /api/stocks/alerts
  * @access  Private
@@ -464,7 +514,9 @@ const transferStock = async (req, res, next) => {
 
 module.exports = {
   getStocks,
+  getStock,
   getStockAlerts,
+  getMovement,
   getMovements,
   createMovement,
   transferStock,

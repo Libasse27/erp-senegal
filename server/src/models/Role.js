@@ -52,8 +52,7 @@ const roleSchema = new mongoose.Schema(
   }
 );
 
-// Index
-roleSchema.index({ name: 1 });
+// Index (name already indexed via unique: true)
 roleSchema.index({ isActive: 1 });
 
 // Index compose isActive + createdAt

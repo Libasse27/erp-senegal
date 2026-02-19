@@ -89,7 +89,9 @@ stockSchema.virtual('isEnRupture').get(function () {
 });
 
 stockSchema.virtual('isEnAlerte').get(function () {
-  // Will be computed when product is populated
+  if (this.populated('product') && this.product) {
+    return this.quantite > 0 && this.quantite <= (this.product.stockAlerte || 0);
+  }
   return false;
 });
 

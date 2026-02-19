@@ -3,7 +3,9 @@ const router = express.Router();
 
 const {
   getStocks,
+  getStock,
   getStockAlerts,
+  getMovement,
   getMovements,
   createMovement,
   transferStock,
@@ -25,6 +27,7 @@ router.get('/alerts', authorize('stocks:read'), getStockAlerts);
 
 // Movements
 router.get('/movements', authorize('stocks:read'), getMovements);
+router.get('/movements/:id', authorize('stocks:read'), getMovement);
 router.post(
   '/movements',
   authorize('stocks:create'),
@@ -41,5 +44,8 @@ router.post(
   audit('stocks', 'create'),
   transferStock
 );
+
+// Single stock by ID (after sub-routes to avoid conflict)
+router.get('/:id', authorize('stocks:read'), getStock);
 
 module.exports = router;
