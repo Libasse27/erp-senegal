@@ -29,6 +29,11 @@ const getSettingsData = () => {
         currentSequence: 0,
         format: 'AV{YYYY}-{NNNNN}',
       },
+      salesOrder: {
+        prefix: 'CM',
+        currentSequence: 0,
+        format: 'CM{YYYY}-{NNNNN}',
+      },
       payment: {
         prefix: 'PA',
         currentSequence: 0,

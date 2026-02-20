@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: #333;
+      line-height: 1.5;
+    }
+    .container { padding: 10px; }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #1a56db;
+    }
+    .company-info { flex: 1; }
+    .company-name {
+      font-size: 20px;
+      font-weight: bold;
+      color: #1a56db;
+      margin-bottom: 5px;
+    }
+    .company-details { font-size: 10px; color: #555; }
+    .company-details p { margin-bottom: 2px; }
+    .company-legal { font-size: 9px; color: #777; margin-top: 5px; }
+
+    /* Document title */
+    .doc-title {
+      text-align: right;
+      flex: 0 0 auto;
+    }
+    .doc-title h1 {
+      font-size: 24px;
+      color: {{#if (eq facture.typeDocument 'avoir')}}#dc2626{{else}}#1a56db{{/if}};
+      margin-bottom: 5px;
+    }
+    .doc-number {
+      font-size: 14px;
+      font-weight: bold;
+      color: #333;
+    }
+    .doc-dates {
+      margin-top: 8px;
+      font-size: 10px;
+      color: #555;
+    }
+    .doc-dates p { margin-bottom: 2px; }
+
+    /* Client section */
+    .client-section {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .client-box {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 12px 15px;
+      width: 280px;
+      background-color: #f9fafb;
+    }
+    .client-box-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #777;
+      margin-bottom: 5px;
+      letter-spacing: 0.5px;
+    }
+    .client-name {
+      font-size: 13px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 3px;
+    }
+    .client-details { font-size: 10px; color: #555; }
+    .client-details p { margin-bottom: 1px; }
+
+    /* Table */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    .items-table thead th {
+      background-color: #1a56db;
+      color: white;
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .items-table thead th:first-child {
+      border-radius: 4px 0 0 0;
+    }
+    .items-table thead th:last-child {
+      border-radius: 0 4px 0 0;
+    }
+    .items-table tbody td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+      font-size: 10px;
+    }
+    .items-table tbody tr:nth-child(even) { background-color: #f9fafb; }
+    .items-table .text-right { text-align: right; }
+    .items-table .text-center { text-align: center; }
+
+    /* Totals */
+    .totals-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+    }
+    .totals-table {
+      width: 280px;
+      border-collapse: collapse;
+    }
+    .totals-table td {
+      padding: 5px 10px;
+      font-size: 11px;
+    }
+    .totals-table .label { text-align: right; color: #555; }
+    .totals-table .value { text-align: right; font-weight: 600; }
+    .totals-table .total-row td {
+      border-top: 2px solid #1a56db;
+      font-size: 14px;
+      font-weight: bold;
+      color: #1a56db;
+      padding-top: 8px;
+    }
+    .amount-words {
+      font-style: italic;
+      font-size: 10px;
+      color: #555;
+      margin-bottom: 20px;
+      text-align: right;
+    }
+
+    /* Conditions */
+    .conditions {
+      margin-top: 15px;
+      padding: 12px;
+      background-color: #f9fafb;
+      border-radius: 4px;
+      border: 1px solid #eee;
+    }
+    .conditions-title {
+      font-size: 10px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 5px;
+    }
+    .conditions-text { font-size: 9px; color: #555; }
+
+    /* Bank info */
+    .bank-info {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background-color: #eff6ff;
+      border-radius: 4px;
+      border: 1px solid #bfdbfe;
+    }
+    .bank-info-title {
+      font-size: 10px;
+      font-weight: bold;
+      color: #1a56db;
+      margin-bottom: 5px;
+    }
+    .bank-info-text { font-size: 9px; color: #555; }
+
+    /* Footer */
+    .footer {
+      margin-top: 25px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+      text-align: center;
+      font-size: 8px;
+      color: #999;
+    }
+    .legal-mentions {
+      margin-top: 10px;
+      font-size: 8px;
+      color: #777;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="company-info">
+        <div class="company-name">{{company.name}}</div>
+        <div class="company-details">
+          {{#if company.legalForm}}<p>{{company.legalForm}}</p>{{/if}}
+          {{#if company.address.street}}<p>{{company.address.street}}</p>{{/if}}
+          <p>{{company.address.city}}{{#if company.address.region}}, {{company.address.region}}{{/if}} - {{company.address.country}}</p>
+          {{#if company.phone}}<p>Tel: {{company.phone}}</p>{{/if}}
+          {{#if company.email}}<p>Email: {{company.email}}</p>{{/if}}
+        </div>
+        <div class="company-legal">
+          {{#if company.ninea}}<p>NINEA: {{company.ninea}}</p>{{/if}}
+          {{#if company.rccm}}<p>RC: {{company.rccm}}</p>{{/if}}
+        </div>
+      </div>
+      <div class="doc-title">
+        <h1>{{#if (eq facture.typeDocument 'avoir')}}AVOIR{{else}}FACTURE{{/if}}</h1>
+        <div class="doc-number">N° {{facture.numero}}</div>
+        {{#if facture.factureOrigine}}
+          <div style="font-size: 10px; color: #dc2626; margin-top: 3px;">
+            Ref. facture: {{facture.factureOrigine.numero}}
+          </div>
+        {{/if}}
+        <div class="doc-dates">
+          <p>Date d'emission: {{formatDate facture.dateFacture}}</p>
+          {{#if facture.dateEcheance}}<p>Date d'echeance: {{formatDate facture.dateEcheance}}</p>{{/if}}
+        </div>
+      </div>
+    </div>
+
+    <!-- Client -->
+    <div class="client-section">
+      <div class="client-box">
+        <div class="client-box-title">Facturer a</div>
+        <div class="client-name">{{facture.clientSnapshot.displayName}}</div>
+        <div class="client-details">
+          {{#if facture.clientSnapshot.address.street}}<p>{{facture.clientSnapshot.address.street}}</p>{{/if}}
+          {{#if facture.clientSnapshot.address.city}}<p>{{facture.clientSnapshot.address.city}}{{#if facture.clientSnapshot.address.region}}, {{facture.clientSnapshot.address.region}}{{/if}}</p>{{/if}}
+          {{#if facture.clientSnapshot.phone}}<p>Tel: {{facture.clientSnapshot.phone}}</p>{{/if}}
+          {{#if facture.clientSnapshot.email}}<p>{{facture.clientSnapshot.email}}</p>{{/if}}
+          {{#if facture.clientSnapshot.ninea}}<p>NINEA: {{facture.clientSnapshot.ninea}}</p>{{/if}}
+          {{#if facture.clientSnapshot.rccm}}<p>RC: {{facture.clientSnapshot.rccm}}</p>{{/if}}
+        </div>
+      </div>
+    </div>
+
+    <!-- Items table -->
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th style="width: 30px;">N°</th>
+          <th>Designation</th>
+          <th style="width: 50px;" class="text-center">Ref</th>
+          <th style="width: 40px;" class="text-center">Qte</th>
+          <th style="width: 45px;" class="text-center">Unite</th>
+          <th style="width: 80px;" class="text-right">PU HT</th>
+          <th style="width: 45px;" class="text-center">Rem%</th>
+          <th style="width: 40px;" class="text-center">TVA%</th>
+          <th style="width: 90px;" class="text-right">Total HT</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each facture.lignes}}
+        <tr>
+          <td class="text-center">{{inc @index}}</td>
+          <td>{{this.designation}}</td>
+          <td class="text-center">{{this.reference}}</td>
+          <td class="text-center">{{this.quantite}}</td>
+          <td class="text-center">{{this.unite}}</td>
+          <td class="text-right">{{formatMontant this.prixUnitaire}}</td>
+          <td class="text-center">{{#if this.remise}}{{this.remise}}%{{else}}-{{/if}}</td>
+          <td class="text-center">{{this.tauxTVA}}%</td>
+          <td class="text-right">{{formatMontant this.montantHT}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="totals-section">
+      <table class="totals-table">
+        <tr>
+          <td class="label">Total HT :</td>
+          <td class="value">{{formatMontant facture.totalHT}} FCFA</td>
+        </tr>
+        {{#if facture.remiseGlobale}}
+        <tr>
+          <td class="label">Remise globale ({{facture.remiseGlobale}}%) :</td>
+          <td class="value">Appliquee</td>
+        </tr>
+        {{/if}}
+        <tr>
+          <td class="label">TVA (18%) :</td>
+          <td class="value">{{formatMontant facture.totalTVA}} FCFA</td>
+        </tr>
+        <tr class="total-row">
+          <td class="label">Total TTC :</td>
+          <td class="value">{{formatMontant facture.totalTTC}} FCFA</td>
+        </tr>
+      </table>
+    </div>
+
+    {{#if facture.montantPaye}}
+    <div style="text-align: right; margin-bottom: 10px;">
+      <span style="font-size: 10px; color: #555;">Montant paye: {{formatMontant facture.montantPaye}} FCFA</span><br>
+      <span style="font-size: 12px; font-weight: bold; color: #dc2626;">Reste a payer: {{formatMontant facture.montantRestant}} FCFA</span>
+    </div>
+    {{/if}}
+
+    <!-- Payment mode -->
+    {{#if facture.modePaiement}}
+    <div style="margin-bottom: 10px; font-size: 10px;">
+      <strong>Mode de paiement:</strong> {{facture.modePaiement}}
+    </div>
+    {{/if}}
+
+    <!-- Conditions -->
+    {{#if facture.conditionsPaiement}}
+    <div class="conditions">
+      <div class="conditions-title">Conditions de paiement</div>
+      <div class="conditions-text">{{facture.conditionsPaiement}}</div>
+    </div>
+    {{/if}}
+
+    <!-- Bank info -->
+    {{#if company.bankInfo.bankName}}
+    <div class="bank-info">
+      <div class="bank-info-title">Coordonnees bancaires</div>
+      <div class="bank-info-text">
+        <p>Banque: {{company.bankInfo.bankName}}</p>
+        {{#if company.bankInfo.accountNumber}}<p>Compte: {{company.bankInfo.accountNumber}}</p>{{/if}}
+        {{#if company.bankInfo.iban}}<p>IBAN: {{company.bankInfo.iban}}</p>{{/if}}
+        {{#if company.bankInfo.swift}}<p>SWIFT: {{company.bankInfo.swift}}</p>{{/if}}
+      </div>
+    </div>
+    {{/if}}
+
+    <!-- Notes -->
+    {{#if facture.notes}}
+    <div class="conditions" style="margin-top: 10px;">
+      <div class="conditions-title">Notes</div>
+      <div class="conditions-text">{{facture.notes}}</div>
+    </div>
+    {{/if}}
+
+    <!-- Legal mentions -->
+    <div class="legal-mentions">
+      {{facture.mentionsLegales}}
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>{{company.name}} - {{company.address.street}}, {{company.address.city}}, {{company.address.country}}</p>
+      {{#if company.ninea}}<p>NINEA: {{company.ninea}} {{#if company.rccm}}- RC: {{company.rccm}}{{/if}}</p>{{/if}}
+      <p>Document genere le {{formatDate generatedAt}}</p>
+    </div>
+  </div>
+</body>
+</html>

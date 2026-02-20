@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: #333;
+      line-height: 1.5;
+    }
+    .container { padding: 10px; }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #d97706;
+    }
+    .company-info { flex: 1; }
+    .company-name {
+      font-size: 20px;
+      font-weight: bold;
+      color: #d97706;
+      margin-bottom: 5px;
+    }
+    .company-details { font-size: 10px; color: #555; }
+    .company-details p { margin-bottom: 2px; }
+    .company-legal { font-size: 9px; color: #777; margin-top: 5px; }
+
+    /* Document title */
+    .doc-title { text-align: right; flex: 0 0 auto; }
+    .doc-title h1 {
+      font-size: 22px;
+      color: #d97706;
+      margin-bottom: 5px;
+    }
+    .doc-number {
+      font-size: 14px;
+      font-weight: bold;
+      color: #333;
+    }
+    .doc-dates {
+      margin-top: 8px;
+      font-size: 10px;
+      color: #555;
+    }
+    .doc-dates p { margin-bottom: 2px; }
+
+    /* Info grid */
+    .info-grid {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      gap: 15px;
+    }
+    .info-box {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 12px 15px;
+      flex: 1;
+      background-color: #f9fafb;
+    }
+    .info-box-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #777;
+      margin-bottom: 5px;
+      letter-spacing: 0.5px;
+    }
+    .info-name {
+      font-size: 13px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 3px;
+    }
+    .info-details { font-size: 10px; color: #555; }
+    .info-details p { margin-bottom: 1px; }
+
+    /* Table */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    .items-table thead th {
+      background-color: #d97706;
+      color: white;
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .items-table thead th:first-child { border-radius: 4px 0 0 0; }
+    .items-table thead th:last-child { border-radius: 0 4px 0 0; }
+    .items-table tbody td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+      font-size: 10px;
+    }
+    .items-table tbody tr:nth-child(even) { background-color: #f9fafb; }
+    .items-table .text-right { text-align: right; }
+    .items-table .text-center { text-align: center; }
+
+    /* Notes */
+    .notes-section {
+      margin-top: 15px;
+      padding: 12px;
+      background-color: #f9fafb;
+      border-radius: 4px;
+      border: 1px solid #eee;
+    }
+    .notes-title {
+      font-size: 10px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 5px;
+    }
+    .notes-text { font-size: 9px; color: #555; }
+
+    /* Signature */
+    .signature-section {
+      margin-top: 40px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .signature-box {
+      width: 200px;
+      text-align: center;
+    }
+    .signature-label {
+      font-size: 10px;
+      color: #555;
+      border-top: 1px solid #ccc;
+      padding-top: 5px;
+      margin-top: 60px;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 25px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+      text-align: center;
+      font-size: 8px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="company-info">
+        <div class="company-name">{{company.name}}</div>
+        <div class="company-details">
+          {{#if company.legalForm}}<p>{{company.legalForm}}</p>{{/if}}
+          {{#if company.address.street}}<p>{{company.address.street}}</p>{{/if}}
+          <p>{{company.address.city}}{{#if company.address.region}}, {{company.address.region}}{{/if}} - {{company.address.country}}</p>
+          {{#if company.phone}}<p>Tel: {{company.phone}}</p>{{/if}}
+        </div>
+        <div class="company-legal">
+          {{#if company.ninea}}<p>NINEA: {{company.ninea}}</p>{{/if}}
+          {{#if company.rccm}}<p>RC: {{company.rccm}}</p>{{/if}}
+        </div>
+      </div>
+      <div class="doc-title">
+        <h1>BON DE LIVRAISON</h1>
+        <div class="doc-number">N° {{bonLivraison.numero}}</div>
+        <div class="doc-dates">
+          <p>Date de livraison: {{formatDate bonLivraison.dateLivraison}}</p>
+          {{#if bonLivraison.commande.numero}}<p>Commande: {{bonLivraison.commande.numero}}</p>{{/if}}
+        </div>
+      </div>
+    </div>
+
+    <!-- Client + Delivery address -->
+    <div class="info-grid">
+      <div class="info-box">
+        <div class="info-box-title">Client</div>
+        <div class="info-name">{{bonLivraison.clientSnapshot.displayName}}</div>
+        <div class="info-details">
+          {{#if bonLivraison.clientSnapshot.address.street}}<p>{{bonLivraison.clientSnapshot.address.street}}</p>{{/if}}
+          {{#if bonLivraison.clientSnapshot.address.city}}<p>{{bonLivraison.clientSnapshot.address.city}}</p>{{/if}}
+          {{#if bonLivraison.clientSnapshot.phone}}<p>Tel: {{bonLivraison.clientSnapshot.phone}}</p>{{/if}}
+        </div>
+      </div>
+      {{#if bonLivraison.adresseLivraison.street}}
+      <div class="info-box">
+        <div class="info-box-title">Adresse de livraison</div>
+        <div class="info-details">
+          <p>{{bonLivraison.adresseLivraison.street}}</p>
+          {{#if bonLivraison.adresseLivraison.city}}<p>{{bonLivraison.adresseLivraison.city}}</p>{{/if}}
+          {{#if bonLivraison.adresseLivraison.region}}<p>{{bonLivraison.adresseLivraison.region}}</p>{{/if}}
+        </div>
+      </div>
+      {{/if}}
+    </div>
+
+    <!-- Items table -->
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th style="width: 30px;">N°</th>
+          <th>Designation</th>
+          <th style="width: 80px;" class="text-center">Reference</th>
+          <th style="width: 80px;" class="text-center">Quantite</th>
+          <th style="width: 60px;" class="text-center">Unite</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each bonLivraison.lignes}}
+        <tr>
+          <td class="text-center">{{inc @index}}</td>
+          <td>{{this.designation}}</td>
+          <td class="text-center">{{this.reference}}</td>
+          <td class="text-center">{{this.quantite}}</td>
+          <td class="text-center">{{this.unite}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+
+    <!-- Notes -->
+    {{#if bonLivraison.notes}}
+    <div class="notes-section">
+      <div class="notes-title">Observations</div>
+      <div class="notes-text">{{bonLivraison.notes}}</div>
+    </div>
+    {{/if}}
+
+    <!-- Signature -->
+    <div class="signature-section">
+      <div class="signature-box">
+        <div class="signature-label">Le livreur</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-label">Le client (bon pour reception)</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>{{company.name}} - {{company.address.street}}, {{company.address.city}}, {{company.address.country}}</p>
+      <p>Document genere le {{formatDate generatedAt}}</p>
+    </div>
+  </div>
+</body>
+</html>

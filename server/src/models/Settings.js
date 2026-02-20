@@ -29,6 +29,11 @@ const settingsSchema = new mongoose.Schema(
         currentSequence: { type: Number, default: 0 },
         format: { type: String, default: 'AV-{YYYY}-{SEQ}' },
       },
+      salesOrder: {
+        prefix: { type: String, default: 'CM' },
+        currentSequence: { type: Number, default: 0 },
+        format: { type: String, default: 'CM-{YYYY}-{SEQ}' },
+      },
       payment: {
         prefix: { type: String, default: 'PA' },
         currentSequence: { type: Number, default: 0 },

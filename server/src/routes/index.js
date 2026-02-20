@@ -16,6 +16,12 @@ const productsRoutes = require('./products.routes');
 const stocksRoutes = require('./stocks.routes');
 const warehousesRoutes = require('./warehouses.routes');
 
+// Phase 3 routes — Cycle de Vente
+const devisRoutes = require('./devis.routes');
+const commandesRoutes = require('./commandes.routes');
+const bonsLivraisonRoutes = require('./bons-livraison.routes');
+const facturesRoutes = require('./factures.routes');
+
 const { limiter } = require('../middlewares/rateLimiter');
 
 // Appliquer le rate limiter global
@@ -35,5 +41,11 @@ router.use('/categories', categoriesRoutes);
 router.use('/products', productsRoutes);
 router.use('/stocks', stocksRoutes);
 router.use('/warehouses', warehousesRoutes);
+
+// === Phase 3 — Cycle de Vente ===
+router.use('/devis', devisRoutes);
+router.use('/commandes', commandesRoutes);
+router.use('/bons-livraison', bonsLivraisonRoutes);
+router.use('/factures', facturesRoutes);
 
 module.exports = router;
