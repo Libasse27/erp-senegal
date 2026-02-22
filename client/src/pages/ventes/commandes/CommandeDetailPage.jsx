@@ -21,7 +21,7 @@ import { toast } from 'react-toastify';
 import usePageTitle from '../../../hooks/usePageTitle';
 import { formatMoney, formatDate } from '../../../utils/formatters';
 import {
-  useGetCommandeByIdQuery,
+  useGetCommandeQuery,
   useDeleteCommandeMutation,
   useUpdateCommandeStatusMutation,
   useGenerateLivraisonMutation,
@@ -58,7 +58,7 @@ const CommandeDetailPage = () => {
     { label: 'Detail', path: '#' },
   ]);
 
-  const { data, isLoading, isError, error } = useGetCommandeByIdQuery(id);
+  const { data, isLoading, isError, error } = useGetCommandeQuery(id);
   const [deleteCommande, { isLoading: isDeleting }] = useDeleteCommandeMutation();
   const [updateStatus, { isLoading: isUpdatingStatus }] = useUpdateCommandeStatusMutation();
   const [generateLivraison, { isLoading: isGenerating }] = useGenerateLivraisonMutation();

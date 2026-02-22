@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import Card from 'react-bootstrap/Card';
 import Table from 'react-bootstrap/Table';
 import Button from 'react-bootstrap/Button';
@@ -39,7 +39,6 @@ const StocksPage = () => {
     { label: 'Stocks' },
   ]);
 
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('stocks');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

@@ -27,7 +27,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
+
 } from 'recharts';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatMoney, formatDateTime } from '../../utils/formatters';

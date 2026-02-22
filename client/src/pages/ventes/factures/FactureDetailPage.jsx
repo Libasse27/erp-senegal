@@ -22,7 +22,7 @@ import { toast } from 'react-toastify';
 import usePageTitle from '../../../hooks/usePageTitle';
 import { formatMoney, formatDate } from '../../../utils/formatters';
 import {
-  useGetFactureByIdQuery,
+  useGetFactureQuery,
   useDeleteFactureMutation,
   useValidateFactureMutation,
   useSendFactureMutation,
@@ -59,7 +59,7 @@ const FactureDetailPage = () => {
     { label: 'Detail', path: '#' },
   ]);
 
-  const { data, isLoading, isError, error } = useGetFactureByIdQuery(id);
+  const { data, isLoading, isError, error } = useGetFactureQuery(id);
   const [deleteFacture, { isLoading: isDeleting }] = useDeleteFactureMutation();
   const [validateFacture, { isLoading: isValidating }] = useValidateFactureMutation();
   const [sendFacture, { isLoading: isSending }] = useSendFactureMutation();
