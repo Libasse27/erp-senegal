@@ -22,6 +22,11 @@ const commandesRoutes = require('./commandes.routes');
 const bonsLivraisonRoutes = require('./bons-livraison.routes');
 const facturesRoutes = require('./factures.routes');
 
+// Phase 4 routes — Paiements & Comptabilite
+const paymentsRoutes = require('./payments.routes');
+const bankAccountsRoutes = require('./bank-accounts.routes');
+const comptabiliteRoutes = require('./comptabilite.routes');
+
 const { limiter } = require('../middlewares/rateLimiter');
 
 // Appliquer le rate limiter global
@@ -47,5 +52,10 @@ router.use('/devis', devisRoutes);
 router.use('/commandes', commandesRoutes);
 router.use('/bons-livraison', bonsLivraisonRoutes);
 router.use('/factures', facturesRoutes);
+
+// === Phase 4 — Paiements & Comptabilite ===
+router.use('/payments', paymentsRoutes);
+router.use('/bank-accounts', bankAccountsRoutes);
+router.use('/comptabilite', comptabiliteRoutes);
 
 module.exports = router;

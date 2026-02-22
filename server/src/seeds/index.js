@@ -21,6 +21,13 @@ const Warehouse = require('../models/Warehouse');
 const Stock = require('../models/Stock');
 const StockMovement = require('../models/StockMovement');
 
+// Phase 4 Models
+const CompteComptable = require('../models/CompteComptable');
+const ExerciceComptable = require('../models/ExerciceComptable');
+const EcritureComptable = require('../models/EcritureComptable');
+const BankAccount = require('../models/BankAccount');
+const Payment = require('../models/Payment');
+
 // Phase 1 Seed data generators
 const generatePermissions = require('./permissions.seed');
 const getRolesData = require('./roles.seed');
@@ -33,6 +40,10 @@ const getClientsData = require('./clients.seed');
 const getFournisseursData = require('./fournisseurs.seed');
 const { getCategoriesData, getProductsData } = require('./products.seed');
 const { getWarehousesData, getStocksData } = require('./stocks.seed');
+
+// Phase 4 Seed data generators
+const getPlanComptableData = require('./planComptable.seed');
+const { getExerciceData, getBankAccountsData } = require('./comptabilite.seed');
 
 const seed = async () => {
   try {
@@ -57,6 +68,11 @@ const seed = async () => {
       Warehouse.deleteMany({}),
       Stock.deleteMany({}),
       StockMovement.deleteMany({}),
+      CompteComptable.deleteMany({}),
+      ExerciceComptable.deleteMany({}),
+      EcritureComptable.deleteMany({}),
+      BankAccount.deleteMany({}),
+      Payment.deleteMany({}),
     ]);
     console.log('Collections nettoyees.\n');
 
@@ -179,6 +195,50 @@ const seed = async () => {
     const totalStockValue = stocks.reduce((sum, s) => sum + s.valeurStock, 0);
 
     // ========================================
+    // PHASE 4 — Paiements & Comptabilite
+    // ========================================
+    console.log('\n--- Phase 4: Paiements & Comptabilite ---\n');
+
+    // 13. Creer le plan comptable SYSCOHADA
+    console.log('Creation du plan comptable SYSCOHADA...');
+    const planComptableData = getPlanComptableData(adminUser._id);
+    const comptes = [];
+    for (const compteData of planComptableData) {
+      const compte = await CompteComptable.create(compteData);
+      comptes.push(compte);
+    }
+    console.log(`${comptes.length} comptes comptables crees.`);
+
+    // Count by class
+    const classCounts = {};
+    comptes.forEach((c) => {
+      classCounts[c.classe] = (classCounts[c.classe] || 0) + 1;
+    });
+
+    // 14. Creer l'exercice comptable 2026
+    console.log('\nCreation de l\'exercice comptable 2026...');
+    const exerciceData = getExerciceData(adminUser._id);
+    const exercice = await ExerciceComptable.create(exerciceData);
+    console.log(`Exercice ${exercice.code} cree (${exercice.libelle}).`);
+
+    // 15. Creer les comptes bancaires
+    console.log('\nCreation des comptes bancaires...');
+    const bankAccountsData = getBankAccountsData(adminUser._id);
+    const bankAccounts = [];
+    for (const baData of bankAccountsData) {
+      // Link to CompteComptable by numero
+      if (baData.compteComptableNumero) {
+        const cc = comptes.find((c) => c.numero === baData.compteComptableNumero);
+        if (cc) baData.compteComptable = cc._id;
+      }
+      const ba = await BankAccount.create(baData);
+      bankAccounts.push(ba);
+    }
+    console.log(`${bankAccounts.length} comptes bancaires crees.`);
+
+    const totalBanque = bankAccounts.reduce((s, a) => s + a.soldeActuel, 0);
+
+    // ========================================
     // RESUME
     // ========================================
     console.log('\n=== Seeding termine avec succes ===');
@@ -196,7 +256,15 @@ const seed = async () => {
     console.log(`    - ${products.length} produits`);
     console.log(`    - ${warehouses.length} depots`);
     console.log(`    - ${stocks.length} lignes de stock`);
-    console.log(`    - Valeur totale stock: ${new Intl.NumberFormat('fr-FR').format(totalStockValue)} FCFA\n`);
+    console.log(`    - Valeur totale stock: ${new Intl.NumberFormat('fr-FR').format(totalStockValue)} FCFA`);
+    console.log(`  Phase 4:`);
+    console.log(`    - ${comptes.length} comptes comptables SYSCOHADA`);
+    for (let cl = 1; cl <= 8; cl++) {
+      if (classCounts[cl]) console.log(`      Classe ${cl}: ${classCounts[cl]} comptes`);
+    }
+    console.log(`    - 1 exercice comptable (${exercice.code})`);
+    console.log(`    - ${bankAccounts.length} comptes bancaires`);
+    console.log(`    - Tresorerie totale: ${new Intl.NumberFormat('fr-FR').format(totalBanque)} FCFA\n`);
 
     console.log('Comptes de test:');
     console.log('  admin@erp-senegal.com / Admin@2026 (Administrateur)');

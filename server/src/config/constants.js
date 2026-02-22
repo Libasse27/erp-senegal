@@ -114,6 +114,44 @@ module.exports = {
     'carte_bancaire',
   ],
 
+  // Types de paiement
+  PAYMENT_TYPES: {
+    CLIENT: 'client',
+    SUPPLIER: 'fournisseur',
+  },
+
+  // Statuts paiement
+  PAYMENT_STATUS: {
+    DRAFT: 'brouillon',
+    VALIDATED: 'valide',
+    CANCELLED: 'annule',
+  },
+
+  // Statuts exercice comptable
+  EXERCISE_STATUS: {
+    OPEN: 'ouvert',
+    CLOSED: 'cloture',
+  },
+
+  // Statuts ecriture comptable
+  ECRITURE_STATUS: {
+    DRAFT: 'brouillon',
+    VALIDATED: 'validee',
+  },
+
+  // Types de compte comptable
+  ACCOUNT_TYPES: {
+    DEBIT: 'debit',
+    CREDIT: 'credit',
+  },
+
+  // Types de compte bancaire
+  BANK_ACCOUNT_TYPES: {
+    CURRENT: 'courant',
+    SAVINGS: 'epargne',
+    MOBILE_MONEY: 'mobile_money',
+  },
+
   // Types de mouvement stock
   STOCK_MOVEMENT_TYPES: {
     IN: 'entree',
