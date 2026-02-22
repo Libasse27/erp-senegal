@@ -13,7 +13,13 @@ import {
   FiBarChart2,
   FiSettings,
   FiChevronLeft,
+  FiChevronDown,
+  FiChevronRight,
   FiBox,
+  FiCreditCard,
+  FiDatabase,
+  FiClipboard,
+  FiLayers,
 } from 'react-icons/fi';
 import {
   selectSidebarCollapsed,
@@ -33,19 +39,32 @@ const navItems = [
   { path: '/stocks', label: 'Stocks', icon: FiBox, permission: 'products:read' },
 
   { section: 'VENTES' },
-  { path: '/devis', label: 'Devis', icon: FiFileText, permission: 'quotes:read' },
-  { path: '/commandes', label: 'Commandes', icon: FiShoppingCart, permission: 'invoices:read' },
-  { path: '/factures', label: 'Factures', icon: FiFileText, permission: 'invoices:read' },
+  { path: '/ventes/devis', label: 'Devis', icon: FiFileText, permission: 'quotes:read' },
+  { path: '/ventes/commandes', label: 'Commandes', icon: FiShoppingCart, permission: 'invoices:read' },
+  { path: '/ventes/factures', label: 'Factures', icon: FiClipboard, permission: 'invoices:read' },
 
   { section: 'FINANCE' },
   { path: '/paiements', label: 'Paiements', icon: FiDollarSign, permission: 'payments:read' },
-  { path: '/comptabilite', label: 'Comptabilite', icon: FiBookOpen, permission: 'journal:read' },
+  { path: '/paiements/tresorerie', label: 'Tresorerie', icon: FiCreditCard, permission: 'payments:read' },
+  { path: '/paiements/comptes-bancaires', label: 'Comptes Bancaires', icon: FiDatabase, permission: 'payments:read' },
+
+  { section: 'COMPTABILITE' },
+  { path: '/comptabilite/plan', label: 'Plan Comptable', icon: FiLayers, permission: 'comptabilite:read' },
+  { path: '/comptabilite/ecritures', label: 'Ecritures', icon: FiBookOpen, permission: 'ecritures:read' },
+  { path: '/comptabilite/grand-livre', label: 'Grand Livre', icon: FiBookOpen, permission: 'comptabilite:read' },
+  { path: '/comptabilite/balance', label: 'Balance', icon: FiBarChart2, permission: 'comptabilite:read' },
+  { path: '/comptabilite/resultat', label: 'Compte de Resultat', icon: FiBarChart2, permission: 'comptabilite:read' },
+  { path: '/comptabilite/bilan', label: 'Bilan', icon: FiBarChart2, permission: 'comptabilite:read' },
+  { path: '/comptabilite/exercices', label: 'Exercices', icon: FiSettings, permission: 'comptabilite:read' },
 
   { section: 'ANALYSE' },
   { path: '/rapports', label: 'Rapports', icon: FiBarChart2, permission: 'reports:read' },
 
   { section: 'SYSTEME' },
-  { path: '/admin', label: 'Administration', icon: FiSettings, roles: ['admin'] },
+  { path: '/admin/utilisateurs', label: 'Utilisateurs', icon: FiUsers, roles: ['admin'] },
+  { path: '/admin/entreprise', label: 'Entreprise', icon: FiHome, roles: ['admin'] },
+  { path: '/admin/parametres', label: 'Parametres', icon: FiSettings, roles: ['admin'] },
+  { path: '/admin/audit', label: 'Journal d\'Audit', icon: FiFileText, roles: ['admin'] },
 ];
 
 const Sidebar = () => {
