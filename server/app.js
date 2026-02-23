@@ -14,6 +14,9 @@ const { errorHandler } = require('./src/middlewares/errorHandler');
 
 const app = express();
 
+// --- Trust proxy (needed for rate-limiter behind reverse proxy / webpack dev server) ---
+app.set('trust proxy', 1);
+
 // --- Security middleware ---
 app.use(helmet());
 app.use(cors(corsOptions));
