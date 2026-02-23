@@ -73,11 +73,9 @@ const stockSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
-stockSchema.index({ product: 1, warehouse: 1 }, { unique: true });
-stockSchema.index({ isActive: 1 });
-stockSchema.index({ quantite: 1 });
-stockSchema.index({ product: 1 });
+// Compound unique index { product: 1, warehouse: 1 } already defined above
 stockSchema.index({ warehouse: 1 });
+stockSchema.index({ quantite: 1 });
 
 // === VIRTUALS ===
 stockSchema.virtual('quantiteDisponible').get(function () {

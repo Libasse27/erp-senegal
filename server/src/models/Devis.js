@@ -162,12 +162,10 @@ const devisSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
-// numero already indexed via unique: true
-devisSchema.index({ client: 1 });
-devisSchema.index({ statut: 1 });
-devisSchema.index({ isActive: 1, createdAt: -1 });
+// numero already indexed via unique: true in schema definition
+devisSchema.index({ client: 1, statut: 1 });
+devisSchema.index({ statut: 1, createdAt: -1 });
 devisSchema.index({ dateValidite: 1 });
-devisSchema.index({ commercial: 1 });
 
 // === VIRTUALS ===
 devisSchema.virtual('isExpire').get(function () {

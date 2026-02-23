@@ -191,8 +191,8 @@ export default function UsersListPage() {
                         </td>
                         <td>{user.email}</td>
                         <td>
-                          <Badge bg={ROLE_VARIANTS[user.role] || 'secondary'}>
-                            {ROLES[user.role] || user.role}
+                          <Badge bg={ROLE_VARIANTS[user.role?.name || user.role] || 'secondary'}>
+                            {user.role?.displayName || ROLES[user.role?.name || user.role] || user.role?.name || user.role}
                           </Badge>
                         </td>
                         <td>

@@ -67,7 +67,13 @@ const StocksPage = () => {
 
   const stocks = stocksData?.data || [];
   const meta = stocksData?.meta;
-  const alerts = alertsData?.data || [];
+  const alertsObj = alertsData?.data || {};
+  const alerts = [
+    ...(alertsObj.rupture || []),
+    ...(alertsObj.seuilMinimum || []),
+    ...(alertsObj.seuilAlerte || []),
+    ...(alertsObj.peremption || []),
+  ];
   const movements = movementsData?.data || [];
   const warehouses = warehousesData?.data || [];
 

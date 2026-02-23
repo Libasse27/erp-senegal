@@ -161,17 +161,16 @@ const clientSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
+// code already indexed via unique: true in schema definition
+clientSchema.index({ email: 1 }, { sparse: true });
+clientSchema.index({ type: 1, segment: 1 });
+clientSchema.index({ 'address.city': 1 });
 clientSchema.index({ isActive: 1, createdAt: -1 });
-clientSchema.index({ segment: 1 });
-clientSchema.index({ type: 1 });
-clientSchema.index({ ninea: 1 });
-clientSchema.index({ totalCA: -1 });
 clientSchema.index({
   raisonSociale: 'text',
   firstName: 'text',
   lastName: 'text',
   email: 'text',
-  phone: 'text',
 });
 
 // === VIRTUALS ===

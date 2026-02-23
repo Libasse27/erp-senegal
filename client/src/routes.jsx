@@ -1,85 +1,93 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
-// Layout
+// Layout and Guards (critical path - not lazy loaded)
 import Layout from './components/layout/Layout';
-
-// Guards
 import PrivateRoute from './guards/PrivateRoute';
 
-// Auth pages
+// Auth pages (critical path - not lazy loaded)
 import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
-// Dashboard
-import DashboardPage from './pages/dashboard/DashboardPage';
+// Lazy loaded pages
+const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
 
 // Clients
-import ClientsListPage from './pages/clients/ClientsListPage';
-import ClientFormPage from './pages/clients/ClientFormPage';
-import ClientDetailPage from './pages/clients/ClientDetailPage';
+const ClientsListPage = lazy(() => import('./pages/clients/ClientsListPage'));
+const ClientFormPage = lazy(() => import('./pages/clients/ClientFormPage'));
+const ClientDetailPage = lazy(() => import('./pages/clients/ClientDetailPage'));
 
 // Fournisseurs
-import FournisseursListPage from './pages/fournisseurs/FournisseursListPage';
-import FournisseurFormPage from './pages/fournisseurs/FournisseurFormPage';
-import FournisseurDetailPage from './pages/fournisseurs/FournisseurDetailPage';
+const FournisseursListPage = lazy(() => import('./pages/fournisseurs/FournisseursListPage'));
+const FournisseurFormPage = lazy(() => import('./pages/fournisseurs/FournisseurFormPage'));
+const FournisseurDetailPage = lazy(() => import('./pages/fournisseurs/FournisseurDetailPage'));
 
 // Produits
-import ProductsListPage from './pages/products/ProductsListPage';
-import ProductFormPage from './pages/products/ProductFormPage';
-import ProductDetailPage from './pages/products/ProductDetailPage';
+const ProductsListPage = lazy(() => import('./pages/products/ProductsListPage'));
+const ProductFormPage = lazy(() => import('./pages/products/ProductFormPage'));
+const ProductDetailPage = lazy(() => import('./pages/products/ProductDetailPage'));
 
 // Stocks
-import StocksPage from './pages/stocks/StocksPage';
+const StocksPage = lazy(() => import('./pages/stocks/StocksPage'));
 
 // Ventes - Devis
-import DevisListPage from './pages/ventes/devis/DevisListPage';
-import DevisFormPage from './pages/ventes/devis/DevisFormPage';
-import DevisDetailPage from './pages/ventes/devis/DevisDetailPage';
+const DevisListPage = lazy(() => import('./pages/ventes/devis/DevisListPage'));
+const DevisFormPage = lazy(() => import('./pages/ventes/devis/DevisFormPage'));
+const DevisDetailPage = lazy(() => import('./pages/ventes/devis/DevisDetailPage'));
 
 // Ventes - Commandes
-import CommandesListPage from './pages/ventes/commandes/CommandesListPage';
-import CommandeDetailPage from './pages/ventes/commandes/CommandeDetailPage';
+const CommandesListPage = lazy(() => import('./pages/ventes/commandes/CommandesListPage'));
+const CommandeDetailPage = lazy(() => import('./pages/ventes/commandes/CommandeDetailPage'));
 
 // Ventes - Factures
-import FacturesListPage from './pages/ventes/factures/FacturesListPage';
-import FactureFormPage from './pages/ventes/factures/FactureFormPage';
-import FactureDetailPage from './pages/ventes/factures/FactureDetailPage';
+const FacturesListPage = lazy(() => import('./pages/ventes/factures/FacturesListPage'));
+const FactureFormPage = lazy(() => import('./pages/ventes/factures/FactureFormPage'));
+const FactureDetailPage = lazy(() => import('./pages/ventes/factures/FactureDetailPage'));
 
 // Paiements
-import PaymentsListPage from './pages/payments/PaymentsListPage';
-import PaymentFormPage from './pages/payments/PaymentFormPage';
-import PaymentDetailPage from './pages/payments/PaymentDetailPage';
-import TresoreriePage from './pages/payments/TresoreriePage';
-import BankAccountsPage from './pages/payments/BankAccountsPage';
+const PaymentsListPage = lazy(() => import('./pages/payments/PaymentsListPage'));
+const PaymentFormPage = lazy(() => import('./pages/payments/PaymentFormPage'));
+const PaymentDetailPage = lazy(() => import('./pages/payments/PaymentDetailPage'));
+const TresoreriePage = lazy(() => import('./pages/payments/TresoreriePage'));
+const BankAccountsPage = lazy(() => import('./pages/payments/BankAccountsPage'));
 
 // Comptabilite
-import PlanComptablePage from './pages/comptabilite/PlanComptablePage';
-import EcrituresListPage from './pages/comptabilite/EcrituresListPage';
-import EcritureFormPage from './pages/comptabilite/EcritureFormPage';
-import EcritureDetailPage from './pages/comptabilite/EcritureDetailPage';
-import GrandLivrePage from './pages/comptabilite/GrandLivrePage';
-import BalancePage from './pages/comptabilite/BalancePage';
-import BilanPage from './pages/comptabilite/BilanPage';
-import CompteResultatPage from './pages/comptabilite/CompteResultatPage';
-import ExercicesPage from './pages/comptabilite/ExercicesPage';
+const PlanComptablePage = lazy(() => import('./pages/comptabilite/PlanComptablePage'));
+const EcrituresListPage = lazy(() => import('./pages/comptabilite/EcrituresListPage'));
+const EcritureFormPage = lazy(() => import('./pages/comptabilite/EcritureFormPage'));
+const EcritureDetailPage = lazy(() => import('./pages/comptabilite/EcritureDetailPage'));
+const GrandLivrePage = lazy(() => import('./pages/comptabilite/GrandLivrePage'));
+const BalancePage = lazy(() => import('./pages/comptabilite/BalancePage'));
+const BilanPage = lazy(() => import('./pages/comptabilite/BilanPage'));
+const CompteResultatPage = lazy(() => import('./pages/comptabilite/CompteResultatPage'));
+const ExercicesPage = lazy(() => import('./pages/comptabilite/ExercicesPage'));
 
 // Rapports
-import ReportsPage from './pages/reports/ReportsPage';
-import SalesReportPage from './pages/reports/SalesReportPage';
+const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
+const SalesReportPage = lazy(() => import('./pages/reports/SalesReportPage'));
 
 // Administration
-import UsersListPage from './pages/admin/UsersListPage';
-import UserFormPage from './pages/admin/UserFormPage';
-import SettingsPage from './pages/admin/SettingsPage';
-import CompanyPage from './pages/admin/CompanyPage';
-import AuditLogPage from './pages/admin/AuditLogPage';
+const UsersListPage = lazy(() => import('./pages/admin/UsersListPage'));
+const UserFormPage = lazy(() => import('./pages/admin/UserFormPage'));
+const SettingsPage = lazy(() => import('./pages/admin/SettingsPage'));
+const CompanyPage = lazy(() => import('./pages/admin/CompanyPage'));
+const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
 
 // 404
-import NotFoundPage from './pages/NotFoundPage';
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+    <div className="spinner-border text-primary" role="status">
+      <span className="visually-hidden">Chargement...</span>
+    </div>
+  </div>
+);
 
 const AppRoutes = () => {
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       {/* Public routes */}
       <Route path="/login" element={<LoginPage />} />
@@ -164,6 +172,7 @@ const AppRoutes = () => {
       {/* 404 */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    </Suspense>
   );
 };
 

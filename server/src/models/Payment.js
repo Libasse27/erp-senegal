@@ -151,15 +151,12 @@ const paymentSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
-paymentSchema.index({ isActive: 1, createdAt: -1 });
-paymentSchema.index({ typePaiement: 1 });
+// numero already indexed via unique+sparse: true in schema definition
+paymentSchema.index({ client: 1, statut: 1 });
+paymentSchema.index({ fournisseur: 1, statut: 1 });
 paymentSchema.index({ modePaiement: 1 });
-paymentSchema.index({ statut: 1 });
-paymentSchema.index({ client: 1 });
-paymentSchema.index({ fournisseur: 1 });
-paymentSchema.index({ facture: 1 });
+paymentSchema.index({ datePaiement: -1 });
 paymentSchema.index({ compteBancaire: 1 });
-paymentSchema.index({ datePaiement: 1 });
 
 // === VIRTUALS ===
 paymentSchema.virtual('displayNumero').get(function () {

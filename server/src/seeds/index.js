@@ -1,5 +1,6 @@
+const path = require('path');
 const dotenv = require('dotenv');
-dotenv.config({ path: '../../.env' });
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const mongoose = require('mongoose');
 const { connectDB } = require('../config/database');
@@ -20,6 +21,12 @@ const Product = require('../models/Product');
 const Warehouse = require('../models/Warehouse');
 const Stock = require('../models/Stock');
 const StockMovement = require('../models/StockMovement');
+
+// Phase 3 Models
+const Devis = require('../models/Devis');
+const Commande = require('../models/Commande');
+const BonLivraison = require('../models/BonLivraison');
+const Facture = require('../models/Facture');
 
 // Phase 4 Models
 const CompteComptable = require('../models/CompteComptable');
@@ -45,6 +52,9 @@ const { getWarehousesData, getStocksData } = require('./stocks.seed');
 const getPlanComptableData = require('./planComptable.seed');
 const { getExerciceData, getBankAccountsData } = require('./comptabilite.seed');
 
+// Phase 3+4 Transactional data
+const { seedTransactions } = require('./transactions.seed');
+
 const seed = async () => {
   try {
     // Connexion a la DB
@@ -68,6 +78,10 @@ const seed = async () => {
       Warehouse.deleteMany({}),
       Stock.deleteMany({}),
       StockMovement.deleteMany({}),
+      Devis.deleteMany({}),
+      Commande.deleteMany({}),
+      BonLivraison.deleteMany({}),
+      Facture.deleteMany({}),
       CompteComptable.deleteMany({}),
       ExerciceComptable.deleteMany({}),
       EcritureComptable.deleteMany({}),
@@ -239,6 +253,22 @@ const seed = async () => {
     const totalBanque = bankAccounts.reduce((s, a) => s + a.soldeActuel, 0);
 
     // ========================================
+    // PHASE 3+4 — Donnees Transactionnelles
+    // ========================================
+    console.log('\n--- Donnees transactionnelles ---\n');
+
+    const txResult = await seedTransactions(
+      adminUser,
+      users,
+      clients,
+      products,
+      warehouses,
+      exercice,
+      comptes,
+      bankAccounts
+    );
+
+    // ========================================
     // RESUME
     // ========================================
     console.log('\n=== Seeding termine avec succes ===');
@@ -257,7 +287,14 @@ const seed = async () => {
     console.log(`    - ${warehouses.length} depots`);
     console.log(`    - ${stocks.length} lignes de stock`);
     console.log(`    - Valeur totale stock: ${new Intl.NumberFormat('fr-FR').format(totalStockValue)} FCFA`);
-    console.log(`  Phase 4:`);
+    console.log(`  Phase 3+4 (Transactions):`);
+    console.log(`    - ${txResult.devis} devis`);
+    console.log(`    - ${txResult.commandes} commandes`);
+    console.log(`    - ${txResult.bonsLivraison} bons de livraison`);
+    console.log(`    - ${txResult.factures} factures`);
+    console.log(`    - ${txResult.payments} paiements`);
+    console.log(`    - ${txResult.ecritures} ecritures comptables`);
+    console.log(`  Comptabilite:`);
     console.log(`    - ${comptes.length} comptes comptables SYSCOHADA`);
     for (let cl = 1; cl <= 8; cl++) {
       if (classCounts[cl]) console.log(`      Classe ${cl}: ${classCounts[cl]} comptes`);

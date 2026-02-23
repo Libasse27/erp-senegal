@@ -147,15 +147,11 @@ const ecritureComptableSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
-ecritureComptableSchema.index({ isActive: 1, createdAt: -1 });
-ecritureComptableSchema.index({ journal: 1, dateEcriture: 1 });
-ecritureComptableSchema.index({ exercice: 1 });
-ecritureComptableSchema.index({ statut: 1 });
-ecritureComptableSchema.index({ 'sourceDocument.type': 1, 'sourceDocument.id': 1 });
+// numero already indexed via unique+sparse: true in schema definition
+ecritureComptableSchema.index({ journal: 1, dateEcriture: -1 });
+ecritureComptableSchema.index({ exercice: 1, statut: 1 });
 ecritureComptableSchema.index({ 'lignes.compte': 1 });
-ecritureComptableSchema.index({ 'lignes.compteNumero': 1 });
-ecritureComptableSchema.index({ 'lignes.lettrage': 1 });
-ecritureComptableSchema.index({ dateEcriture: 1 });
+ecritureComptableSchema.index({ 'sourceDocument.type': 1, 'sourceDocument.id': 1 });
 
 // === VIRTUALS ===
 ecritureComptableSchema.virtual('isEquilibree').get(function () {

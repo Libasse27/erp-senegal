@@ -41,12 +41,13 @@ const {
   lettrage: lettrageSchema,
 } = require('../validations/comptabilite.validation');
 const audit = require('../middlewares/audit');
+const { cache } = require('../middlewares/cache');
 
 // All routes require authentication
 router.use(protect);
 
 // === Plan Comptable ===
-router.get('/plan', authorize('comptabilite:read'), getPlanComptable);
+router.get('/plan', authorize('comptabilite:read'), cache(300), getPlanComptable);
 router.get('/plan/:id', authorize('comptabilite:read'), getCompteComptable);
 router.post(
   '/plan',

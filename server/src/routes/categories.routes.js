@@ -14,12 +14,13 @@ const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const { createCategory: createSchema, updateCategory: updateSchema } = require('../validations/category.validation');
 const audit = require('../middlewares/audit');
+const { cache } = require('../middlewares/cache');
 
 // All routes require authentication
 router.use(protect);
 
-router.get('/', authorize('categories:read'), getCategories);
-router.get('/tree', authorize('categories:read'), getCategoryTree);
+router.get('/', authorize('categories:read'), cache(120), getCategories);
+router.get('/tree', authorize('categories:read'), cache(120), getCategoryTree);
 router.get('/:id', authorize('categories:read'), getCategory);
 router.post(
   '/',

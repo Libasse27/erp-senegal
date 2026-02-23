@@ -43,6 +43,7 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
+  keepUnusedDataFor: 300, // 5 minutes cache for unused data
   tagTypes: [
     'Client',
     'Fournisseur',
@@ -68,6 +69,7 @@ export const apiSlice = createApi({
     'AuditLog',
     'Settings',
     'Company',
+    'Notification',
   ],
   endpoints: () => ({}),
 });

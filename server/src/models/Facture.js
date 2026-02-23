@@ -235,15 +235,11 @@ const factureSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
-// numero already indexed via unique+sparse: true
-factureSchema.index({ client: 1 });
-factureSchema.index({ statut: 1 });
-factureSchema.index({ typeDocument: 1 });
-factureSchema.index({ isActive: 1, createdAt: -1 });
-factureSchema.index({ dateEcheance: 1, statut: 1 });
-factureSchema.index({ commande: 1 });
-factureSchema.index({ factureOrigine: 1 });
-factureSchema.index({ commercial: 1 });
+// numero already indexed via unique+sparse: true in schema definition
+factureSchema.index({ client: 1, statut: 1 });
+factureSchema.index({ statut: 1, createdAt: -1 });
+factureSchema.index({ dateEcheance: 1 });
+factureSchema.index({ montantPaye: 1 });
 
 // === VIRTUALS ===
 factureSchema.virtual('montantRestant').get(function () {

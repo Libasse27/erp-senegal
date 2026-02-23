@@ -86,10 +86,9 @@ const compteComptableSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
-compteComptableSchema.index({ isActive: 1, createdAt: -1 });
-compteComptableSchema.index({ classe: 1, numero: 1 });
+// numero already indexed via unique: true in schema definition
+compteComptableSchema.index({ classe: 1 });
 compteComptableSchema.index({ parent: 1 });
-compteComptableSchema.index({ isImputable: 1 });
 
 // === VIRTUALS ===
 compteComptableSchema.virtual('solde').get(function () {

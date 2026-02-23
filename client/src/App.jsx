@@ -19,8 +19,8 @@ function App() {
     <Provider store={store}>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
-          <NotificationProvider>
-            <SocketProvider>
+          <SocketProvider>
+            <NotificationProvider>
               <AppRoutes />
               <ToastContainer
                 position="top-right"
@@ -34,8 +34,8 @@ function App() {
                 pauseOnHover
                 theme="light"
               />
-            </SocketProvider>
-          </NotificationProvider>
+            </NotificationProvider>
+          </SocketProvider>
         </AuthProvider>
       </Router>
     </Provider>

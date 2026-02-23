@@ -102,10 +102,8 @@ const bankAccountSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
-bankAccountSchema.index({ isActive: 1, createdAt: -1 });
-bankAccountSchema.index({ type: 1 });
-bankAccountSchema.index({ isDefault: 1 });
-bankAccountSchema.index({ compteComptable: 1 });
+// numeroCompte already indexed via unique: true in schema definition
+bankAccountSchema.index({ type: 1, isActive: 1 });
 
 // === VIRTUALS ===
 bankAccountSchema.virtual('soldeFormate').get(function () {

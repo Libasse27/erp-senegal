@@ -174,11 +174,11 @@ const productSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
+// code already indexed via unique: true in schema definition
 productSchema.index({ category: 1 });
-productSchema.index({ isActive: 1, createdAt: -1 });
-productSchema.index({ type: 1 });
+productSchema.index({ type: 1, isActive: 1 });
 productSchema.index({ prixVente: 1 });
-productSchema.index({ name: 'text', description: 'text', code: 'text', barcode: 'text' });
+productSchema.index({ name: 'text', code: 'text', barcode: 'text' });
 
 // === VIRTUALS ===
 productSchema.virtual('margeBrute').get(function () {

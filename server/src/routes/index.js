@@ -27,6 +27,12 @@ const paymentsRoutes = require('./payments.routes');
 const bankAccountsRoutes = require('./bank-accounts.routes');
 const comptabiliteRoutes = require('./comptabilite.routes');
 
+// Dashboard
+const dashboardRoutes = require('./dashboard.routes');
+
+// Notifications
+const notificationsRoutes = require('./notifications.routes');
+
 const { limiter } = require('../middlewares/rateLimiter');
 
 // Appliquer le rate limiter global
@@ -57,5 +63,11 @@ router.use('/factures', facturesRoutes);
 router.use('/payments', paymentsRoutes);
 router.use('/bank-accounts', bankAccountsRoutes);
 router.use('/comptabilite', comptabiliteRoutes);
+
+// === Dashboard ===
+router.use('/dashboard', dashboardRoutes);
+
+// === Notifications ===
+router.use('/notifications', notificationsRoutes);
 
 module.exports = router;

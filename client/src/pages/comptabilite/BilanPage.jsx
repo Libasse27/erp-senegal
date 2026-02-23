@@ -28,19 +28,27 @@ const BilanPage = () => {
   const { data: bilanData, isLoading, error } = useGetBilanQuery(filters);
 
   const exercices = exercicesData?.data || [];
-  const actif = bilanData?.data?.actif || {
-    actifImmobilise: [],
-    actifCirculant: [],
-    totalActifImmobilise: 0,
-    totalActifCirculant: 0,
-    totalActif: 0,
+  const bilanResult = bilanData?.data || {};
+  const actifData = bilanResult.actif || {};
+  const passifData = bilanResult.passif || {};
+
+  const actif = {
+    actifImmobilise: actifData.immobilisations || [],
+    actifCirculant: [
+      ...(actifData.stocks || []),
+      ...(actifData.creances || []),
+      ...(actifData.tresorerie || []),
+    ],
+    totalActifImmobilise: (actifData.immobilisations || []).reduce((s, r) => s + (r.solde || 0), 0),
+    totalActifCirculant: [...(actifData.stocks || []), ...(actifData.creances || []), ...(actifData.tresorerie || [])].reduce((s, r) => s + (r.solde || 0), 0),
+    totalActif: bilanResult.totalActif || 0,
   };
-  const passif = bilanData?.data?.passif || {
-    capitauxPropres: [],
-    dettes: [],
-    totalCapitauxPropres: 0,
-    totalDettes: 0,
-    totalPassif: 0,
+  const passif = {
+    capitauxPropres: passifData.capitaux || [],
+    dettes: [...(passifData.dettes || []), ...(passifData.tresorerie || [])],
+    totalCapitauxPropres: (passifData.capitaux || []).reduce((s, r) => s + (r.solde || 0), 0),
+    totalDettes: [...(passifData.dettes || []), ...(passifData.tresorerie || [])].reduce((s, r) => s + (r.solde || 0), 0),
+    totalPassif: bilanResult.totalPassif || 0,
   };
 
   const handleFilterChange = (e) => {
@@ -154,8 +162,8 @@ const BilanPage = () => {
                     ) : (
                       actif.actifImmobilise.map((item, index) => (
                         <tr key={index}>
-                          <td className="ps-4">{item.libelle}</td>
-                          <td className="text-end">{formatMoney(item.montant)}</td>
+                          <td className="ps-4">{item.compteLibelle || item.libelle}</td>
+                          <td className="text-end">{formatMoney(item.solde || item.montant)}</td>
                         </tr>
                       ))
                     )}
@@ -181,8 +189,8 @@ const BilanPage = () => {
                     ) : (
                       actif.actifCirculant.map((item, index) => (
                         <tr key={index}>
-                          <td className="ps-4">{item.libelle}</td>
-                          <td className="text-end">{formatMoney(item.montant)}</td>
+                          <td className="ps-4">{item.compteLibelle || item.libelle}</td>
+                          <td className="text-end">{formatMoney(item.solde || item.montant)}</td>
                         </tr>
                       ))
                     )}
@@ -234,8 +242,8 @@ const BilanPage = () => {
                     ) : (
                       passif.capitauxPropres.map((item, index) => (
                         <tr key={index}>
-                          <td className="ps-4">{item.libelle}</td>
-                          <td className="text-end">{formatMoney(item.montant)}</td>
+                          <td className="ps-4">{item.compteLibelle || item.libelle}</td>
+                          <td className="text-end">{formatMoney(item.solde || item.montant)}</td>
                         </tr>
                       ))
                     )}
@@ -261,8 +269,8 @@ const BilanPage = () => {
                     ) : (
                       passif.dettes.map((item, index) => (
                         <tr key={index}>
-                          <td className="ps-4">{item.libelle}</td>
-                          <td className="text-end">{formatMoney(item.montant)}</td>
+                          <td className="ps-4">{item.compteLibelle || item.libelle}</td>
+                          <td className="text-end">{formatMoney(item.solde || item.montant)}</td>
                         </tr>
                       ))
                     )}

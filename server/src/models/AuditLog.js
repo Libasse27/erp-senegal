@@ -45,10 +45,9 @@ const auditLogSchema = new mongoose.Schema(
   }
 );
 
-// Index pour recherche rapide
+// === INDEXES ===
 auditLogSchema.index({ user: 1, createdAt: -1 });
-auditLogSchema.index({ module: 1, action: 1 });
-auditLogSchema.index({ documentId: 1, documentModel: 1 });
+auditLogSchema.index({ action: 1, module: 1 });
 auditLogSchema.index({ createdAt: -1 });
 
 // TTL index - supprimer les logs apres 365 jours (optionnel)

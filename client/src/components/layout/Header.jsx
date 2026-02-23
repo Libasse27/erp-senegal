@@ -2,13 +2,12 @@ import React from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import Dropdown from 'react-bootstrap/Dropdown';
-import Badge from 'react-bootstrap/Badge';
 import Breadcrumb from 'react-bootstrap/Breadcrumb';
-import { FiMenu, FiBell, FiUser, FiLogOut, FiSettings } from 'react-icons/fi';
+import { FiMenu, FiUser, FiLogOut, FiSettings } from 'react-icons/fi';
 import { useSelector } from 'react-redux';
 import { toggleSidebar, selectPageTitle, selectBreadcrumbs } from '../../redux/slices/uiSlice';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNotifications } from '../../contexts/NotificationContext';
+import NotificationBell from './NotificationBell';
 
 const Header = () => {
   const dispatch = useDispatch();
@@ -16,7 +15,6 @@ const Header = () => {
   const pageTitle = useSelector(selectPageTitle);
   const breadcrumbs = useSelector(selectBreadcrumbs);
   const { user, logout } = useAuth();
-  const { unreadCount } = useNotifications();
 
   const handleLogout = async () => {
     await logout();
@@ -51,27 +49,7 @@ const Header = () => {
 
       <div className="d-flex align-items-center gap-3">
         {/* Notifications */}
-        <Dropdown align="end">
-          <Dropdown.Toggle variant="link" className="text-dark p-0 position-relative">
-            <FiBell size={20} />
-            {unreadCount > 0 && (
-              <Badge
-                bg="danger"
-                pill
-                className="position-absolute top-0 start-100 translate-middle"
-                style={{ fontSize: '0.6rem' }}
-              >
-                {unreadCount}
-              </Badge>
-            )}
-          </Dropdown.Toggle>
-          <Dropdown.Menu style={{ minWidth: '300px' }}>
-            <Dropdown.Header>Notifications</Dropdown.Header>
-            <Dropdown.Item className="text-muted text-center py-3">
-              Aucune nouvelle notification
-            </Dropdown.Item>
-          </Dropdown.Menu>
-        </Dropdown>
+        <NotificationBell />
 
         {/* User menu */}
         <Dropdown align="end">

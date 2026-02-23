@@ -174,12 +174,10 @@ const commandeSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
-// numero already indexed via unique: true
-commandeSchema.index({ client: 1 });
-commandeSchema.index({ statut: 1 });
-commandeSchema.index({ isActive: 1, createdAt: -1 });
+// numero already indexed via unique: true in schema definition
+commandeSchema.index({ client: 1, statut: 1 });
+commandeSchema.index({ statut: 1, createdAt: -1 });
 commandeSchema.index({ devis: 1 });
-commandeSchema.index({ commercial: 1 });
 
 // === VIRTUALS ===
 commandeSchema.virtual('isFullyDelivered').get(function () {

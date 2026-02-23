@@ -122,12 +122,11 @@ const stockMovementSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
-stockMovementSchema.index({ product: 1, date: -1 });
-stockMovementSchema.index({ warehouseSource: 1 });
-stockMovementSchema.index({ warehouseDestination: 1 });
-stockMovementSchema.index({ type: 1, date: -1 });
-stockMovementSchema.index({ isActive: 1, createdAt: -1 });
-stockMovementSchema.index({ documentType: 1, documentId: 1 });
+// reference already indexed via unique: true in schema definition
+stockMovementSchema.index({ product: 1, createdAt: -1 });
+stockMovementSchema.index({ warehouseSource: 1, createdAt: -1 });
+stockMovementSchema.index({ warehouseDestination: 1, createdAt: -1 });
+stockMovementSchema.index({ type: 1 });
 
 // === PRE-SAVE ===
 stockMovementSchema.pre('save', async function (next) {

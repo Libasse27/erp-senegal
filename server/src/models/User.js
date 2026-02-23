@@ -77,10 +77,12 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Index
-userSchema.index({ role: 1 });
-userSchema.index({ isActive: 1 });
+// === INDEXES ===
+// email already indexed via unique: true in schema definition
+userSchema.index({ role: 1, isActive: 1 });
+userSchema.index({ createdAt: -1 });
 userSchema.index({ firstName: 'text', lastName: 'text', email: 'text' });
+userSchema.index({ isActive: 1, createdAt: -1 });
 
 // Virtual: nom complet
 userSchema.virtual('fullName').get(function () {
@@ -95,9 +97,6 @@ userSchema.pre('save', async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
-
-// Index compose isActive + createdAt
-userSchema.index({ isActive: 1, createdAt: -1 });
 
 // Exclure les soft-deleted par defaut
 userSchema.pre(/^find/, function (next) {

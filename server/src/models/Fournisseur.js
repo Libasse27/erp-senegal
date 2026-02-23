@@ -157,14 +157,10 @@ const fournisseurSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
+// code already indexed via unique: true in schema definition
+fournisseurSchema.index({ email: 1 }, { sparse: true });
 fournisseurSchema.index({ isActive: 1, createdAt: -1 });
-fournisseurSchema.index({ ninea: 1 });
-fournisseurSchema.index({ category: 1 });
-fournisseurSchema.index({
-  raisonSociale: 'text',
-  email: 'text',
-  phone: 'text',
-});
+fournisseurSchema.index({ raisonSociale: 'text', email: 'text' });
 
 // === VIRTUALS ===
 fournisseurSchema.virtual('ratingMoyen').get(function () {
