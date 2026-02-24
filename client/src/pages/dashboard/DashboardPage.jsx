@@ -167,15 +167,15 @@ const DashboardPage = () => {
       <div className="page-header">
         <h1>Tableau de bord</h1>
         <div className="d-flex gap-2">
-          <Button as={Link} to="/devis/new" variant="outline-primary" size="sm">
+          <Button as={Link} to="/ventes/devis/nouveau" variant="outline-primary" size="sm">
             <FiPlus className="me-1" />
             Nouveau devis
           </Button>
-          <Button as={Link} to="/factures/new" variant="outline-primary" size="sm">
+          <Button as={Link} to="/ventes/factures/nouveau" variant="outline-primary" size="sm">
             <FiFileText className="me-1" />
             Nouvelle facture
           </Button>
-          <Button as={Link} to="/paiements/new" variant="primary" size="sm">
+          <Button as={Link} to="/paiements/nouveau" variant="primary" size="sm">
             <FiCreditCard className="me-1" />
             Nouveau paiement
           </Button>
@@ -333,7 +333,7 @@ const DashboardPage = () => {
               <div className="d-grid gap-2">
                 <Button
                   as={Link}
-                  to="/devis/new"
+                  to="/ventes/devis/nouveau"
                   variant="outline-primary"
                   className="text-start d-flex align-items-center"
                 >
@@ -342,7 +342,7 @@ const DashboardPage = () => {
                 </Button>
                 <Button
                   as={Link}
-                  to="/factures/new"
+                  to="/ventes/factures/nouveau"
                   variant="outline-primary"
                   className="text-start d-flex align-items-center"
                 >
@@ -351,7 +351,7 @@ const DashboardPage = () => {
                 </Button>
                 <Button
                   as={Link}
-                  to="/paiements/new"
+                  to="/paiements/nouveau"
                   variant="outline-success"
                   className="text-start d-flex align-items-center"
                 >
@@ -360,7 +360,7 @@ const DashboardPage = () => {
                 </Button>
                 <Button
                   as={Link}
-                  to="/clients/new"
+                  to="/clients/nouveau"
                   variant="outline-primary"
                   className="text-start d-flex align-items-center"
                 >
@@ -369,7 +369,7 @@ const DashboardPage = () => {
                 </Button>
                 <Button
                   as={Link}
-                  to="/produits/new"
+                  to="/produits/nouveau"
                   variant="outline-primary"
                   className="text-start d-flex align-items-center"
                 >
