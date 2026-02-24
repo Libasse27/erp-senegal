@@ -51,6 +51,7 @@ const setRefreshTokenCookie = (res, refreshToken) => {
     httpOnly: jwtConfig.cookie.httpOnly,
     secure: jwtConfig.cookie.secure,
     sameSite: jwtConfig.cookie.sameSite,
+    path: '/',
     maxAge: jwtConfig.cookie.expire * 24 * 60 * 60 * 1000, // jours -> ms
   });
 };
@@ -62,6 +63,7 @@ const setRefreshTokenCookie = (res, refreshToken) => {
 const clearRefreshTokenCookie = (res) => {
   res.cookie('refreshToken', '', {
     httpOnly: true,
+    path: '/',
     expires: new Date(0),
   });
 };

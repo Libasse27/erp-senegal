@@ -76,17 +76,6 @@ registerRoute(
   })
 );
 
-// Offline fallback
-self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('/offline.html') || caches.match(process.env.PUBLIC_URL + '/index.html');
-      })
-    );
-  }
-});
-
 // Listen for skip waiting message
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
