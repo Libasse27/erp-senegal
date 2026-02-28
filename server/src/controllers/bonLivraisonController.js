@@ -1,11 +1,13 @@
 const BonLivraison = require('../models/BonLivraison');
 const Commande = require('../models/Commande');
 const Facture = require('../models/Facture');
+const Product = require('../models/Product');
 const Stock = require('../models/Stock');
 const StockMovement = require('../models/StockMovement');
+const Warehouse = require('../models/Warehouse');
 const Company = require('../models/Company');
 const { generateBonLivraisonPDF } = require('../services/pdfService');
-const { notifyNewInvoice, createAndNotifyRole } = require('../services/notificationService');
+const { notifyNewInvoice, createAndNotifyRole, notifyStockAlert } = require('../services/notificationService');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
 
@@ -187,6 +189,18 @@ const validateBL = async (req, res, next) => {
         documentId: bl._id,
         createdBy: req.user._id,
       });
+
+      // Check stock alert threshold after decrement
+      const productDoc = await Product.findById(ligne.product).select('name code stockMinimum stockAlerte');
+      if (productDoc && stock.quantite <= (productDoc.stockAlerte || productDoc.stockMinimum || 0)) {
+        const warehouseDoc = await Warehouse.findById(ligne.warehouse).select('name code');
+        notifyStockAlert(
+          productDoc,
+          warehouseDoc || { _id: ligne.warehouse, name: 'Depot' },
+          stock.quantite,
+          productDoc.stockMinimum || productDoc.stockAlerte
+        );
+      }
     }
 
     // 2. Update commande delivery quantities
