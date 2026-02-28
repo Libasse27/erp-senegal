@@ -16,6 +16,8 @@ import {
   FiTruck,
   FiArrowLeft,
   FiDownload,
+  FiPrinter,
+  FiEye,
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../../hooks/usePageTitle';
@@ -26,11 +28,15 @@ import {
   useUpdateCommandeStatusMutation,
   useGenerateLivraisonMutation,
 } from '../../../redux/api/commandesApi';
+import usePdfActions from '../../../hooks/usePdfActions';
+import PdfPreviewModal from '../../../components/print/PdfPreviewModal';
 
 const statusColors = {
   brouillon: 'secondary',
   confirmee: 'primary',
   en_preparation: 'info',
+  en_cours: 'info',
+  partiellement_livree: 'warning',
   livree: 'success',
   annulee: 'danger',
 };
@@ -39,6 +45,8 @@ const statusLabels = {
   brouillon: 'Brouillon',
   confirmee: 'Confirmee',
   en_preparation: 'En preparation',
+  en_cours: 'En cours',
+  partiellement_livree: 'Partiellement livree',
   livree: 'Livree',
   annulee: 'Annulee',
 };
@@ -62,6 +70,8 @@ const CommandeDetailPage = () => {
   const [deleteCommande, { isLoading: isDeleting }] = useDeleteCommandeMutation();
   const [updateStatus, { isLoading: isUpdatingStatus }] = useUpdateCommandeStatusMutation();
   const [generateLivraison, { isLoading: isGenerating }] = useGenerateLivraisonMutation();
+
+  const { downloadPdf, printPdf, previewPdf, closePreview, previewUrl, isLoading: isPdfLoading } = usePdfActions();
 
   const handleDelete = async () => {
     try {
@@ -126,6 +136,10 @@ const CommandeDetailPage = () => {
     return { ht, tva, ttc: ht + tva };
   };
 
+  const statut = commande.statut || commande.status;
+  const pdfPath = `/commandes/${id}/pdf`;
+  const pdfFilename = `BC-${commande.numero || id}.pdf`;
+
   return (
     <>
       <div className="page-header d-flex justify-content-between align-items-center mb-4">
@@ -141,7 +155,7 @@ const CommandeDetailPage = () => {
           <h1 className="d-inline-block ms-2">Commande {commande.numero}</h1>
         </div>
         <div>
-          {commande.status === 'brouillon' && (
+          {statut === 'brouillon' && (
             <>
               <Button
                 variant="warning"
@@ -161,21 +175,43 @@ const CommandeDetailPage = () => {
             variant="info"
             className="me-2"
             onClick={() => {
-              setNewStatus(commande.status);
+              setNewStatus(statut);
               setStatusModalOpen(true);
             }}
           >
             Changer statut
           </Button>
-          {commande.status === 'confirmee' && (
+          {statut === 'confirmee' && (
             <Button variant="success" className="me-2" onClick={() => setLivraisonModalOpen(true)}>
               <FiTruck className="me-2" />
               Generer bon de livraison
             </Button>
           )}
-          <Button variant="secondary">
+          <Button
+            variant="outline-secondary"
+            className="me-2"
+            onClick={() => previewPdf(pdfPath)}
+            disabled={isPdfLoading}
+          >
+            <FiEye className="me-2" />
+            Apercu
+          </Button>
+          <Button
+            variant="outline-secondary"
+            className="me-2"
+            onClick={() => printPdf(pdfPath)}
+            disabled={isPdfLoading}
+          >
+            <FiPrinter className="me-2" />
+            Imprimer
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => downloadPdf(pdfPath, pdfFilename)}
+            disabled={isPdfLoading}
+          >
             <FiDownload className="me-2" />
-            Telecharger PDF
+            {isPdfLoading ? 'Chargement...' : 'Telecharger PDF'}
           </Button>
         </div>
       </div>
@@ -186,7 +222,7 @@ const CommandeDetailPage = () => {
             <Card.Header className="bg-white">
               <div className="d-flex justify-content-between align-items-center">
                 <h6 className="mb-0">Informations de la commande</h6>
-                <Badge bg={statusColors[commande.status]}>{statusLabels[commande.status]}</Badge>
+                <Badge bg={statusColors[statut] || 'secondary'}>{statusLabels[statut] || statut}</Badge>
               </div>
             </Card.Header>
             <Card.Body>
@@ -196,7 +232,7 @@ const CommandeDetailPage = () => {
                     <strong>Numero:</strong> {commande.numero}
                   </p>
                   <p className="mb-2">
-                    <strong>Date:</strong> {formatDate(commande.date)}
+                    <strong>Date:</strong> {formatDate(commande.dateCommande || commande.date)}
                   </p>
                   {commande.devis && (
                     <p className="mb-2">
@@ -237,20 +273,22 @@ const CommandeDetailPage = () => {
               <h6 className="mb-0">Client</h6>
             </Card.Header>
             <Card.Body>
-              {commande.client ? (
+              {commande.clientSnapshot ? (
                 <>
-                  <h6 className="mb-2">{commande.client.nom}</h6>
+                  <h6 className="mb-2">{commande.clientSnapshot.displayName}</h6>
+                  <p className="mb-1 small text-muted">
+                    <strong>Email:</strong> {commande.clientSnapshot.email || 'N/A'}
+                  </p>
+                  <p className="mb-1 small text-muted">
+                    <strong>Tel:</strong> {commande.clientSnapshot.phone || 'N/A'}
+                  </p>
+                </>
+              ) : commande.client ? (
+                <>
+                  <h6 className="mb-2">{commande.client.displayName || commande.client.nom}</h6>
                   <p className="mb-1 small text-muted">
                     <strong>Email:</strong> {commande.client.email || 'N/A'}
                   </p>
-                  <p className="mb-1 small text-muted">
-                    <strong>Tel:</strong> {commande.client.telephone || 'N/A'}
-                  </p>
-                  {commande.client.adresse && (
-                    <p className="mb-0 small text-muted">
-                      <strong>Adresse:</strong> {commande.client.adresse}
-                    </p>
-                  )}
                 </>
               ) : (
                 <p className="text-muted mb-0">Aucun client associe</p>
@@ -284,10 +322,8 @@ const CommandeDetailPage = () => {
                   <tr key={index}>
                     <td>
                       {ligne.designation}
-                      {ligne.product && (
-                        <small className="text-muted d-block">
-                          Ref: {ligne.product.reference}
-                        </small>
+                      {ligne.reference && (
+                        <small className="text-muted d-block">Ref: {ligne.reference}</small>
                       )}
                     </td>
                     <td className="text-center">{ligne.quantite}</td>
@@ -365,7 +401,8 @@ const CommandeDetailPage = () => {
             <Form.Select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
               <option value="brouillon">Brouillon</option>
               <option value="confirmee">Confirmee</option>
-              <option value="en_preparation">En preparation</option>
+              <option value="en_cours">En cours</option>
+              <option value="partiellement_livree">Partiellement livree</option>
               <option value="livree">Livree</option>
               <option value="annulee">Annulee</option>
             </Form.Select>
@@ -397,6 +434,15 @@ const CommandeDetailPage = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <PdfPreviewModal
+        show={!!previewUrl}
+        onHide={closePreview}
+        blobUrl={previewUrl}
+        documentTitle={commande.numero}
+        onDownload={() => downloadPdf(pdfPath, pdfFilename)}
+        onPrint={() => printPdf(pdfPath)}
+      />
     </>
   );
 };

@@ -3,6 +3,8 @@ const Commande = require('../models/Commande');
 const Facture = require('../models/Facture');
 const Stock = require('../models/Stock');
 const StockMovement = require('../models/StockMovement');
+const Company = require('../models/Company');
+const { generateBonLivraisonPDF } = require('../services/pdfService');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
 
@@ -271,9 +273,42 @@ const validateBL = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Generate bon de livraison PDF
+ * @route   GET /api/bons-livraison/:id/pdf
+ * @access  Private
+ */
+const getBonLivraisonPDF = async (req, res, next) => {
+  try {
+    const bl = await BonLivraison.findById(req.params.id)
+      .populate('commande', 'numero statut')
+      .populate('client', 'raisonSociale firstName lastName code')
+      .populate('lignes.product', 'name code');
+
+    if (!bl) {
+      return next(new AppError('Bon de livraison non trouve.', 404));
+    }
+
+    const company = await Company.findOne({ isActive: true });
+    if (!company) {
+      return next(new AppError('Informations entreprise non trouvees.', 404));
+    }
+
+    const pdfBuffer = await generateBonLivraisonPDF(bl, company);
+
+    const filename = `BL-${bl.numero}`;
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="${filename}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getBonsLivraison,
   getBonLivraison,
   createBonLivraison,
   validateBL,
+  getBonLivraisonPDF,
 };

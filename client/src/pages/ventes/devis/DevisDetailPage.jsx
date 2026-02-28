@@ -16,6 +16,8 @@ import {
   FiSend,
   FiDownload,
   FiArrowLeft,
+  FiPrinter,
+  FiEye,
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../../hooks/usePageTitle';
@@ -26,6 +28,8 @@ import {
   useConvertDevisMutation,
   useSendDevisMutation,
 } from '../../../redux/api/devisApi';
+import usePdfActions from '../../../hooks/usePdfActions';
+import PdfPreviewModal from '../../../components/print/PdfPreviewModal';
 
 const statusColors = {
   brouillon: 'secondary',
@@ -63,6 +67,8 @@ const DevisDetailPage = () => {
   const [convertDevis, { isLoading: isConverting }] = useConvertDevisMutation();
   const [sendDevis, { isLoading: isSending }] = useSendDevisMutation();
 
+  const { downloadPdf, printPdf, previewPdf, closePreview, previewUrl, isLoading: isPdfLoading } = usePdfActions();
+
   const handleDelete = async () => {
     try {
       await deleteDevis(id).unwrap();
@@ -91,7 +97,7 @@ const DevisDetailPage = () => {
       await sendDevis(id).unwrap();
       toast.success('Devis envoye au client avec succes');
     } catch (err) {
-      toast.error(err?.data?.message || 'Erreur lors de l\'envoi');
+      toast.error(err?.data?.message || "Erreur lors de l'envoi");
     }
   };
 
@@ -124,6 +130,10 @@ const DevisDetailPage = () => {
     return { ht, tva, ttc: ht + tva };
   };
 
+  const statut = devis.statut || devis.status;
+  const pdfPath = `/devis/${id}/pdf`;
+  const pdfFilename = `${devis.numero || 'devis'}.pdf`;
+
   return (
     <>
       <div className="page-header d-flex justify-content-between align-items-center mb-4">
@@ -139,7 +149,7 @@ const DevisDetailPage = () => {
           <h1 className="d-inline-block ms-2">Devis {devis.numero}</h1>
         </div>
         <div>
-          {devis.status === 'brouillon' && (
+          {statut === 'brouillon' && (
             <>
               <Button
                 variant="warning"
@@ -155,7 +165,7 @@ const DevisDetailPage = () => {
               </Button>
             </>
           )}
-          {(devis.status === 'brouillon' || devis.status === 'accepte') && (
+          {(statut === 'brouillon' || statut === 'accepte') && (
             <Button
               variant="info"
               className="me-2"
@@ -166,15 +176,37 @@ const DevisDetailPage = () => {
               {isSending ? 'Envoi...' : 'Envoyer'}
             </Button>
           )}
-          {devis.status === 'accepte' && (
+          {statut === 'accepte' && (
             <Button variant="success" className="me-2" onClick={() => setConvertModalOpen(true)}>
               <FiRefreshCw className="me-2" />
               Convertir en commande
             </Button>
           )}
-          <Button variant="secondary">
+          <Button
+            variant="outline-secondary"
+            className="me-2"
+            onClick={() => previewPdf(pdfPath)}
+            disabled={isPdfLoading}
+          >
+            <FiEye className="me-2" />
+            Apercu
+          </Button>
+          <Button
+            variant="outline-secondary"
+            className="me-2"
+            onClick={() => printPdf(pdfPath)}
+            disabled={isPdfLoading}
+          >
+            <FiPrinter className="me-2" />
+            Imprimer
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => downloadPdf(pdfPath, pdfFilename)}
+            disabled={isPdfLoading}
+          >
             <FiDownload className="me-2" />
-            Telecharger PDF
+            {isPdfLoading ? 'Chargement...' : 'Telecharger PDF'}
           </Button>
         </div>
       </div>
@@ -185,7 +217,7 @@ const DevisDetailPage = () => {
             <Card.Header className="bg-white">
               <div className="d-flex justify-content-between align-items-center">
                 <h6 className="mb-0">Informations du devis</h6>
-                <Badge bg={statusColors[devis.status]}>{statusLabels[devis.status]}</Badge>
+                <Badge bg={statusColors[statut]}>{statusLabels[statut]}</Badge>
               </div>
             </Card.Header>
             <Card.Body>
@@ -195,7 +227,7 @@ const DevisDetailPage = () => {
                     <strong>Numero:</strong> {devis.numero}
                   </p>
                   <p className="mb-2">
-                    <strong>Date:</strong> {formatDate(devis.date)}
+                    <strong>Date:</strong> {formatDate(devis.dateDevis || devis.date)}
                   </p>
                   <p className="mb-2">
                     <strong>Date de validite:</strong> {formatDate(devis.dateValidite)}
@@ -226,20 +258,22 @@ const DevisDetailPage = () => {
               <h6 className="mb-0">Client</h6>
             </Card.Header>
             <Card.Body>
-              {devis.client ? (
+              {devis.clientSnapshot ? (
                 <>
-                  <h6 className="mb-2">{devis.client.nom}</h6>
+                  <h6 className="mb-2">{devis.clientSnapshot.displayName}</h6>
+                  <p className="mb-1 small text-muted">
+                    <strong>Email:</strong> {devis.clientSnapshot.email || 'N/A'}
+                  </p>
+                  <p className="mb-1 small text-muted">
+                    <strong>Tel:</strong> {devis.clientSnapshot.phone || 'N/A'}
+                  </p>
+                </>
+              ) : devis.client ? (
+                <>
+                  <h6 className="mb-2">{devis.client.displayName || devis.client.nom}</h6>
                   <p className="mb-1 small text-muted">
                     <strong>Email:</strong> {devis.client.email || 'N/A'}
                   </p>
-                  <p className="mb-1 small text-muted">
-                    <strong>Tel:</strong> {devis.client.telephone || 'N/A'}
-                  </p>
-                  {devis.client.adresse && (
-                    <p className="mb-0 small text-muted">
-                      <strong>Adresse:</strong> {devis.client.adresse}
-                    </p>
-                  )}
                 </>
               ) : (
                 <p className="text-muted mb-0">Aucun client associe</p>
@@ -273,10 +307,8 @@ const DevisDetailPage = () => {
                   <tr key={index}>
                     <td>
                       {ligne.designation}
-                      {ligne.product && (
-                        <small className="text-muted d-block">
-                          Ref: {ligne.product.reference}
-                        </small>
+                      {ligne.reference && (
+                        <small className="text-muted d-block">Ref: {ligne.reference}</small>
                       )}
                     </td>
                     <td className="text-center">{ligne.quantite}</td>
@@ -360,6 +392,15 @@ const DevisDetailPage = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <PdfPreviewModal
+        show={!!previewUrl}
+        onHide={closePreview}
+        blobUrl={previewUrl}
+        documentTitle={devis.numero}
+        onDownload={() => downloadPdf(pdfPath, pdfFilename)}
+        onPrint={() => printPdf(pdfPath)}
+      />
     </>
   );
 };

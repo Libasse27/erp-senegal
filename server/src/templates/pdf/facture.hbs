@@ -192,6 +192,35 @@
       color: #777;
       text-align: center;
     }
+    .company-logo {
+      max-height: 60px;
+      max-width: 160px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .amount-words {
+      font-style: italic;
+      font-size: 10px;
+      color: #555;
+      margin-bottom: 15px;
+      text-align: right;
+    }
+    .signature-section {
+      margin-top: 25px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .signature-box {
+      width: 200px;
+      text-align: center;
+    }
+    .signature-label {
+      font-size: 10px;
+      color: #555;
+      border-top: 1px solid #ccc;
+      padding-top: 5px;
+      margin-top: 50px;
+    }
   </style>
 </head>
 <body>
@@ -199,6 +228,7 @@
     <!-- Header -->
     <div class="header">
       <div class="company-info">
+        {{#if company.logo}}<img src="{{company.logo}}" alt="Logo" class="company-logo" />{{/if}}
         <div class="company-name">{{company.name}}</div>
         <div class="company-details">
           {{#if company.legalForm}}<p>{{company.legalForm}}</p>{{/if}}
@@ -284,8 +314,8 @@
         </tr>
         {{#if facture.remiseGlobale}}
         <tr>
-          <td class="label">Remise globale ({{facture.remiseGlobale}}%) :</td>
-          <td class="value">Appliquee</td>
+          <td class="label">Remise ({{facture.remiseGlobale}}%) :</td>
+          <td class="value">-{{formatMontant (multiply facture.totalHT (multiply facture.remiseGlobale 0.01))}} FCFA</td>
         </tr>
         {{/if}}
         <tr>
@@ -297,6 +327,10 @@
           <td class="value">{{formatMontant facture.totalTTC}} FCFA</td>
         </tr>
       </table>
+    </div>
+
+    <div class="amount-words">
+      Arrete la presente facture a la somme de : <strong>{{numberToWords facture.totalTTC}}</strong>
     </div>
 
     {{#if facture.montantPaye}}
@@ -345,6 +379,16 @@
     <!-- Legal mentions -->
     <div class="legal-mentions">
       {{facture.mentionsLegales}}
+    </div>
+
+    <!-- Signature -->
+    <div class="signature-section">
+      <div class="signature-box">
+        <div class="signature-label">Cachet et signature de l'entreprise</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-label">Bon pour accord (client)</div>
+      </div>
     </div>
 
     <!-- Footer -->

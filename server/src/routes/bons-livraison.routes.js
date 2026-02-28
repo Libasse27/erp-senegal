@@ -6,6 +6,7 @@ const {
   getBonLivraison,
   createBonLivraison,
   validateBL,
+  getBonLivraisonPDF,
 } = require('../controllers/bonLivraisonController');
 const { protect } = require('../middlewares/auth');
 const { authorize } = require('../middlewares/rbac');
@@ -21,6 +22,7 @@ router.use(protect);
 
 // CRUD
 router.get('/', authorize('bons_livraison:read'), getBonsLivraison);
+router.get('/:id/pdf', authorize('bons_livraison:read'), getBonLivraisonPDF);
 router.get('/:id', authorize('bons_livraison:read'), getBonLivraison);
 router.post(
   '/',

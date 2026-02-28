@@ -39,6 +39,9 @@ const DevisDetailPage = lazy(() => import('./pages/ventes/devis/DevisDetailPage'
 const CommandesListPage = lazy(() => import('./pages/ventes/commandes/CommandesListPage'));
 const CommandeDetailPage = lazy(() => import('./pages/ventes/commandes/CommandeDetailPage'));
 
+// Ventes - Bons de livraison
+const BonLivraisonDetailPage = lazy(() => import('./pages/ventes/bons-livraison/BonLivraisonDetailPage'));
+
 // Ventes - Factures
 const FacturesListPage = lazy(() => import('./pages/ventes/factures/FacturesListPage'));
 const FactureFormPage = lazy(() => import('./pages/ventes/factures/FactureFormPage'));
@@ -129,6 +132,9 @@ const AppRoutes = () => {
           {/* Ventes - Commandes */}
           <Route path="/ventes/commandes" element={<CommandesListPage />} />
           <Route path="/ventes/commandes/:id" element={<CommandeDetailPage />} />
+
+          {/* Ventes - Bons de livraison */}
+          <Route path="/ventes/bons-livraison/:id" element={<BonLivraisonDetailPage />} />
 
           {/* Ventes - Factures */}
           <Route path="/ventes/factures" element={<FacturesListPage />} />

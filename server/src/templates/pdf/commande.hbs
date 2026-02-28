@@ -19,13 +19,19 @@
       align-items: flex-start;
       margin-bottom: 20px;
       padding-bottom: 15px;
-      border-bottom: 3px solid #059669;
+      border-bottom: 3px solid #7c3aed;
     }
     .company-info { flex: 1; }
+    .company-logo {
+      max-height: 60px;
+      max-width: 160px;
+      margin-bottom: 8px;
+      display: block;
+    }
     .company-name {
       font-size: 20px;
       font-weight: bold;
-      color: #059669;
+      color: #7c3aed;
       margin-bottom: 5px;
     }
     .company-details { font-size: 10px; color: #555; }
@@ -36,7 +42,7 @@
     .doc-title { text-align: right; flex: 0 0 auto; }
     .doc-title h1 {
       font-size: 24px;
-      color: #059669;
+      color: #7c3aed;
       margin-bottom: 5px;
     }
     .doc-number {
@@ -50,28 +56,31 @@
       color: #555;
     }
     .doc-dates p { margin-bottom: 2px; }
-    .validity-badge {
+    .statut-badge {
       display: inline-block;
-      background-color: #d1fae5;
-      color: #059669;
-      padding: 3px 8px;
+      padding: 3px 10px;
       border-radius: 3px;
       font-size: 9px;
       font-weight: bold;
-      margin-top: 5px;
+      margin-top: 6px;
+      background-color: #ede9fe;
+      color: #7c3aed;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     /* Client section */
     .client-section {
       margin-bottom: 20px;
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
+      gap: 15px;
     }
     .client-box {
       border: 1px solid #ddd;
       border-radius: 4px;
       padding: 12px 15px;
-      width: 280px;
+      flex: 1;
       background-color: #f9fafb;
     }
     .client-box-title {
@@ -97,7 +106,7 @@
       margin-bottom: 20px;
     }
     .items-table thead th {
-      background-color: #059669;
+      background-color: #7c3aed;
       color: white;
       padding: 8px 10px;
       text-align: left;
@@ -121,18 +130,52 @@
     .totals-section {
       display: flex;
       justify-content: flex-end;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
     .totals-table { width: 280px; border-collapse: collapse; }
     .totals-table td { padding: 5px 10px; font-size: 11px; }
     .totals-table .label { text-align: right; color: #555; }
     .totals-table .value { text-align: right; font-weight: 600; }
     .totals-table .total-row td {
-      border-top: 2px solid #059669;
+      border-top: 2px solid #7c3aed;
       font-size: 14px;
       font-weight: bold;
-      color: #059669;
+      color: #7c3aed;
       padding-top: 8px;
+    }
+    .amount-words {
+      font-style: italic;
+      font-size: 10px;
+      color: #555;
+      margin-bottom: 20px;
+      text-align: right;
+    }
+
+    /* Accord box */
+    .accord-section {
+      margin-top: 30px;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .accord-box {
+      flex: 1;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 12px 15px;
+      background-color: #faf5ff;
+    }
+    .accord-box-title {
+      font-size: 10px;
+      font-weight: bold;
+      color: #7c3aed;
+      margin-bottom: 40px;
+    }
+    .accord-line {
+      border-top: 1px solid #ccc;
+      padding-top: 5px;
+      font-size: 9px;
+      color: #555;
     }
 
     /* Conditions */
@@ -160,35 +203,6 @@
       font-size: 8px;
       color: #999;
     }
-    .signature-section {
-      margin-top: 30px;
-      display: flex;
-      justify-content: space-between;
-    }
-    .signature-box {
-      width: 200px;
-      text-align: center;
-    }
-    .signature-label {
-      font-size: 10px;
-      color: #555;
-      border-top: 1px solid #ccc;
-      padding-top: 5px;
-      margin-top: 50px;
-    }
-    .company-logo {
-      max-height: 60px;
-      max-width: 160px;
-      margin-bottom: 8px;
-      display: block;
-    }
-    .amount-words {
-      font-style: italic;
-      font-size: 10px;
-      color: #555;
-      margin-bottom: 15px;
-      text-align: right;
-    }
   </style>
 </head>
 <body>
@@ -196,7 +210,9 @@
     <!-- Header -->
     <div class="header">
       <div class="company-info">
-        {{#if company.logo}}<img src="{{company.logo}}" alt="Logo" class="company-logo" />{{/if}}
+        {{#if company.logo}}
+        <img src="{{company.logo}}" alt="Logo" class="company-logo" />
+        {{/if}}
         <div class="company-name">{{company.name}}</div>
         <div class="company-details">
           {{#if company.legalForm}}<p>{{company.legalForm}}</p>{{/if}}
@@ -211,29 +227,35 @@
         </div>
       </div>
       <div class="doc-title">
-        <h1>DEVIS</h1>
-        <div class="doc-number">N° {{devis.numero}}</div>
+        <h1>BON DE COMMANDE</h1>
+        <div class="doc-number">N° {{commande.numero}}</div>
         <div class="doc-dates">
-          <p>Date: {{formatDate devis.dateDevis}}</p>
-          <p>Valide jusqu'au: {{formatDate devis.dateValidite}}</p>
+          <p>Date: {{formatDate commande.dateCommande}}</p>
+          {{#if commande.dateLivraisonPrevue}}<p>Livraison prevue: {{formatDate commande.dateLivraisonPrevue}}</p>{{/if}}
         </div>
-        <div class="validity-badge">Valable 30 jours</div>
+        <div class="statut-badge">{{commande.statut}}</div>
       </div>
     </div>
 
     <!-- Client -->
     <div class="client-section">
       <div class="client-box">
-        <div class="client-box-title">Destinataire</div>
-        <div class="client-name">{{devis.clientSnapshot.displayName}}</div>
+        <div class="client-box-title">Client</div>
+        <div class="client-name">{{commande.clientSnapshot.displayName}}</div>
         <div class="client-details">
-          {{#if devis.clientSnapshot.address.street}}<p>{{devis.clientSnapshot.address.street}}</p>{{/if}}
-          {{#if devis.clientSnapshot.address.city}}<p>{{devis.clientSnapshot.address.city}}{{#if devis.clientSnapshot.address.region}}, {{devis.clientSnapshot.address.region}}{{/if}}</p>{{/if}}
-          {{#if devis.clientSnapshot.phone}}<p>Tel: {{devis.clientSnapshot.phone}}</p>{{/if}}
-          {{#if devis.clientSnapshot.email}}<p>{{devis.clientSnapshot.email}}</p>{{/if}}
-          {{#if devis.clientSnapshot.ninea}}<p>NINEA: {{devis.clientSnapshot.ninea}}</p>{{/if}}
+          {{#if commande.clientSnapshot.address.street}}<p>{{commande.clientSnapshot.address.street}}</p>{{/if}}
+          {{#if commande.clientSnapshot.address.city}}<p>{{commande.clientSnapshot.address.city}}{{#if commande.clientSnapshot.address.region}}, {{commande.clientSnapshot.address.region}}{{/if}}</p>{{/if}}
+          {{#if commande.clientSnapshot.phone}}<p>Tel: {{commande.clientSnapshot.phone}}</p>{{/if}}
+          {{#if commande.clientSnapshot.email}}<p>{{commande.clientSnapshot.email}}</p>{{/if}}
+          {{#if commande.clientSnapshot.ninea}}<p>NINEA: {{commande.clientSnapshot.ninea}}</p>{{/if}}
         </div>
       </div>
+      {{#if commande.devis}}
+      <div class="client-box">
+        <div class="client-box-title">Reference devis</div>
+        <div class="client-name">{{commande.devis.numero}}</div>
+      </div>
+      {{/if}}
     </div>
 
     <!-- Items table -->
@@ -243,7 +265,8 @@
           <th style="width: 30px;">N°</th>
           <th>Designation</th>
           <th style="width: 50px;" class="text-center">Ref</th>
-          <th style="width: 40px;" class="text-center">Qte</th>
+          <th style="width: 50px;" class="text-center">Qte</th>
+          <th style="width: 50px;" class="text-center">Livree</th>
           <th style="width: 45px;" class="text-center">Unite</th>
           <th style="width: 80px;" class="text-right">PU HT</th>
           <th style="width: 45px;" class="text-center">Rem%</th>
@@ -252,12 +275,13 @@
         </tr>
       </thead>
       <tbody>
-        {{#each devis.lignes}}
+        {{#each commande.lignes}}
         <tr>
           <td class="text-center">{{inc @index}}</td>
           <td>{{this.designation}}</td>
           <td class="text-center">{{this.reference}}</td>
           <td class="text-center">{{this.quantite}}</td>
+          <td class="text-center">{{#if this.quantiteLivree}}{{this.quantiteLivree}}{{else}}-{{/if}}</td>
           <td class="text-center">{{this.unite}}</td>
           <td class="text-right">{{formatMontant this.prixUnitaire}}</td>
           <td class="text-center">{{#if this.remise}}{{this.remise}}%{{else}}-{{/if}}</td>
@@ -273,52 +297,53 @@
       <table class="totals-table">
         <tr>
           <td class="label">Total HT :</td>
-          <td class="value">{{formatMontant devis.totalHT}} FCFA</td>
+          <td class="value">{{formatMontant commande.totalHT}} FCFA</td>
         </tr>
-        {{#if devis.remiseGlobale}}
+        {{#if commande.remiseGlobale}}
         <tr>
-          <td class="label">Remise ({{devis.remiseGlobale}}%) :</td>
-          <td class="value">-{{formatMontant (multiply devis.totalHT (multiply devis.remiseGlobale 0.01))}} FCFA</td>
+          <td class="label">Remise ({{commande.remiseGlobale}}%) :</td>
+          <td class="value">-{{formatMontant (multiply commande.totalHT (multiply commande.remiseGlobale 0.01))}} FCFA</td>
         </tr>
         {{/if}}
         <tr>
           <td class="label">TVA (18%) :</td>
-          <td class="value">{{formatMontant devis.totalTVA}} FCFA</td>
+          <td class="value">{{formatMontant commande.totalTVA}} FCFA</td>
         </tr>
         <tr class="total-row">
           <td class="label">Total TTC :</td>
-          <td class="value">{{formatMontant devis.totalTTC}} FCFA</td>
+          <td class="value">{{formatMontant commande.totalTTC}} FCFA</td>
         </tr>
       </table>
     </div>
 
     <div class="amount-words">
-      Arrete le present devis a la somme de : <strong>{{numberToWords devis.totalTTC}}</strong>
+      Arrete la presente commande a la somme de : <strong>{{numberToWords commande.totalTTC}}</strong>
     </div>
 
     <!-- Conditions -->
-    {{#if devis.conditionsPaiement}}
+    {{#if commande.conditionsPaiement}}
     <div class="conditions">
       <div class="conditions-title">Conditions de paiement</div>
-      <div class="conditions-text">{{devis.conditionsPaiement}}</div>
+      <div class="conditions-text">{{commande.conditionsPaiement}}</div>
     </div>
     {{/if}}
 
-    <!-- Notes -->
-    {{#if devis.notes}}
+    {{#if commande.notes}}
     <div class="conditions" style="margin-top: 10px;">
       <div class="conditions-title">Notes</div>
-      <div class="conditions-text">{{devis.notes}}</div>
+      <div class="conditions-text">{{commande.notes}}</div>
     </div>
     {{/if}}
 
-    <!-- Signature -->
-    <div class="signature-section">
-      <div class="signature-box">
-        <div class="signature-label">Signature de l'entreprise</div>
+    <!-- Bon pour accord -->
+    <div class="accord-section">
+      <div class="accord-box">
+        <div class="accord-box-title">Bon pour accord — Le client</div>
+        <div class="accord-line">Date et signature</div>
       </div>
-      <div class="signature-box">
-        <div class="signature-label">Bon pour accord (client)</div>
+      <div class="accord-box">
+        <div class="accord-box-title">Etabli par — {{company.name}}</div>
+        <div class="accord-line">Cachet et signature</div>
       </div>
     </div>
 

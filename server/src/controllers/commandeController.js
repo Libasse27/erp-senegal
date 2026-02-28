@@ -1,6 +1,8 @@
 const Commande = require('../models/Commande');
 const BonLivraison = require('../models/BonLivraison');
 const Client = require('../models/Client');
+const Company = require('../models/Company');
+const { generateCommandePDF } = require('../services/pdfService');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
 
@@ -290,6 +292,39 @@ const generateBL = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Generate commande PDF
+ * @route   GET /api/commandes/:id/pdf
+ * @access  Private
+ */
+const getCommandePDF = async (req, res, next) => {
+  try {
+    const commande = await Commande.findById(req.params.id)
+      .populate('client', 'raisonSociale firstName lastName code')
+      .populate('commercial', 'firstName lastName')
+      .populate('devis', 'numero')
+      .populate('lignes.product', 'name code');
+
+    if (!commande) {
+      return next(new AppError('Commande non trouvee.', 404));
+    }
+
+    const company = await Company.findOne({ isActive: true });
+    if (!company) {
+      return next(new AppError('Informations entreprise non trouvees.', 404));
+    }
+
+    const pdfBuffer = await generateCommandePDF(commande, company);
+
+    const filename = `BC-${commande.numero}`;
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="${filename}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getCommandes,
   getCommande,
@@ -298,4 +333,5 @@ module.exports = {
   deleteCommande,
   changeStatut,
   generateBL,
+  getCommandePDF,
 };

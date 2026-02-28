@@ -9,6 +9,7 @@ const {
   deleteCommande,
   changeStatut,
   generateBL,
+  getCommandePDF,
 } = require('../controllers/commandeController');
 const { protect } = require('../middlewares/auth');
 const { authorize } = require('../middlewares/rbac');
@@ -26,6 +27,7 @@ router.use(protect);
 
 // CRUD
 router.get('/', authorize('commandes:read'), getCommandes);
+router.get('/:id/pdf', authorize('commandes:read'), getCommandePDF);
 router.get('/:id', authorize('commandes:read'), getCommande);
 router.post(
   '/',

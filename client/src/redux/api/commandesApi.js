@@ -64,6 +64,9 @@ export const commandesApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Commande', id: 'LIST' }],
     }),
+    getCommandePDF: builder.query({
+      query: (id) => `/commandes/${id}/pdf`,
+    }),
   }),
 });
 
@@ -75,4 +78,5 @@ export const {
   useUpdateCommandeStatusMutation,
   useGenerateLivraisonMutation,
   useDeleteCommandeMutation,
+  useGetCommandePDFQuery,
 } = commandesApi;

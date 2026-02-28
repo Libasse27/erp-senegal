@@ -17,6 +17,8 @@ import {
   FiArrowLeft,
   FiDownload,
   FiFileText,
+  FiPrinter,
+  FiEye,
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../../hooks/usePageTitle';
@@ -27,6 +29,8 @@ import {
   useValidateFactureMutation,
   useSendFactureMutation,
 } from '../../../redux/api/facturesApi';
+import usePdfActions from '../../../hooks/usePdfActions';
+import PdfPreviewModal from '../../../components/print/PdfPreviewModal';
 
 const statusColors = {
   brouillon: 'secondary',
@@ -64,6 +68,8 @@ const FactureDetailPage = () => {
   const [validateFacture, { isLoading: isValidating }] = useValidateFactureMutation();
   const [sendFacture, { isLoading: isSending }] = useSendFactureMutation();
 
+  const { downloadPdf, printPdf, previewPdf, closePreview, previewUrl, isLoading: isPdfLoading } = usePdfActions();
+
   const handleDelete = async () => {
     try {
       await deleteFacture(id).unwrap();
@@ -89,7 +95,7 @@ const FactureDetailPage = () => {
       await sendFacture(id).unwrap();
       toast.success('Facture envoyee au client avec succes');
     } catch (err) {
-      toast.error(err?.data?.message || 'Erreur lors de l\'envoi');
+      toast.error(err?.data?.message || "Erreur lors de l'envoi");
     }
   };
 
@@ -124,6 +130,8 @@ const FactureDetailPage = () => {
 
   const montantPaye = facture.montantPaye || 0;
   const resteAPayer = (facture.totalTTC || 0) - montantPaye;
+  const pdfPath = `/factures/${id}/pdf`;
+  const pdfFilename = `${facture.numero || 'facture'}.pdf`;
 
   return (
     <>
@@ -140,7 +148,7 @@ const FactureDetailPage = () => {
           <h1 className="d-inline-block ms-2">Facture {facture.numero}</h1>
         </div>
         <div>
-          {facture.status === 'brouillon' && (
+          {facture.statut === 'brouillon' && (
             <>
               <Button
                 variant="warning"
@@ -164,7 +172,7 @@ const FactureDetailPage = () => {
               </Button>
             </>
           )}
-          {(facture.status === 'validee' || facture.status === 'envoyee') && (
+          {(facture.statut === 'validee' || facture.statut === 'envoyee') && (
             <Button
               variant="info"
               className="me-2"
@@ -175,7 +183,7 @@ const FactureDetailPage = () => {
               {isSending ? 'Envoi...' : 'Envoyer'}
             </Button>
           )}
-          {facture.status !== 'brouillon' && facture.status !== 'annulee' && (
+          {facture.statut !== 'brouillon' && facture.statut !== 'annulee' && (
             <Button
               variant="warning"
               className="me-2"
@@ -185,9 +193,31 @@ const FactureDetailPage = () => {
               Creer avoir
             </Button>
           )}
-          <Button variant="secondary">
+          <Button
+            variant="outline-secondary"
+            className="me-2"
+            onClick={() => previewPdf(pdfPath)}
+            disabled={isPdfLoading}
+          >
+            <FiEye className="me-2" />
+            Apercu
+          </Button>
+          <Button
+            variant="outline-secondary"
+            className="me-2"
+            onClick={() => printPdf(pdfPath)}
+            disabled={isPdfLoading}
+          >
+            <FiPrinter className="me-2" />
+            Imprimer
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => downloadPdf(pdfPath, pdfFilename)}
+            disabled={isPdfLoading}
+          >
             <FiDownload className="me-2" />
-            Telecharger PDF
+            {isPdfLoading ? 'Chargement...' : 'Telecharger PDF'}
           </Button>
         </div>
       </div>
@@ -198,7 +228,7 @@ const FactureDetailPage = () => {
             <Card.Header className="bg-white">
               <div className="d-flex justify-content-between align-items-center">
                 <h6 className="mb-0">Informations de la facture</h6>
-                <Badge bg={statusColors[facture.status]}>{statusLabels[facture.status]}</Badge>
+                <Badge bg={statusColors[facture.statut]}>{statusLabels[facture.statut]}</Badge>
               </div>
             </Card.Header>
             <Card.Body>
@@ -208,7 +238,7 @@ const FactureDetailPage = () => {
                     <strong>Numero:</strong> {facture.numero}
                   </p>
                   <p className="mb-2">
-                    <strong>Date:</strong> {formatDate(facture.date)}
+                    <strong>Date:</strong> {formatDate(facture.dateFacture || facture.date)}
                   </p>
                   <p className="mb-2">
                     <strong>Date d'echeance:</strong> {formatDate(facture.dateEcheance)}
@@ -239,20 +269,22 @@ const FactureDetailPage = () => {
               <h6 className="mb-0">Client</h6>
             </Card.Header>
             <Card.Body>
-              {facture.client ? (
+              {facture.clientSnapshot ? (
                 <>
-                  <h6 className="mb-2">{facture.client.nom}</h6>
+                  <h6 className="mb-2">{facture.clientSnapshot.displayName}</h6>
+                  <p className="mb-1 small text-muted">
+                    <strong>Email:</strong> {facture.clientSnapshot.email || 'N/A'}
+                  </p>
+                  <p className="mb-1 small text-muted">
+                    <strong>Tel:</strong> {facture.clientSnapshot.phone || 'N/A'}
+                  </p>
+                </>
+              ) : facture.client ? (
+                <>
+                  <h6 className="mb-2">{facture.client.displayName || facture.client.nom}</h6>
                   <p className="mb-1 small text-muted">
                     <strong>Email:</strong> {facture.client.email || 'N/A'}
                   </p>
-                  <p className="mb-1 small text-muted">
-                    <strong>Tel:</strong> {facture.client.telephone || 'N/A'}
-                  </p>
-                  {facture.client.adresse && (
-                    <p className="mb-0 small text-muted">
-                      <strong>Adresse:</strong> {facture.client.adresse}
-                    </p>
-                  )}
                 </>
               ) : (
                 <p className="text-muted mb-0">Aucun client associe</p>
@@ -286,10 +318,8 @@ const FactureDetailPage = () => {
                   <tr key={index}>
                     <td>
                       {ligne.designation}
-                      {ligne.product && (
-                        <small className="text-muted d-block">
-                          Ref: {ligne.product.reference}
-                        </small>
+                      {ligne.reference && (
+                        <small className="text-muted d-block">Ref: {ligne.reference}</small>
                       )}
                     </td>
                     <td className="text-center">{ligne.quantite}</td>
@@ -334,8 +364,8 @@ const FactureDetailPage = () => {
                   <div className="mb-2">
                     <small className="text-muted">Statut paiement</small>
                     <h5 className="mb-0">
-                      <Badge bg={statusColors[facture.status]}>
-                        {statusLabels[facture.status]}
+                      <Badge bg={statusColors[facture.statut]}>
+                        {statusLabels[facture.statut]}
                       </Badge>
                     </h5>
                   </div>
@@ -434,6 +464,15 @@ const FactureDetailPage = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <PdfPreviewModal
+        show={!!previewUrl}
+        onHide={closePreview}
+        blobUrl={previewUrl}
+        documentTitle={facture.numero}
+        onDownload={() => downloadPdf(pdfPath, pdfFilename)}
+        onPrint={() => printPdf(pdfPath)}
+      />
     </>
   );
 };

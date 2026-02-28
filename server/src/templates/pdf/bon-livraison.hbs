@@ -151,6 +151,12 @@
       font-size: 8px;
       color: #999;
     }
+    .company-logo {
+      max-height: 60px;
+      max-width: 160px;
+      margin-bottom: 8px;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -158,6 +164,7 @@
     <!-- Header -->
     <div class="header">
       <div class="company-info">
+        {{#if company.logo}}<img src="{{company.logo}}" alt="Logo" class="company-logo" />{{/if}}
         <div class="company-name">{{company.name}}</div>
         <div class="company-details">
           {{#if company.legalForm}}<p>{{company.legalForm}}</p>{{/if}}
