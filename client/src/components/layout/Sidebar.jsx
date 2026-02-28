@@ -13,8 +13,6 @@ import {
   FiBarChart2,
   FiSettings,
   FiChevronLeft,
-  FiChevronDown,
-  FiChevronRight,
   FiBox,
   FiCreditCard,
   FiDatabase,
@@ -27,6 +25,59 @@ import {
   selectSidebarOpen,
 } from '../../redux/slices/uiSlice';
 import { useAuth } from '../../contexts/AuthContext';
+
+// Thème visuel par rôle
+const ROLE_THEMES = {
+  admin: {
+    gradient: 'linear-gradient(160deg, #7f1d1d 0%, #1a0505 100%)',
+    accent: '#f87171',
+    label: 'Administrateur',
+    icon: '🔐',
+  },
+  manager: {
+    gradient: 'linear-gradient(160deg, #312e81 0%, #0f0b2e 100%)',
+    accent: '#818cf8',
+    label: 'Manager',
+    icon: '👔',
+  },
+  comptable: {
+    gradient: 'linear-gradient(160deg, #14532d 0%, #021f0d 100%)',
+    accent: '#34d399',
+    label: 'Comptable',
+    icon: '💰',
+  },
+  commercial: {
+    gradient: 'linear-gradient(160deg, #7c2d12 0%, #1c0700 100%)',
+    accent: '#fb923c',
+    label: 'Commercial',
+    icon: '📈',
+  },
+  vendeur: {
+    gradient: 'linear-gradient(160deg, #78350f 0%, #1a0f00 100%)',
+    accent: '#fbbf24',
+    label: 'Vendeur',
+    icon: '🛒',
+  },
+  caissier: {
+    gradient: 'linear-gradient(160deg, #164e63 0%, #031820 100%)',
+    accent: '#22d3ee',
+    label: 'Caissier',
+    icon: '💳',
+  },
+  gestionnaire_stock: {
+    gradient: 'linear-gradient(160deg, #4c1d95 0%, #130520 100%)',
+    accent: '#a78bfa',
+    label: 'Gestion Stock',
+    icon: '📦',
+  },
+};
+
+const DEFAULT_THEME = {
+  gradient: 'linear-gradient(160deg, #2d3748 0%, #1e293b 100%)',
+  accent: '#60a5fa',
+  label: 'Utilisateur',
+  icon: '👤',
+};
 
 const navItems = [
   { section: 'PRINCIPAL' },
@@ -64,14 +115,22 @@ const navItems = [
   { path: '/admin/utilisateurs', label: 'Utilisateurs', icon: FiUsers, roles: ['admin'] },
   { path: '/admin/entreprise', label: 'Entreprise', icon: FiHome, roles: ['admin'] },
   { path: '/admin/parametres', label: 'Parametres', icon: FiSettings, roles: ['admin'] },
-  { path: '/admin/audit', label: 'Journal d\'Audit', icon: FiFileText, roles: ['admin'] },
+  { path: '/admin/audit', label: "Journal d'Audit", icon: FiFileText, roles: ['admin'] },
 ];
 
 const Sidebar = () => {
   const dispatch = useDispatch();
   const collapsed = useSelector(selectSidebarCollapsed);
   const isOpen = useSelector(selectSidebarOpen);
-  const { hasPermission, hasRole } = useAuth();
+  const { user, hasPermission, hasRole } = useAuth();
+
+  const roleName = user?.role?.name || '';
+  const theme = ROLE_THEMES[roleName] || DEFAULT_THEME;
+
+  const firstName = user?.firstName || '';
+  const lastName = user?.lastName || '';
+  const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || '?';
+  const fullName = [firstName, lastName].filter(Boolean).join(' ') || 'Utilisateur';
 
   const shouldShowItem = (item) => {
     if (item.permission && !hasPermission(item.permission)) return false;
@@ -80,13 +139,20 @@ const Sidebar = () => {
   };
 
   return (
-    <nav className={`sidebar ${collapsed ? 'collapsed' : ''} ${isOpen ? 'open' : ''}`}>
+    <nav
+      className={`sidebar ${collapsed ? 'collapsed' : ''} ${isOpen ? 'open' : ''}`}
+      style={{
+        '--sidebar-gradient': theme.gradient,
+        '--sidebar-accent': theme.accent,
+      }}
+    >
+      {/* Barre de titre */}
       <div className="sidebar-brand">
-        {!collapsed && <h5>ERP Senegal</h5>}
+        {!collapsed && <span className="sidebar-app-name">ERP Sénégal</span>}
         <button
           className="btn btn-link text-white ms-auto p-0"
           onClick={() => dispatch(toggleSidebarCollapsed())}
-          title={collapsed ? 'Ouvrir le menu' : 'Reduire le menu'}
+          title={collapsed ? 'Ouvrir le menu' : 'Réduire le menu'}
         >
           <FiChevronLeft
             size={20}
@@ -95,6 +161,28 @@ const Sidebar = () => {
         </button>
       </div>
 
+      {/* Profil utilisateur */}
+      <div className="sidebar-profile">
+        <div
+          className="sidebar-avatar"
+          style={{ backgroundColor: theme.accent }}
+          title={fullName}
+        >
+          {initials}
+        </div>
+        {!collapsed && (
+          <div className="sidebar-profile-info">
+            <span className="sidebar-profile-name">{fullName}</span>
+            <span className="sidebar-profile-role" style={{ color: theme.accent }}>
+              {theme.icon} {theme.label}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="sidebar-divider" />
+
+      {/* Navigation */}
       <div className="sidebar-nav">
         {navItems.map((item, index) => {
           if (item.section) {
