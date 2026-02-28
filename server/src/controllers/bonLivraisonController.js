@@ -5,6 +5,7 @@ const Stock = require('../models/Stock');
 const StockMovement = require('../models/StockMovement');
 const Company = require('../models/Company');
 const { generateBonLivraisonPDF } = require('../services/pdfService');
+const { notifyNewInvoice, createAndNotifyRole } = require('../services/notificationService');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
 
@@ -224,6 +225,13 @@ const validateBL = async (req, res, next) => {
     }
     await bl.save();
 
+    createAndNotifyRole('gestionnaire_stock', {
+      type: 'success',
+      title: 'Bon de livraison valide',
+      message: `Le BL ${bl.numero} a ete valide. Le stock a ete decremente.`,
+      link: `/ventes/bons-livraison/${bl._id}`,
+    });
+
     // 4. Optionally create facture
     let facture = null;
     if (req.body.createFacture) {
@@ -249,6 +257,8 @@ const validateBL = async (req, res, next) => {
           dateEcheance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           createdBy: req.user._id,
         });
+
+        notifyNewInvoice(facture);
 
         bl.facture = facture._id;
         await bl.save();

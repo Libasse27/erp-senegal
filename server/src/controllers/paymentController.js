@@ -11,6 +11,7 @@ const {
   generateEcritureFromPaymentFournisseur,
 } = require('../services/comptabiliteService');
 const logger = require('../config/logger');
+const { notifyPaymentReceived, notifyPaymentValidated, notifyInvoicePaid } = require('../services/notificationService');
 
 /**
  * @desc    Get all payments with pagination, filters, and search
@@ -156,6 +157,8 @@ const createPayment = async (req, res, next) => {
       .populate('fournisseur', 'raisonSociale code')
       .populate('facture', 'numero totalTTC')
       .populate('compteBancaire', 'nom banque');
+
+    notifyPaymentReceived(payment);
 
     res.status(201).json({
       success: true,
@@ -307,6 +310,8 @@ const validatePayment = async (req, res, next) => {
       .populate('facture', 'numero totalTTC montantPaye')
       .populate('compteBancaire', 'nom banque');
 
+    notifyPaymentValidated(populated);
+
     res.json({
       success: true,
       message: `Paiement valide avec le numero ${numero}`,
@@ -332,6 +337,7 @@ const applyPaymentToFacture = async (factureId, montant) => {
   if (facture.montantPaye >= facture.totalTTC) {
     facture.montantPaye = facture.totalTTC; // Cap at total
     facture.statut = 'payee';
+    notifyInvoicePaid(facture);
   } else if (facture.montantPaye > 0) {
     facture.statut = 'partiellement_payee';
   }

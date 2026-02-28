@@ -6,6 +6,7 @@ const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
 const { generateDevisPDF } = require('../services/pdfService');
 const { sendDevisEmail } = require('../services/emailService');
+const { notifyDevisConverted } = require('../services/notificationService');
 
 /**
  * @desc    Get all devis with pagination, filters, and search
@@ -300,6 +301,8 @@ const convertDevis = async (req, res, next) => {
     devis.statut = 'converti';
     devis.commandeGeneree = commande._id;
     await devis.save();
+
+    notifyDevisConverted(devis, commande);
 
     const populated = await Commande.findById(commande._id)
       .populate('client', 'raisonSociale firstName lastName code')

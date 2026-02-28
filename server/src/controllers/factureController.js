@@ -6,6 +6,7 @@ const { buildPaginationOptions, buildPaginationResponse } = require('../utils/he
 const { getNextSequence } = require('../utils/sequenceHelper');
 const { generateFacturePDF } = require('../services/pdfService');
 const { sendFactureEmail } = require('../services/emailService');
+const { notifyNewInvoice, notifyInvoiceValidated } = require('../services/notificationService');
 
 /**
  * @desc    Get all factures with pagination, filters, and search
@@ -123,6 +124,8 @@ const createFacture = async (req, res, next) => {
     const populated = await Facture.findById(facture._id)
       .populate('client', 'raisonSociale firstName lastName code')
       .populate('commercial', 'firstName lastName');
+
+    notifyNewInvoice(facture);
 
     res.status(201).json({
       success: true,
@@ -245,6 +248,8 @@ const validateFacture = async (req, res, next) => {
     const populated = await Facture.findById(facture._id)
       .populate('client', 'raisonSociale firstName lastName code')
       .populate('commercial', 'firstName lastName');
+
+    notifyInvoiceValidated(facture);
 
     res.json({
       success: true,

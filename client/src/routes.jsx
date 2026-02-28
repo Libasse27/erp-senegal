@@ -76,6 +76,9 @@ const SettingsPage = lazy(() => import('./pages/admin/SettingsPage'));
 const CompanyPage = lazy(() => import('./pages/admin/CompanyPage'));
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
 
+// Notifications
+const NotificationsListPage = lazy(() => import('./pages/notifications/NotificationsListPage'));
+
 // 404
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
@@ -164,6 +167,9 @@ const AppRoutes = () => {
           {/* Rapports */}
           <Route path="/rapports" element={<ReportsPage />} />
           <Route path="/rapports/ventes" element={<SalesReportPage />} />
+
+          {/* Notifications */}
+          <Route path="/notifications" element={<NotificationsListPage />} />
 
           {/* Administration */}
           <Route path="/admin/utilisateurs" element={<UsersListPage />} />

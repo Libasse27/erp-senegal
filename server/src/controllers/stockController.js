@@ -5,6 +5,7 @@ const Warehouse = require('../models/Warehouse');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
 const logger = require('../config/logger');
+const { notifyStockAlert } = require('../services/notificationService');
 
 /**
  * @desc    Get global stock overview with filters
@@ -337,15 +338,13 @@ const createMovement = async (req, res, next) => {
 
       // Emit alert if stock is low
       if (stock.quantite <= productDoc.stockAlerte) {
-        const io = req.app.get('io');
-        if (io) {
-          io.to('role:gestionnaire_stock').emit('stock:alert', {
-            type: stock.quantite <= 0 ? 'rupture' : 'alerte',
-            product: { name: productDoc.name, code: productDoc.code },
-            quantite: stock.quantite,
-            warehouse: warehouseSource,
-          });
-        }
+        const warehouseDoc = await Warehouse.findById(warehouseSource).select('name code');
+        notifyStockAlert(
+          productDoc,
+          warehouseDoc || { _id: warehouseSource, name: 'Depot' },
+          stock.quantite,
+          productDoc.stockMinimum || productDoc.stockAlerte
+        );
       }
 
       return res.status(201).json({
