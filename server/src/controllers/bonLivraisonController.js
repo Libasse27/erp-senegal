@@ -258,7 +258,7 @@ const validateBL = async (req, res, next) => {
           createdBy: req.user._id,
         });
 
-        notifyNewInvoice(facture);
+        notifyNewInvoice({ ...facture.toObject(), numero: facture.numero || facture.referenceInterne });
 
         bl.facture = facture._id;
         await bl.save();

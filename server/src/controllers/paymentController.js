@@ -158,7 +158,7 @@ const createPayment = async (req, res, next) => {
       .populate('facture', 'numero totalTTC')
       .populate('compteBancaire', 'nom banque');
 
-    notifyPaymentReceived(payment);
+    notifyPaymentReceived({ ...payment.toObject(), numero: payment.numero || payment.referenceInterne });
 
     res.status(201).json({
       success: true,
