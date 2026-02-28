@@ -449,7 +449,7 @@ const seedTransactions = async (
       lignes,
       statut: 'validee',
       sourceDocument: {
-        type: 'Facture',
+        type: 'facture',
         id: facture._id,
       },
       createdBy: adminUser._id,
@@ -508,7 +508,7 @@ const seedTransactions = async (
       lignes,
       statut: 'validee',
       sourceDocument: {
-        type: 'Payment',
+        type: 'paiement',
         id: payment._id,
       },
       createdBy: adminUser._id,
