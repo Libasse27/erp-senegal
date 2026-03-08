@@ -37,6 +37,7 @@ const DevisDetailPage = lazy(() => import('./pages/ventes/devis/DevisDetailPage'
 
 // Ventes - Commandes
 const CommandesListPage = lazy(() => import('./pages/ventes/commandes/CommandesListPage'));
+const CommandeFormPage = lazy(() => import('./pages/ventes/commandes/CommandeFormPage'));
 const CommandeDetailPage = lazy(() => import('./pages/ventes/commandes/CommandeDetailPage'));
 
 // Ventes - Bons de livraison
@@ -75,6 +76,11 @@ const UserFormPage = lazy(() => import('./pages/admin/UserFormPage'));
 const SettingsPage = lazy(() => import('./pages/admin/SettingsPage'));
 const CompanyPage = lazy(() => import('./pages/admin/CompanyPage'));
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
+
+// Achats
+const CommandesAchatListPage = lazy(() => import('./pages/achats/CommandesAchatListPage'));
+const CommandeAchatFormPage = lazy(() => import('./pages/achats/CommandeAchatFormPage'));
+const CommandeAchatDetailPage = lazy(() => import('./pages/achats/CommandeAchatDetailPage'));
 
 // Notifications
 const NotificationsListPage = lazy(() => import('./pages/notifications/NotificationsListPage'));
@@ -134,7 +140,9 @@ const AppRoutes = () => {
 
           {/* Ventes - Commandes */}
           <Route path="/ventes/commandes" element={<CommandesListPage />} />
+          <Route path="/ventes/commandes/nouveau" element={<CommandeFormPage />} />
           <Route path="/ventes/commandes/:id" element={<CommandeDetailPage />} />
+          <Route path="/ventes/commandes/:id/modifier" element={<CommandeFormPage />} />
 
           {/* Ventes - Bons de livraison */}
           <Route path="/ventes/bons-livraison/:id" element={<BonLivraisonDetailPage />} />
@@ -144,6 +152,12 @@ const AppRoutes = () => {
           <Route path="/ventes/factures/nouveau" element={<FactureFormPage />} />
           <Route path="/ventes/factures/:id" element={<FactureDetailPage />} />
           <Route path="/ventes/factures/:id/modifier" element={<FactureFormPage />} />
+
+          {/* Achats */}
+          <Route path="/achats/commandes" element={<CommandesAchatListPage />} />
+          <Route path="/achats/commandes/nouveau" element={<CommandeAchatFormPage />} />
+          <Route path="/achats/commandes/:id" element={<CommandeAchatDetailPage />} />
+          <Route path="/achats/commandes/:id/modifier" element={<CommandeAchatFormPage />} />
 
           {/* Paiements */}
           <Route path="/paiements" element={<PaymentsListPage />} />

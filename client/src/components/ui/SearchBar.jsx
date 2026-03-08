@@ -30,6 +30,7 @@ const SearchBar = ({
     if (onChange && debouncedSearchTerm !== value) {
       onChange(debouncedSearchTerm);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchTerm]);
 
   const handleClear = () => {

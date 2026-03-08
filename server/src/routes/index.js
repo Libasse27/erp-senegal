@@ -22,6 +22,9 @@ const commandesRoutes = require('./commandes.routes');
 const bonsLivraisonRoutes = require('./bons-livraison.routes');
 const facturesRoutes = require('./factures.routes');
 
+// Phase 3b routes — Cycle d'Achat
+const commandesAchatRoutes = require('./commandes-achat.routes');
+
 // Phase 4 routes — Paiements & Comptabilite
 const paymentsRoutes = require('./payments.routes');
 const bankAccountsRoutes = require('./bank-accounts.routes');
@@ -58,6 +61,9 @@ router.use('/devis', devisRoutes);
 router.use('/commandes', commandesRoutes);
 router.use('/bons-livraison', bonsLivraisonRoutes);
 router.use('/factures', facturesRoutes);
+
+// === Phase 3b — Cycle d'Achat ===
+router.use('/commandes-achat', commandesAchatRoutes);
 
 // === Phase 4 — Paiements & Comptabilite ===
 router.use('/payments', paymentsRoutes);

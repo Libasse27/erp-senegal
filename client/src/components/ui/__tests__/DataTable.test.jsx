@@ -147,7 +147,7 @@ describe('DataTable', () => {
     });
 
     it('shows correct sort icon for ascending sort', () => {
-      const { container } = render(
+      render(
         <DataTable
           columns={mockColumns}
           data={mockData}
@@ -178,7 +178,7 @@ describe('DataTable', () => {
     });
 
     it('does not show sort icons when onSort is not provided', () => {
-      const { container } = render(
+      render(
         <DataTable
           columns={mockColumns}
           data={mockData}

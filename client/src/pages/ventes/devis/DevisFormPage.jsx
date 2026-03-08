@@ -5,19 +5,22 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import Table from 'react-bootstrap/Table';
 import Spinner from 'react-bootstrap/Spinner';
-import { FiPlus, FiTrash2, FiSave } from 'react-icons/fi';
+import { FiSave } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../../hooks/usePageTitle';
-import { formatMoney } from '../../../utils/formatters';
+import {
+  ClientSelect,
+  LignesDocumentEditor,
+  TotauxDocument,
+  calculateLigne,
+  LIGNE_VIDE,
+} from '../../../components/forms';
 import {
   useGetDevisByIdQuery,
   useCreateDevisMutation,
   useUpdateDevisMutation,
 } from '../../../redux/api/devisApi';
-import { useGetClientsQuery } from '../../../redux/api/clientsApi';
-import { useGetProductsQuery } from '../../../redux/api/productsApi';
 
 const DevisFormPage = () => {
   const navigate = useNavigate();
@@ -37,8 +40,6 @@ const DevisFormPage = () => {
   const { data: devisData, isLoading: isLoadingDevis } = useGetDevisByIdQuery(id, {
     skip: !isEditMode,
   });
-  const { data: clientsData } = useGetClientsQuery({ limit: 1000, isActive: true });
-  const { data: productsData } = useGetProductsQuery({ limit: 1000, isActive: true });
   const [createDevis, { isLoading: isCreating }] = useCreateDevisMutation();
   const [updateDevis, { isLoading: isUpdating }] = useUpdateDevisMutation();
 
@@ -51,9 +52,8 @@ const DevisFormPage = () => {
     remiseGlobale: 0,
   });
 
-  const [lignes, setLignes] = useState([
-    { product: '', designation: '', quantite: 1, prixUnitaire: 0, remise: 0, tauxTVA: 18 },
-  ]);
+  const [lignes, setLignes] = useState([{ ...LIGNE_VIDE }]);
+  const [clientError, setClientError] = useState('');
 
   useEffect(() => {
     if (isEditMode && devisData?.data) {
@@ -81,50 +81,16 @@ const DevisFormPage = () => {
     }
   }, [isEditMode, devisData]);
 
-  const addLigne = () => {
-    setLignes([
-      ...lignes,
-      { product: '', designation: '', quantite: 1, prixUnitaire: 0, remise: 0, tauxTVA: 18 },
-    ]);
-  };
-
-  const removeLigne = (index) => {
-    setLignes(lignes.filter((_, i) => i !== index));
-  };
-
-  const updateLigne = (index, field, value) => {
-    const updated = [...lignes];
-    updated[index] = { ...updated[index], [field]: value };
-
-    if (field === 'product' && value) {
-      const product = productsData?.data?.find((p) => p._id === value);
-      if (product) {
-        updated[index].designation = product.nom;
-        updated[index].prixUnitaire = product.prixVente || 0;
-      }
-    }
-
-    setLignes(updated);
-  };
-
-  const calculateLigne = (l) => {
-    const ht = Math.round(l.quantite * l.prixUnitaire * (1 - l.remise / 100));
-    const tva = Math.round((ht * l.tauxTVA) / 100);
-    return { ht, tva, ttc: ht + tva };
-  };
-
   const calculateTotals = () => {
     const totalHT = lignes.reduce((sum, l) => sum + calculateLigne(l).ht, 0);
     const remiseGlobaleAmount = Math.round((totalHT * formData.remiseGlobale) / 100);
     const totalHTApresRemise = totalHT - remiseGlobaleAmount;
     const totalTVA = lignes.reduce((sum, l) => {
-      const ligne = calculateLigne(l);
-      const htLigne = Math.round((ligne.ht * (100 - formData.remiseGlobale)) / 100);
-      return sum + Math.round((htLigne * l.tauxTVA) / 100);
+      const { ht } = calculateLigne(l);
+      const htApresRemise = Math.round((ht * (100 - formData.remiseGlobale)) / 100);
+      return sum + Math.round((htApresRemise * Number(l.tauxTVA)) / 100);
     }, 0);
-    const totalTTC = totalHTApresRemise + totalTVA;
-
-    return { totalHT, remiseGlobaleAmount, totalHTApresRemise, totalTVA, totalTTC };
+    return { totalHT, remiseGlobaleAmount, totalHTApresRemise, totalTVA, totalTTC: totalHTApresRemise + totalTVA };
   };
 
   const totals = calculateTotals();
@@ -133,12 +99,12 @@ const DevisFormPage = () => {
     e.preventDefault();
 
     if (!formData.client) {
-      toast.error('Veuillez selectionner un client');
+      setClientError('Veuillez selectionner un client');
       return;
     }
 
-    if (lignes.length === 0 || lignes.some((l) => !l.designation || l.quantite <= 0)) {
-      toast.error('Veuillez ajouter au moins une ligne valide');
+    if (lignes.some((l) => !l.designation || Number(l.quantite) <= 0)) {
+      toast.error('Veuillez remplir toutes les lignes correctement');
       return;
     }
 
@@ -168,7 +134,7 @@ const DevisFormPage = () => {
       }
       navigate('/ventes/devis');
     } catch (err) {
-      toast.error(err?.data?.message || 'Erreur lors de l\'enregistrement');
+      toast.error(err?.data?.message || "Erreur lors de l'enregistrement");
     }
   };
 
@@ -180,9 +146,6 @@ const DevisFormPage = () => {
       </div>
     );
   }
-
-  const clients = clientsData?.data || [];
-  const products = productsData?.data || [];
 
   return (
     <>
@@ -201,23 +164,14 @@ const DevisFormPage = () => {
           <Card.Body>
             <Row>
               <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>
-                    Client <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Select
-                    required
-                    value={formData.client}
-                    onChange={(e) => setFormData({ ...formData, client: e.target.value })}
-                  >
-                    <option value="">Selectionner un client</option>
-                    {clients.map((client) => (
-                      <option key={client._id} value={client._id}>
-                        {client.nom} - {client.email}
-                      </option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
+                <ClientSelect
+                  value={formData.client}
+                  onChange={(id) => {
+                    setFormData({ ...formData, client: id });
+                    setClientError('');
+                  }}
+                  error={clientError}
+                />
               </Col>
               <Col md={3}>
                 <Form.Group className="mb-3">
@@ -278,117 +232,12 @@ const DevisFormPage = () => {
         </Card>
 
         <Card className="shadow-sm mb-4">
-          <Card.Header className="bg-white d-flex justify-content-between align-items-center">
-            <h6 className="mb-0">Lignes du devis</h6>
-            <Button variant="primary" size="sm" onClick={addLigne}>
-              <FiPlus className="me-1" />
-              Ajouter une ligne
-            </Button>
-          </Card.Header>
-          <Card.Body className="p-0">
-            <Table responsive className="mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th style={{ width: '20%' }}>Produit</th>
-                  <th style={{ width: '25%' }}>Designation</th>
-                  <th style={{ width: '10%' }}>Quantite</th>
-                  <th style={{ width: '12%' }}>Prix unit.</th>
-                  <th style={{ width: '8%' }}>Remise %</th>
-                  <th style={{ width: '8%' }}>TVA %</th>
-                  <th style={{ width: '12%' }} className="text-end">
-                    Total TTC
-                  </th>
-                  <th style={{ width: '5%' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {lignes.map((ligne, index) => {
-                  const calc = calculateLigne(ligne);
-                  return (
-                    <tr key={index}>
-                      <td>
-                        <Form.Select
-                          size="sm"
-                          value={ligne.product}
-                          onChange={(e) => updateLigne(index, 'product', e.target.value)}
-                        >
-                          <option value="">Aucun</option>
-                          {products.map((product) => (
-                            <option key={product._id} value={product._id}>
-                              {product.reference} - {product.nom}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </td>
-                      <td>
-                        <Form.Control
-                          size="sm"
-                          type="text"
-                          required
-                          value={ligne.designation}
-                          onChange={(e) => updateLigne(index, 'designation', e.target.value)}
-                          placeholder="Description"
-                        />
-                      </td>
-                      <td>
-                        <Form.Control
-                          size="sm"
-                          type="number"
-                          min="1"
-                          required
-                          value={ligne.quantite}
-                          onChange={(e) => updateLigne(index, 'quantite', e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <Form.Control
-                          size="sm"
-                          type="number"
-                          min="0"
-                          required
-                          value={ligne.prixUnitaire}
-                          onChange={(e) => updateLigne(index, 'prixUnitaire', e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <Form.Control
-                          size="sm"
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={ligne.remise}
-                          onChange={(e) => updateLigne(index, 'remise', e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <Form.Select
-                          size="sm"
-                          value={ligne.tauxTVA}
-                          onChange={(e) => updateLigne(index, 'tauxTVA', e.target.value)}
-                        >
-                          <option value="0">0%</option>
-                          <option value="18">18%</option>
-                        </Form.Select>
-                      </td>
-                      <td className="text-end">
-                        <strong>{formatMoney(calc.ttc)}</strong>
-                      </td>
-                      <td className="text-center">
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="p-0 text-danger"
-                          onClick={() => removeLigne(index)}
-                          disabled={lignes.length === 1}
-                        >
-                          <FiTrash2 size={16} />
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
+          <Card.Body>
+            <LignesDocumentEditor
+              lignes={lignes}
+              onChange={setLignes}
+              label="Lignes du devis"
+            />
           </Card.Body>
         </Card>
 
@@ -397,53 +246,21 @@ const DevisFormPage = () => {
             <h6 className="mb-0">Totaux</h6>
           </Card.Header>
           <Card.Body>
-            <Row>
-              <Col md={8}></Col>
-              <Col md={4}>
-                <div className="d-flex justify-content-between mb-2">
-                  <span>Total HT:</span>
-                  <strong>{formatMoney(totals.totalHT)}</strong>
-                </div>
-                <div className="d-flex justify-content-between mb-2 align-items-center">
-                  <div>
-                    <span>Remise globale:</span>
-                    <Form.Control
-                      type="number"
-                      min="0"
-                      max="100"
-                      size="sm"
-                      className="d-inline-block ms-2"
-                      style={{ width: '80px' }}
-                      value={formData.remiseGlobale}
-                      onChange={(e) =>
-                        setFormData({ ...formData, remiseGlobale: Number(e.target.value) })
-                      }
-                    />
-                    <span className="ms-1">%</span>
-                  </div>
-                  <strong>-{formatMoney(totals.remiseGlobaleAmount)}</strong>
-                </div>
-                <div className="d-flex justify-content-between mb-2">
-                  <span>Total TVA:</span>
-                  <strong>{formatMoney(totals.totalTVA)}</strong>
-                </div>
-                <hr />
-                <div className="d-flex justify-content-between">
-                  <strong>Total TTC:</strong>
-                  <h5 className="text-primary mb-0">{formatMoney(totals.totalTTC)}</h5>
-                </div>
-              </Col>
-            </Row>
+            <TotauxDocument
+              totals={totals}
+              remiseGlobale={formData.remiseGlobale}
+              onRemiseGlobaleChange={(v) => setFormData({ ...formData, remiseGlobale: v })}
+            />
           </Card.Body>
           <Card.Footer className="bg-white text-end">
-            <Button variant="secondary" className="me-2" onClick={() => navigate('/ventes/devis')}>
+            <Button
+              variant="secondary"
+              className="me-2"
+              onClick={() => navigate('/ventes/devis')}
+            >
               Annuler
             </Button>
-            <Button
-              type="submit"
-              variant="success"
-              disabled={isCreating || isUpdating}
-            >
+            <Button type="submit" variant="success" disabled={isCreating || isUpdating}>
               <FiSave className="me-2" />
               {isCreating || isUpdating
                 ? 'Enregistrement...'
