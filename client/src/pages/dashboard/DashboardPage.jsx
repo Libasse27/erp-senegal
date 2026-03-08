@@ -28,6 +28,7 @@ import { useGetDashboardStatsQuery } from '../../redux/api/dashboardApi';
 import StatCard from '../../components/ui/StatCard';
 import { SalesEvolutionChart, TopProductsChart } from '../../components/charts';
 import { useAuth } from '../../contexts/AuthContext';
+import { PERM } from '../../config/permissions';
 
 // Thème par rôle (couleur d'accent du workspace)
 const ROLE_WORKSPACE = {
@@ -84,28 +85,28 @@ const DashboardPage = () => {
 
   // ── Stat cards filtrées par permission ──────────────────────────────────
   const statCards = [
-    hasPermission('invoices:read') && {
+    hasPermission(PERM.FACTURES_READ) && {
       title: 'CA du mois',
       value: formatMoney(stats.caDuMois || 0),
       icon: FiDollarSign,
       color: '#059669',
       subtitle: 'Chiffre d\'affaires',
     },
-    hasPermission('clients:read') && {
+    hasPermission(PERM.CLIENTS_READ) && {
       title: 'Clients actifs',
       value: stats.clientsActifs || 0,
       icon: FiUsers,
       color: '#1a56db',
       subtitle: 'Total',
     },
-    hasPermission('invoices:read') && {
+    hasPermission(PERM.FACTURES_READ) && {
       title: 'Factures impayees',
       value: stats.facturesImpayees || 0,
       icon: FiFileText,
       color: '#d97706',
       subtitle: 'En attente',
     },
-    hasPermission('products:read') && {
+    hasPermission(PERM.PRODUITS_READ) && {
       title: 'Alertes stock',
       value: stats.alertesStock || 0,
       icon: FiAlertTriangle,
@@ -113,7 +114,7 @@ const DashboardPage = () => {
       subtitle: 'Rupture ou faible',
     },
     // Caissier / Comptable sans accès factures → voir paiements
-    hasPermission('payments:read') && !hasPermission('invoices:read') && {
+    hasPermission(PERM.PAIEMENTS_READ) && !hasPermission(PERM.FACTURES_READ) && {
       title: 'Paiements du mois',
       value: formatMoney(stats.paiementsDuMois || 0),
       icon: FiCreditCard,
@@ -121,7 +122,7 @@ const DashboardPage = () => {
       subtitle: 'Encaissements',
     },
     // Comptable → écritures comptables
-    hasPermission('ecritures:read') && {
+    hasPermission(PERM.ECRITURES_READ) && {
       title: 'Ecritures du mois',
       value: stats.ecrituresDuMois || 0,
       icon: FiBookOpen,
@@ -132,17 +133,17 @@ const DashboardPage = () => {
 
   // ── Boutons header ───────────────────────────────────────────────────────
   const headerActions = [
-    hasPermission('quotes:create') && (
+    hasPermission(PERM.DEVIS_CREATE) && (
       <Button key="devis" as={Link} to="/ventes/devis/nouveau" variant="outline-primary" size="sm">
         <FiFileText className="me-1" /> Nouveau devis
       </Button>
     ),
-    hasPermission('invoices:create') && (
+    hasPermission(PERM.FACTURES_CREATE) && (
       <Button key="facture" as={Link} to="/ventes/factures/nouveau" variant="outline-primary" size="sm">
         <FiClipboard className="me-1" /> Nouvelle facture
       </Button>
     ),
-    hasPermission('payments:create') && (
+    hasPermission(PERM.PAIEMENTS_CREATE) && (
       <Button key="paiement" as={Link} to="/paiements/nouveau" variant="primary" size="sm">
         <FiCreditCard className="me-1" /> Nouveau paiement
       </Button>
@@ -151,67 +152,67 @@ const DashboardPage = () => {
 
   // ── Actions rapides filtrées par permission ──────────────────────────────
   const quickActions = [
-    hasPermission('quotes:create') && {
+    hasPermission(PERM.DEVIS_CREATE) && {
       to: '/ventes/devis/nouveau',
       label: 'Creer un devis',
       icon: FiFileText,
       variant: 'outline-primary',
     },
-    hasPermission('invoices:create') && {
+    hasPermission(PERM.FACTURES_CREATE) && {
       to: '/ventes/factures/nouveau',
       label: 'Creer une facture',
       icon: FiClipboard,
       variant: 'outline-primary',
     },
-    hasPermission('payments:create') && {
+    hasPermission(PERM.PAIEMENTS_CREATE) && {
       to: '/paiements/nouveau',
       label: 'Enregistrer un paiement',
       icon: FiCreditCard,
       variant: 'outline-success',
     },
-    hasPermission('clients:create') && {
+    hasPermission(PERM.CLIENTS_CREATE) && {
       to: '/clients/nouveau',
       label: 'Ajouter un client',
       icon: FiUsers,
       variant: 'outline-primary',
     },
-    hasPermission('products:create') && {
+    hasPermission(PERM.PRODUITS_CREATE) && {
       to: '/produits/nouveau',
       label: 'Ajouter un produit',
       icon: FiPackage,
       variant: 'outline-primary',
     },
-    hasPermission('ecritures:create') && {
+    hasPermission(PERM.ECRITURES_CREATE) && {
       to: '/comptabilite/ecritures/nouveau',
       label: 'Nouvelle ecriture',
       icon: FiBookOpen,
       variant: 'outline-success',
     },
-    hasPermission('products:read') && !hasPermission('products:create') && {
+    hasPermission(PERM.STOCKS_READ) && !hasPermission(PERM.PRODUITS_CREATE) && {
       to: '/stocks',
       label: 'Voir les stocks',
       icon: FiBox,
       variant: 'outline-warning',
     },
-    hasPermission('invoices:read') && !hasPermission('invoices:create') && {
+    hasPermission(PERM.FACTURES_READ) && !hasPermission(PERM.FACTURES_CREATE) && {
       to: '/ventes/factures',
       label: 'Voir les factures',
       icon: FiClipboard,
       variant: 'outline-primary',
     },
-    hasPermission('payments:read') && !hasPermission('payments:create') && {
+    hasPermission(PERM.PAIEMENTS_READ) && !hasPermission(PERM.PAIEMENTS_CREATE) && {
       to: '/paiements',
       label: 'Voir les paiements',
       icon: FiCreditCard,
       variant: 'outline-info',
     },
-    hasPermission('comptabilite:read') && {
+    hasPermission(PERM.COMPTABILITE_READ) && {
       to: '/comptabilite/balance',
       label: 'Consulter la balance',
       icon: FiBarChart2,
       variant: 'outline-success',
     },
-    hasPermission('reports:read') && {
+    hasPermission(PERM.RAPPORTS_READ) && {
       to: '/rapports',
       label: 'Voir les rapports',
       icon: FiBarChart2,
@@ -225,8 +226,8 @@ const DashboardPage = () => {
     },
   ].filter(Boolean);
 
-  const showRevenueChart = hasPermission('invoices:read') || hasPermission('reports:read');
-  const showPaymentChart  = hasPermission('payments:read');
+  const showRevenueChart = hasPermission(PERM.FACTURES_READ) || hasPermission(PERM.RAPPORTS_READ);
+  const showPaymentChart  = hasPermission(PERM.PAIEMENTS_READ);
 
   return (
     <>
@@ -308,7 +309,7 @@ const DashboardPage = () => {
       {/* ── Activité + Actions rapides ──────────────────────────────── */}
       <Row className="g-3">
         {/* Activité récente — visible si au moins une permission globale */}
-        {(hasPermission('invoices:read') || hasPermission('payments:read') || hasPermission('clients:read')) && (
+        {(hasPermission(PERM.FACTURES_READ) || hasPermission(PERM.PAIEMENTS_READ) || hasPermission(PERM.CLIENTS_READ)) && (
           <Col lg={quickActions.length > 0 ? 8 : 12}>
             <Card className="shadow-sm">
               <Card.Header className="bg-white d-flex justify-content-between align-items-center">
@@ -348,7 +349,7 @@ const DashboardPage = () => {
 
         {/* Actions rapides ─────────────────────────────────────────── */}
         {quickActions.length > 0 && (
-          <Col lg={hasPermission('invoices:read') || hasPermission('payments:read') || hasPermission('clients:read') ? 4 : 12}>
+          <Col lg={hasPermission(PERM.FACTURES_READ) || hasPermission(PERM.PAIEMENTS_READ) || hasPermission(PERM.CLIENTS_READ) ? 4 : 12}>
             <Card className="shadow-sm">
               <Card.Header className="bg-white">
                 <h6 className="mb-0">Actions rapides</h6>
@@ -377,7 +378,7 @@ const DashboardPage = () => {
         )}
 
         {/* Raccourcis comptabilité pour comptable sans autres sections */}
-        {hasPermission('comptabilite:read') && !hasPermission('invoices:read') && !hasPermission('clients:read') && (
+        {hasPermission(PERM.COMPTABILITE_READ) && !hasPermission(PERM.FACTURES_READ) && !hasPermission(PERM.CLIENTS_READ) && (
           <Col lg={12}>
             <Card className="shadow-sm">
               <Card.Header className="bg-white">
