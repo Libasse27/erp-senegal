@@ -42,16 +42,15 @@ const ProductFormPage = () => {
 
   const [formData, setFormData] = useState({
     type: 'produit',
-    reference: '',
-    designation: '',
+    name: '',
     description: '',
     category: '',
     prixVente: '',
     prixAchat: '',
-    tva: 18,
+    tauxTVA: 18,
     unite: '',
     stockMinimum: '',
-    codeBarre: '',
+    barcode: '',
     isActive: true,
   });
 
@@ -62,16 +61,15 @@ const ProductFormPage = () => {
       const product = productData.data;
       setFormData({
         type: product.type || 'produit',
-        reference: product.reference || '',
-        designation: product.designation || '',
+        name: product.name || '',
         description: product.description || '',
         category: product.category?._id || '',
         prixVente: product.prixVente || '',
         prixAchat: product.prixAchat || '',
-        tva: product.tva || 18,
+        tauxTVA: product.tauxTVA ?? 18,
         unite: product.unite || '',
-        stockMinimum: product.stockMinimum || '',
-        codeBarre: product.codeBarre || '',
+        stockMinimum: product.stockMinimum ?? '',
+        barcode: product.barcode || '',
         isActive: product.isActive !== false,
       });
     }
@@ -91,19 +89,23 @@ const ProductFormPage = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.designation.trim()) {
-      newErrors.designation = 'La designation est requise';
+    if (!formData.name.trim()) {
+      newErrors.name = 'Le nom du produit est requis';
     }
 
-    if (!formData.prixVente || formData.prixVente <= 0) {
-      newErrors.prixVente = 'Le prix de vente doit etre superieur a 0';
+    if (!formData.category) {
+      newErrors.category = 'La categorie est requise';
     }
 
-    if (!formData.prixAchat || formData.prixAchat <= 0) {
-      newErrors.prixAchat = 'Le prix d\'achat doit etre superieur a 0';
+    if (!formData.prixVente || Number(formData.prixVente) < 0) {
+      newErrors.prixVente = 'Le prix de vente est requis';
     }
 
-    if (formData.stockMinimum && formData.stockMinimum < 0) {
+    if (!formData.prixAchat || Number(formData.prixAchat) < 0) {
+      newErrors.prixAchat = "Le prix d'achat est requis";
+    }
+
+    if (formData.stockMinimum !== '' && Number(formData.stockMinimum) < 0) {
       newErrors.stockMinimum = 'Le stock minimum doit etre positif';
     }
 
@@ -121,16 +123,15 @@ const ProductFormPage = () => {
 
     const payload = {
       type: formData.type,
-      reference: formData.reference || undefined,
-      designation: formData.designation,
+      name: formData.name,
       description: formData.description || undefined,
-      category: formData.category || undefined,
+      category: formData.category,
       prixVente: Number(formData.prixVente),
       prixAchat: Number(formData.prixAchat),
-      tva: Number(formData.tva),
+      tauxTVA: Number(formData.tauxTVA),
       unite: formData.unite || undefined,
-      stockMinimum: formData.stockMinimum ? Number(formData.stockMinimum) : undefined,
-      codeBarre: formData.codeBarre || undefined,
+      stockMinimum: formData.stockMinimum !== '' ? Number(formData.stockMinimum) : undefined,
+      barcode: formData.barcode || undefined,
       isActive: formData.isActive,
     };
 
@@ -202,34 +203,21 @@ const ProductFormPage = () => {
             </Row>
 
             <Row className="g-3">
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>Reference</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="reference"
-                    value={formData.reference}
-                    onChange={handleChange}
-                    placeholder="Generee automatiquement si vide"
-                  />
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
+              <Col md={12}>
                 <Form.Group>
                   <Form.Label>
                     Designation <span className="text-danger">*</span>
                   </Form.Label>
                   <Form.Control
                     type="text"
-                    name="designation"
-                    value={formData.designation}
+                    name="name"
+                    value={formData.name}
                     onChange={handleChange}
-                    isInvalid={!!errors.designation}
+                    isInvalid={!!errors.name}
                     placeholder="Nom du produit"
                   />
                   <Form.Control.Feedback type="invalid">
-                    {errors.designation}
+                    {errors.name}
                   </Form.Control.Feedback>
                 </Form.Group>
               </Col>
@@ -322,7 +310,7 @@ const ProductFormPage = () => {
                   <Form.Label>
                     TVA <span className="text-danger">*</span>
                   </Form.Label>
-                  <Form.Select name="tva" value={formData.tva} onChange={handleChange}>
+                  <Form.Select name="tauxTVA" value={formData.tauxTVA} onChange={handleChange}>
                     <option value={18}>18%</option>
                     <option value={0}>0% (Exonere)</option>
                   </Form.Select>
@@ -351,8 +339,8 @@ const ProductFormPage = () => {
                   <Form.Label>Code-barres</Form.Label>
                   <Form.Control
                     type="text"
-                    name="codeBarre"
-                    value={formData.codeBarre}
+                    name="barcode"
+                    value={formData.barcode}
                     onChange={handleChange}
                     placeholder="Code-barres du produit"
                   />
