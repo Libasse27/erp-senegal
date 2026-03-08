@@ -31,13 +31,15 @@
     "@testing-library/react": "^14.1.2",
     "@testing-library/user-event": "^14.5.2",
     "eslint": "^8.56.0",
+    "patch-package": "^8.0.1",
     "prettier": "^3.2.4"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "lint": "eslint src/ --ext .js,.jsx"
+    "lint": "eslint src/ --ext .js,.jsx",
+    "postinstall": "patch-package"
   },
   "browserslist": {
     "production": [
