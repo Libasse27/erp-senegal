@@ -9,7 +9,6 @@ import Spinner from 'react-bootstrap/Spinner';
 import Alert from 'react-bootstrap/Alert';
 import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
-import Table from 'react-bootstrap/Table';
 import { FiEdit2, FiTrash2, FiMail, FiPhone, FiMapPin } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../hooks/usePageTitle';

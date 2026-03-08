@@ -15,8 +15,6 @@ import {
   FiPrinter,
 } from 'react-icons/fi';
 import {
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,

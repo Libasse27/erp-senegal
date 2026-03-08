@@ -9,7 +9,7 @@ import Spinner from 'react-bootstrap/Spinner';
 import Alert from 'react-bootstrap/Alert';
 import { FiPrinter, FiDownload, FiAlertCircle } from 'react-icons/fi';
 import usePageTitle from '../../hooks/usePageTitle';
-import { formatMoney, formatDate } from '../../utils/formatters';
+import { formatMoney } from '../../utils/formatters';
 import { useGetExercicesQuery, useGetBilanQuery } from '../../redux/api/comptabiliteApi';
 
 const BilanPage = () => {

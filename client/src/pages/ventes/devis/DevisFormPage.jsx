@@ -7,7 +7,6 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Table from 'react-bootstrap/Table';
 import Spinner from 'react-bootstrap/Spinner';
-import Alert from 'react-bootstrap/Alert';
 import { FiPlus, FiTrash2, FiSave } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../../hooks/usePageTitle';

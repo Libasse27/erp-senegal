@@ -14,6 +14,7 @@ const usePageTitle = (title, breadcrumbs = []) => {
     dispatch(setPageTitle(title));
     dispatch(setBreadcrumbs(breadcrumbs));
     document.title = `${title} | ERP Senegal`;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, dispatch]);
 };
 

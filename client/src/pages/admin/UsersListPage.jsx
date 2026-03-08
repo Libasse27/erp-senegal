@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from 'react-bootstrap/Card';
 import Table from 'react-bootstrap/Table';
@@ -14,7 +14,7 @@ import BsPagination from 'react-bootstrap/Pagination';
 import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiUsers } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../hooks/usePageTitle';
-import { formatDate, formatDateTime } from '../../utils/formatters';
+import { formatDateTime } from '../../utils/formatters';
 import { ROLES } from '../../utils/constants';
 import { useGetUsersQuery, useDeleteUserMutation } from '../../redux/api/usersApi';
 

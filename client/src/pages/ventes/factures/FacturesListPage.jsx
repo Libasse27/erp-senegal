@@ -50,7 +50,7 @@ const statusLabels = {
 
 const FacturesListPage = () => {
   const navigate = useNavigate();
-  const { page, limit, queryParams, handlePageChange } = usePagination(25);
+  const { page, queryParams, handlePageChange } = usePagination(25);
   const [statusFilter, setStatusFilter] = useState('');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedFacture, setSelectedFacture] = useState(null);
