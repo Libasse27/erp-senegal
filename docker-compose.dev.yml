@@ -1,0 +1,13 @@
+# =============================================================================
+# Override de développement — remplace nginx.conf par la version HTTP-only.
+# Utilisé quand les certificats SSL ne sont pas encore générés.
+#
+# Usage :
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# =============================================================================
+
+services:
+  nginx:
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro

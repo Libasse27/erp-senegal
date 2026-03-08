@@ -1,0 +1,14 @@
+# Ignorer les fichiers de certificats réels (ne jamais committer des clés privées)
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+*.der
+
+# Garder le dossier et les scripts dans git
+!.gitkeep
+!.gitignore
+!generate-ssl.sh
+!letsencrypt.sh

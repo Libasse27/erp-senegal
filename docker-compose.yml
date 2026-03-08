@@ -157,6 +157,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
+      - certbot_webroot:/var/www/certbot:ro
     networks:
       - erp_network
     healthcheck:
@@ -219,3 +220,4 @@ volumes:
   backend_logs:
   backend_backups:
   redis_data:
+  certbot_webroot:   # volume partagé Nginx ↔ Certbot pour le défi HTTP-01
