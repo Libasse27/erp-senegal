@@ -82,6 +82,9 @@ const CommandesAchatListPage = lazy(() => import('./pages/achats/CommandesAchatL
 const CommandeAchatFormPage = lazy(() => import('./pages/achats/CommandeAchatFormPage'));
 const CommandeAchatDetailPage = lazy(() => import('./pages/achats/CommandeAchatDetailPage'));
 
+// Profil
+const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
+
 // Notifications
 const NotificationsListPage = lazy(() => import('./pages/notifications/NotificationsListPage'));
 
@@ -181,6 +184,9 @@ const AppRoutes = () => {
           {/* Rapports */}
           <Route path="/rapports" element={<ReportsPage />} />
           <Route path="/rapports/ventes" element={<SalesReportPage />} />
+
+          {/* Profil */}
+          <Route path="/profil" element={<ProfilePage />} />
 
           {/* Notifications */}
           <Route path="/notifications" element={<NotificationsListPage />} />

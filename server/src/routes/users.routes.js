@@ -9,11 +9,17 @@ const {
   deleteUser,
   getMe,
   updateMe,
+  changePassword,
 } = require('../controllers/userController');
 const { protect } = require('../middlewares/auth');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
-const { createUser: createUserSchema, updateUser: updateUserSchema, updateMe: updateMeSchema } = require('../validations/user.validation');
+const {
+  createUser: createUserSchema,
+  updateUser: updateUserSchema,
+  updateMe: updateMeSchema,
+  changePassword: changePasswordSchema,
+} = require('../validations/user.validation');
 const audit = require('../middlewares/audit');
 
 // Toutes les routes sont protegees
@@ -22,6 +28,7 @@ router.use(protect);
 // Routes profil personnel (avant /:id pour eviter conflit)
 router.get('/me', getMe);
 router.put('/me', validate(updateMeSchema), audit('users', 'update'), updateMe);
+router.put('/me/password', validate(changePasswordSchema), changePassword);
 
 // Routes admin
 router.get('/', authorize('users:read'), getUsers);

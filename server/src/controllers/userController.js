@@ -200,9 +200,10 @@ const getMe = async (req, res, next) => {
  */
 const updateMe = async (req, res, next) => {
   try {
-    // Ne pas permettre de changer le role
+    // Ne pas permettre de changer le role ni le statut via ce endpoint
     delete req.body.role;
     delete req.body.isActive;
+    delete req.body.password; // Le mot de passe passe par /me/password
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
@@ -220,6 +221,38 @@ const updateMe = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Changer son mot de passe (requiert l'ancien)
+ * @route   PUT /api/users/me/password
+ * @access  Private
+ */
+const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // Charger l'utilisateur avec le mot de passe hashé
+    const user = await User.findById(req.user._id).select('+password');
+
+    // Verifier l'ancien mot de passe
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return next(new AppError('Mot de passe actuel incorrect.', 400));
+    }
+
+    // Sauvegarder le nouveau mot de passe (pre-save hook hashe automatiquement)
+    user.password = newPassword;
+    user.modifiedBy = req.user._id;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Mot de passe modifie avec succes',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getUsers,
   getUser,
@@ -228,4 +261,5 @@ module.exports = {
   deleteUser,
   getMe,
   updateMe,
+  changePassword,
 };

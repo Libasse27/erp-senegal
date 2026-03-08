@@ -53,8 +53,21 @@ const updateMe = Joi.object({
   'object.min': 'Au moins un champ doit etre fourni pour la mise a jour',
 });
 
+const changePassword = Joi.object({
+  currentPassword: Joi.string().required().messages({
+    'string.empty': 'Le mot de passe actuel est requis',
+    'any.required': 'Le mot de passe actuel est requis',
+  }),
+  newPassword: Joi.string().min(6).max(128).required().messages({
+    'string.empty': 'Le nouveau mot de passe est requis',
+    'string.min': 'Le nouveau mot de passe doit contenir au moins 6 caracteres',
+    'any.required': 'Le nouveau mot de passe est requis',
+  }),
+});
+
 module.exports = {
   createUser,
   updateUser,
   updateMe,
+  changePassword,
 };
