@@ -5,7 +5,6 @@ import Col from 'react-bootstrap/Col';
 import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Badge from 'react-bootstrap/Badge';
-import Spinner from 'react-bootstrap/Spinner';
 import {
   FiDollarSign,
   FiUsers,
@@ -16,47 +15,11 @@ import {
   FiCheckCircle,
   FiClock,
 } from 'react-icons/fi';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-
-} from 'recharts';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatMoney, formatDateTime } from '../../utils/formatters';
 import { useGetDashboardStatsQuery } from '../../redux/api/dashboardApi';
-
-const StatCard = ({ title, value, icon: Icon, color, subtitle, loading }) => (
-  <Card className="stat-card h-100">
-    <Card.Body className="d-flex align-items-center">
-      <div
-        className="rounded-circle d-flex align-items-center justify-content-center me-3"
-        style={{
-          width: 48,
-          height: 48,
-          backgroundColor: `${color}15`,
-          color: color,
-        }}
-      >
-        {loading ? <Spinner size="sm" /> : <Icon size={24} />}
-      </div>
-      <div>
-        <div className="stat-label">{title}</div>
-        <div className="stat-value" style={{ color }}>
-          {loading ? '...' : value}
-        </div>
-        {subtitle && <small className="text-muted">{subtitle}</small>}
-      </div>
-    </Card.Body>
-  </Card>
-);
+import StatCard from '../../components/ui/StatCard';
+import { SalesEvolutionChart, TopProductsChart } from '../../components/charts';
 
 const DashboardPage = () => {
   usePageTitle('Tableau de bord', [{ label: 'Accueil', path: '/' }]);
@@ -86,8 +49,6 @@ const DashboardPage = () => {
     { name: 'Wave', value: 15 },
     { name: 'Cheque', value: 5 },
   ];
-
-  const COLORS = ['#059669', '#1a56db', '#ff6900', '#00b4d8', '#d97706'];
 
   const recentActivities = [
     {
@@ -131,36 +92,6 @@ const DashboardPage = () => {
       time: new Date(Date.now() - 1000 * 60 * 240),
     },
   ];
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div
-          className="bg-white p-2 border rounded shadow-sm"
-          style={{ fontSize: '0.875rem' }}
-        >
-          <p className="mb-0 fw-semibold">{payload[0].payload.mois}</p>
-          <p className="mb-0 text-success">{formatMoney(payload[0].value)}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const CustomPieTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div
-          className="bg-white p-2 border rounded shadow-sm"
-          style={{ fontSize: '0.875rem' }}
-        >
-          <p className="mb-0 fw-semibold">{payload[0].name}</p>
-          <p className="mb-0">{payload[0].value}%</p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <>
@@ -232,19 +163,12 @@ const DashboardPage = () => {
               <h6 className="mb-0">Evolution du chiffre d'affaires (2026)</h6>
             </Card.Header>
             <Card.Body>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="mois" />
-                  <YAxis
-                    tickFormatter={(value) =>
-                      `${(value / 1000000).toFixed(0)}M`
-                    }
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="ca" fill="#059669" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <SalesEvolutionChart
+                data={revenueData}
+                dataKey="ca"
+                labelKey="mois"
+                type="bar"
+              />
             </Card.Body>
           </Card>
         </Col>
@@ -255,30 +179,7 @@ const DashboardPage = () => {
               <h6 className="mb-0">Modes de paiement</h6>
             </Card.Header>
             <Card.Body>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={paymentData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {paymentData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomPieTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
+              <TopProductsChart data={paymentData} />
             </Card.Body>
           </Card>
         </Col>

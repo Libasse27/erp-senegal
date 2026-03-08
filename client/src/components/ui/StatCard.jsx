@@ -1,18 +1,20 @@
 import React from 'react';
 import Card from 'react-bootstrap/Card';
+import Spinner from 'react-bootstrap/Spinner';
 import { FiTrendingUp, FiTrendingDown } from 'react-icons/fi';
 
 /**
  * KPI stat card for dashboard
- * @param {Object} props
- * @param {string} props.title - Card title
+ * @param {Object}  props
+ * @param {string}  props.title    - Card title
  * @param {string|number} props.value - Main value to display
  * @param {React.Component} props.icon - Icon component from react-icons/fi
- * @param {string} props.color - Color for icon and value (hex or named)
- * @param {string} props.subtitle - Optional subtitle text
- * @param {Object} props.trend - Optional trend {value: string, isUp: boolean}
+ * @param {string}  props.color    - Color for icon and value (hex or named)
+ * @param {string}  props.subtitle - Optional subtitle text
+ * @param {Object}  props.trend    - Optional trend {value: string, isUp: boolean}
+ * @param {boolean} props.loading  - Show spinner while loading
  */
-const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }) => {
+const StatCard = ({ title, value, icon: Icon, color, subtitle, trend, loading }) => {
   return (
     <Card className="stat-card h-100 shadow-sm">
       <Card.Body className="d-flex align-items-center">
@@ -25,12 +27,12 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }) => {
             color: color,
           }}
         >
-          {Icon && <Icon size={24} />}
+          {loading ? <Spinner size="sm" /> : Icon && <Icon size={24} />}
         </div>
         <div className="flex-grow-1">
           <div className="stat-label text-muted small">{title}</div>
           <div className="stat-value fw-bold" style={{ color, fontSize: '1.5rem' }}>
-            {value}
+            {loading ? '...' : value}
           </div>
           {subtitle && <small className="text-muted d-block">{subtitle}</small>}
           {trend && (
