@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Table from 'react-bootstrap/Table';
-import Badge from 'react-bootstrap/Badge';
 import Spinner from 'react-bootstrap/Spinner';
 import Alert from 'react-bootstrap/Alert';
 import Modal from 'react-bootstrap/Modal';
@@ -14,10 +13,7 @@ import {
   FiTrash2,
   FiRefreshCw,
   FiSend,
-  FiDownload,
   FiArrowLeft,
-  FiPrinter,
-  FiEye,
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../../hooks/usePageTitle';
@@ -29,7 +25,7 @@ import {
   useSendDevisMutation,
 } from '../../../redux/api/devisApi';
 import usePdfActions from '../../../hooks/usePdfActions';
-import PdfPreviewModal from '../../../components/print/PdfPreviewModal';
+import { PrintToolbar, DocumentHeader, PdfPreviewModal } from '../../../components/print';
 
 const statusColors = {
   brouillon: 'secondary',
@@ -134,6 +130,12 @@ const DevisDetailPage = () => {
   const pdfPath = `/devis/${id}/pdf`;
   const pdfFilename = `${devis.numero || 'devis'}.pdf`;
 
+  const tiers = devis.clientSnapshot
+    ? { nom: devis.clientSnapshot.displayName, email: devis.clientSnapshot.email, phone: devis.clientSnapshot.phone }
+    : devis.client
+    ? { nom: devis.client.displayName || devis.client.nom, email: devis.client.email }
+    : null;
+
   return (
     <>
       <div className="page-header d-flex justify-content-between align-items-center mb-4">
@@ -148,140 +150,58 @@ const DevisDetailPage = () => {
           </Button>
           <h1 className="d-inline-block ms-2">Devis {devis.numero}</h1>
         </div>
-        <div>
+        <div className="d-flex align-items-center gap-2">
           {statut === 'brouillon' && (
             <>
               <Button
                 variant="warning"
-                className="me-2"
                 onClick={() => navigate(`/ventes/devis/${id}/modifier`)}
               >
                 <FiEdit2 className="me-2" />
                 Modifier
               </Button>
-              <Button variant="danger" className="me-2" onClick={() => setDeleteModalOpen(true)}>
+              <Button variant="danger" onClick={() => setDeleteModalOpen(true)}>
                 <FiTrash2 className="me-2" />
                 Supprimer
               </Button>
             </>
           )}
           {(statut === 'brouillon' || statut === 'accepte') && (
-            <Button
-              variant="info"
-              className="me-2"
-              onClick={handleSend}
-              disabled={isSending}
-            >
+            <Button variant="info" onClick={handleSend} disabled={isSending}>
               <FiSend className="me-2" />
               {isSending ? 'Envoi...' : 'Envoyer'}
             </Button>
           )}
           {statut === 'accepte' && (
-            <Button variant="success" className="me-2" onClick={() => setConvertModalOpen(true)}>
+            <Button variant="success" onClick={() => setConvertModalOpen(true)}>
               <FiRefreshCw className="me-2" />
               Convertir en commande
             </Button>
           )}
-          <Button
-            variant="outline-secondary"
-            className="me-2"
-            onClick={() => previewPdf(pdfPath)}
-            disabled={isPdfLoading}
-          >
-            <FiEye className="me-2" />
-            Apercu
-          </Button>
-          <Button
-            variant="outline-secondary"
-            className="me-2"
-            onClick={() => printPdf(pdfPath)}
-            disabled={isPdfLoading}
-          >
-            <FiPrinter className="me-2" />
-            Imprimer
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => downloadPdf(pdfPath, pdfFilename)}
-            disabled={isPdfLoading}
-          >
-            <FiDownload className="me-2" />
-            {isPdfLoading ? 'Chargement...' : 'Telecharger PDF'}
-          </Button>
+          <PrintToolbar
+            onPreview={() => previewPdf(pdfPath)}
+            onPrint={() => printPdf(pdfPath)}
+            onDownload={() => downloadPdf(pdfPath, pdfFilename)}
+            isLoading={isPdfLoading}
+          />
         </div>
       </div>
 
-      <Row className="g-3 mb-4">
-        <Col lg={8}>
-          <Card className="shadow-sm">
-            <Card.Header className="bg-white">
-              <div className="d-flex justify-content-between align-items-center">
-                <h6 className="mb-0">Informations du devis</h6>
-                <Badge bg={statusColors[statut]}>{statusLabels[statut]}</Badge>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <p className="mb-2">
-                    <strong>Numero:</strong> {devis.numero}
-                  </p>
-                  <p className="mb-2">
-                    <strong>Date:</strong> {formatDate(devis.dateDevis || devis.date)}
-                  </p>
-                  <p className="mb-2">
-                    <strong>Date de validite:</strong> {formatDate(devis.dateValidite)}
-                  </p>
-                </Col>
-                <Col md={6}>
-                  {devis.conditionsPaiement && (
-                    <p className="mb-2">
-                      <strong>Conditions de paiement:</strong>
-                      <br />
-                      {devis.conditionsPaiement}
-                    </p>
-                  )}
-                </Col>
-              </Row>
-              {devis.notes && (
-                <div>
-                  <strong>Notes:</strong>
-                  <p className="text-muted mb-0">{devis.notes}</p>
-                </div>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col lg={4}>
-          <Card className="shadow-sm">
-            <Card.Header className="bg-white">
-              <h6 className="mb-0">Client</h6>
-            </Card.Header>
-            <Card.Body>
-              {devis.clientSnapshot ? (
-                <>
-                  <h6 className="mb-2">{devis.clientSnapshot.displayName}</h6>
-                  <p className="mb-1 small text-muted">
-                    <strong>Email:</strong> {devis.clientSnapshot.email || 'N/A'}
-                  </p>
-                  <p className="mb-1 small text-muted">
-                    <strong>Tel:</strong> {devis.clientSnapshot.phone || 'N/A'}
-                  </p>
-                </>
-              ) : devis.client ? (
-                <>
-                  <h6 className="mb-2">{devis.client.displayName || devis.client.nom}</h6>
-                  <p className="mb-1 small text-muted">
-                    <strong>Email:</strong> {devis.client.email || 'N/A'}
-                  </p>
-                </>
-              ) : (
-                <p className="text-muted mb-0">Aucun client associe</p>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+      <DocumentHeader
+        docLabel="Informations du devis"
+        numero={devis.numero}
+        statut={statut}
+        statusColors={statusColors}
+        statusLabels={statusLabels}
+        dateFields={[
+          { label: 'Date', value: formatDate(devis.dateDevis || devis.date) },
+          { label: 'Date de validite', value: formatDate(devis.dateValidite) },
+        ]}
+        conditionsPaiement={devis.conditionsPaiement}
+        notes={devis.notes}
+        tiersLabel="Client"
+        tiers={tiers}
+      />
 
       <Card className="shadow-sm mb-4">
         <Card.Header className="bg-white">
@@ -330,7 +250,7 @@ const DevisDetailPage = () => {
       <Card className="shadow-sm">
         <Card.Body>
           <Row>
-            <Col md={8}></Col>
+            <Col md={8} />
             <Col md={4}>
               <div className="d-flex justify-content-between mb-2">
                 <span>Total HT:</span>

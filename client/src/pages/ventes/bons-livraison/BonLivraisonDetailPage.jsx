@@ -3,18 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Table from 'react-bootstrap/Table';
-import Badge from 'react-bootstrap/Badge';
 import Spinner from 'react-bootstrap/Spinner';
 import Alert from 'react-bootstrap/Alert';
 import Modal from 'react-bootstrap/Modal';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
 import {
   FiArrowLeft,
   FiCheckCircle,
-  FiDownload,
-  FiPrinter,
-  FiEye,
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../../hooks/usePageTitle';
@@ -24,7 +18,7 @@ import {
   useValidateBonLivraisonMutation,
 } from '../../../redux/api/bonsLivraisonApi';
 import usePdfActions from '../../../hooks/usePdfActions';
-import PdfPreviewModal from '../../../components/print/PdfPreviewModal';
+import { PrintToolbar, DocumentHeader, PdfPreviewModal } from '../../../components/print';
 
 const statusColors = {
   brouillon: 'secondary',
@@ -92,6 +86,38 @@ const BonLivraisonDetailPage = () => {
   const pdfPath = `/bons-livraison/${id}/pdf`;
   const pdfFilename = `BL-${bl.numero || id}.pdf`;
 
+  const tiers = bl.clientSnapshot
+    ? {
+        nom: bl.clientSnapshot.displayName,
+        phone: bl.clientSnapshot.phone,
+        adresse: [bl.clientSnapshot.address?.street, bl.clientSnapshot.address?.city]
+          .filter(Boolean)
+          .join(', ') || undefined,
+      }
+    : null;
+
+  const commandeLink = bl.commande ? (
+    <Button
+      variant="link"
+      size="sm"
+      className="p-0"
+      onClick={() => navigate(`/ventes/commandes/${bl.commande._id}`)}
+    >
+      {bl.commande.numero}
+    </Button>
+  ) : null;
+
+  const factureLink = bl.facture ? (
+    <Button
+      variant="link"
+      size="sm"
+      className="p-0"
+      onClick={() => navigate(`/ventes/factures/${bl.facture._id}`)}
+    >
+      {bl.facture.numero}
+    </Button>
+  ) : null;
+
   return (
     <>
       <div className="page-header d-flex justify-content-between align-items-center mb-4">
@@ -106,127 +132,37 @@ const BonLivraisonDetailPage = () => {
           </Button>
           <h1 className="d-inline-block ms-2">Bon de livraison {bl.numero}</h1>
         </div>
-        <div>
+        <div className="d-flex align-items-center gap-2">
           {statut === 'brouillon' && (
-            <Button
-              variant="success"
-              className="me-2"
-              onClick={() => setValidateModalOpen(true)}
-            >
+            <Button variant="success" onClick={() => setValidateModalOpen(true)}>
               <FiCheckCircle className="me-2" />
               Valider
             </Button>
           )}
-          <Button
-            variant="outline-secondary"
-            className="me-2"
-            onClick={() => previewPdf(pdfPath)}
-            disabled={isPdfLoading}
-          >
-            <FiEye className="me-2" />
-            Apercu
-          </Button>
-          <Button
-            variant="outline-secondary"
-            className="me-2"
-            onClick={() => printPdf(pdfPath)}
-            disabled={isPdfLoading}
-          >
-            <FiPrinter className="me-2" />
-            Imprimer
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => downloadPdf(pdfPath, pdfFilename)}
-            disabled={isPdfLoading}
-          >
-            <FiDownload className="me-2" />
-            {isPdfLoading ? 'Chargement...' : 'Telecharger PDF'}
-          </Button>
+          <PrintToolbar
+            onPreview={() => previewPdf(pdfPath)}
+            onPrint={() => printPdf(pdfPath)}
+            onDownload={() => downloadPdf(pdfPath, pdfFilename)}
+            isLoading={isPdfLoading}
+          />
         </div>
       </div>
 
-      <Row className="g-3 mb-4">
-        <Col lg={8}>
-          <Card className="shadow-sm">
-            <Card.Header className="bg-white">
-              <div className="d-flex justify-content-between align-items-center">
-                <h6 className="mb-0">Informations du bon de livraison</h6>
-                <Badge bg={statusColors[statut] || 'secondary'}>{statusLabels[statut] || statut}</Badge>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <p className="mb-2">
-                    <strong>Numero:</strong> {bl.numero}
-                  </p>
-                  <p className="mb-2">
-                    <strong>Date de livraison:</strong> {formatDate(bl.dateLivraison)}
-                  </p>
-                  {bl.commande && (
-                    <p className="mb-2">
-                      <strong>Commande:</strong>{' '}
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="p-0"
-                        onClick={() => navigate(`/ventes/commandes/${bl.commande._id}`)}
-                      >
-                        {bl.commande.numero}
-                      </Button>
-                    </p>
-                  )}
-                </Col>
-                <Col md={6}>
-                  {bl.facture && (
-                    <p className="mb-2">
-                      <strong>Facture associee:</strong>{' '}
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="p-0"
-                        onClick={() => navigate(`/ventes/factures/${bl.facture._id}`)}
-                      >
-                        {bl.facture.numero}
-                      </Button>
-                    </p>
-                  )}
-                  {bl.notes && (
-                    <p className="mb-2">
-                      <strong>Notes:</strong> {bl.notes}
-                    </p>
-                  )}
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col lg={4}>
-          <Card className="shadow-sm">
-            <Card.Header className="bg-white">
-              <h6 className="mb-0">Client</h6>
-            </Card.Header>
-            <Card.Body>
-              {bl.clientSnapshot ? (
-                <>
-                  <h6 className="mb-2">{bl.clientSnapshot.displayName}</h6>
-                  <p className="mb-1 small text-muted">
-                    <strong>Tel:</strong> {bl.clientSnapshot.phone || 'N/A'}
-                  </p>
-                  {bl.clientSnapshot.address?.street && (
-                    <p className="mb-0 small text-muted">
-                      <strong>Adresse:</strong> {bl.clientSnapshot.address.street}, {bl.clientSnapshot.address.city}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="text-muted mb-0">Aucun client associe</p>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+      <DocumentHeader
+        docLabel="Informations du bon de livraison"
+        numero={bl.numero}
+        statut={statut}
+        statusColors={statusColors}
+        statusLabels={statusLabels}
+        dateFields={[
+          { label: 'Date de livraison', value: formatDate(bl.dateLivraison) },
+          { label: 'Commande', value: commandeLink },
+          { label: 'Facture associee', value: factureLink },
+        ]}
+        notes={bl.notes}
+        tiersLabel="Client"
+        tiers={tiers}
+      />
 
       <Card className="shadow-sm mb-4">
         <Card.Header className="bg-white">

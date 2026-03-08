@@ -15,10 +15,7 @@ import {
   FiSend,
   FiCheckCircle,
   FiArrowLeft,
-  FiDownload,
   FiFileText,
-  FiPrinter,
-  FiEye,
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../../hooks/usePageTitle';
@@ -30,7 +27,7 @@ import {
   useSendFactureMutation,
 } from '../../../redux/api/facturesApi';
 import usePdfActions from '../../../hooks/usePdfActions';
-import PdfPreviewModal from '../../../components/print/PdfPreviewModal';
+import { PrintToolbar, DocumentHeader, PdfPreviewModal } from '../../../components/print';
 
 const statusColors = {
   brouillon: 'secondary',
@@ -133,6 +130,12 @@ const FactureDetailPage = () => {
   const pdfPath = `/factures/${id}/pdf`;
   const pdfFilename = `${facture.numero || 'facture'}.pdf`;
 
+  const tiers = facture.clientSnapshot
+    ? { nom: facture.clientSnapshot.displayName, email: facture.clientSnapshot.email, phone: facture.clientSnapshot.phone }
+    : facture.client
+    ? { nom: facture.client.displayName || facture.client.nom, email: facture.client.email }
+    : null;
+
   return (
     <>
       <div className="page-header d-flex justify-content-between align-items-center mb-4">
@@ -147,152 +150,62 @@ const FactureDetailPage = () => {
           </Button>
           <h1 className="d-inline-block ms-2">Facture {facture.numero}</h1>
         </div>
-        <div>
+        <div className="d-flex align-items-center gap-2">
           {facture.statut === 'brouillon' && (
             <>
               <Button
                 variant="warning"
-                className="me-2"
                 onClick={() => navigate(`/ventes/factures/${id}/modifier`)}
               >
                 <FiEdit2 className="me-2" />
                 Modifier
               </Button>
-              <Button variant="danger" className="me-2" onClick={() => setDeleteModalOpen(true)}>
+              <Button variant="danger" onClick={() => setDeleteModalOpen(true)}>
                 <FiTrash2 className="me-2" />
                 Supprimer
               </Button>
-              <Button
-                variant="success"
-                className="me-2"
-                onClick={() => setValidateModalOpen(true)}
-              >
+              <Button variant="success" onClick={() => setValidateModalOpen(true)}>
                 <FiCheckCircle className="me-2" />
                 Valider
               </Button>
             </>
           )}
           {(facture.statut === 'validee' || facture.statut === 'envoyee') && (
-            <Button
-              variant="info"
-              className="me-2"
-              onClick={handleSend}
-              disabled={isSending}
-            >
+            <Button variant="info" onClick={handleSend} disabled={isSending}>
               <FiSend className="me-2" />
               {isSending ? 'Envoi...' : 'Envoyer'}
             </Button>
           )}
           {facture.statut !== 'brouillon' && facture.statut !== 'annulee' && (
-            <Button
-              variant="warning"
-              className="me-2"
-              onClick={() => toast.info('Fonctionnalite a venir')}
-            >
+            <Button variant="warning" onClick={() => toast.info('Fonctionnalite a venir')}>
               <FiFileText className="me-2" />
               Creer avoir
             </Button>
           )}
-          <Button
-            variant="outline-secondary"
-            className="me-2"
-            onClick={() => previewPdf(pdfPath)}
-            disabled={isPdfLoading}
-          >
-            <FiEye className="me-2" />
-            Apercu
-          </Button>
-          <Button
-            variant="outline-secondary"
-            className="me-2"
-            onClick={() => printPdf(pdfPath)}
-            disabled={isPdfLoading}
-          >
-            <FiPrinter className="me-2" />
-            Imprimer
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => downloadPdf(pdfPath, pdfFilename)}
-            disabled={isPdfLoading}
-          >
-            <FiDownload className="me-2" />
-            {isPdfLoading ? 'Chargement...' : 'Telecharger PDF'}
-          </Button>
+          <PrintToolbar
+            onPreview={() => previewPdf(pdfPath)}
+            onPrint={() => printPdf(pdfPath)}
+            onDownload={() => downloadPdf(pdfPath, pdfFilename)}
+            isLoading={isPdfLoading}
+          />
         </div>
       </div>
 
-      <Row className="g-3 mb-4">
-        <Col lg={8}>
-          <Card className="shadow-sm">
-            <Card.Header className="bg-white">
-              <div className="d-flex justify-content-between align-items-center">
-                <h6 className="mb-0">Informations de la facture</h6>
-                <Badge bg={statusColors[facture.statut]}>{statusLabels[facture.statut]}</Badge>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <p className="mb-2">
-                    <strong>Numero:</strong> {facture.numero}
-                  </p>
-                  <p className="mb-2">
-                    <strong>Date:</strong> {formatDate(facture.dateFacture || facture.date)}
-                  </p>
-                  <p className="mb-2">
-                    <strong>Date d'echeance:</strong> {formatDate(facture.dateEcheance)}
-                  </p>
-                </Col>
-                <Col md={6}>
-                  {facture.conditionsPaiement && (
-                    <p className="mb-2">
-                      <strong>Conditions de paiement:</strong>
-                      <br />
-                      {facture.conditionsPaiement}
-                    </p>
-                  )}
-                </Col>
-              </Row>
-              {facture.notes && (
-                <div>
-                  <strong>Notes:</strong>
-                  <p className="text-muted mb-0">{facture.notes}</p>
-                </div>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col lg={4}>
-          <Card className="shadow-sm">
-            <Card.Header className="bg-white">
-              <h6 className="mb-0">Client</h6>
-            </Card.Header>
-            <Card.Body>
-              {facture.clientSnapshot ? (
-                <>
-                  <h6 className="mb-2">{facture.clientSnapshot.displayName}</h6>
-                  <p className="mb-1 small text-muted">
-                    <strong>Email:</strong> {facture.clientSnapshot.email || 'N/A'}
-                  </p>
-                  <p className="mb-1 small text-muted">
-                    <strong>Tel:</strong> {facture.clientSnapshot.phone || 'N/A'}
-                  </p>
-                </>
-              ) : facture.client ? (
-                <>
-                  <h6 className="mb-2">{facture.client.displayName || facture.client.nom}</h6>
-                  <p className="mb-1 small text-muted">
-                    <strong>Email:</strong> {facture.client.email || 'N/A'}
-                  </p>
-                </>
-              ) : (
-                <p className="text-muted mb-0">Aucun client associe</p>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+      <DocumentHeader
+        docLabel="Informations de la facture"
+        numero={facture.numero}
+        statut={facture.statut}
+        statusColors={statusColors}
+        statusLabels={statusLabels}
+        dateFields={[
+          { label: 'Date', value: formatDate(facture.dateFacture || facture.date) },
+          { label: "Date d'echeance", value: formatDate(facture.dateEcheance) },
+        ]}
+        conditionsPaiement={facture.conditionsPaiement}
+        notes={facture.notes}
+        tiersLabel="Client"
+        tiers={tiers}
+      />
 
       <Card className="shadow-sm mb-4">
         <Card.Header className="bg-white">
