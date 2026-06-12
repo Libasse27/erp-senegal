@@ -47,10 +47,20 @@ if (process.env.NODE_ENV === 'development') {
 // --- Static files ---
 app.use('/uploads', express.static('uploads'));
 
-// --- API Routes ---
-app.use('/api', routes);
+// --- Root & favicon (Vercel crawler / browser requests) ---
+app.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    name: process.env.APP_NAME || 'ERP Senegal',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV,
+    docs: '/api/health',
+  });
+});
+app.get('/favicon.ico', (_req, res) => res.status(204).end());
+app.get('/favicon.png', (_req, res) => res.status(204).end());
 
-// --- Health check ---
+// --- Health check (avant les routes pour garantir l'accessibilité) ---
 app.get('/api/health', (_req, res) => {
   res.json({
     success: true,
@@ -59,6 +69,9 @@ app.get('/api/health', (_req, res) => {
     environment: process.env.NODE_ENV,
   });
 });
+
+// --- API Routes ---
+app.use('/api', routes);
 
 // --- 404 handler ---
 app.use((_req, res) => {
