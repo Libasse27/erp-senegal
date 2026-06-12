@@ -11,12 +11,12 @@ const envFile = isProd
   : path.join(__dirname, '..', '.env');
 
 if (!fs.existsSync(envFile)) {
-  console.error(`[config] Fichier d'environnement introuvable : ${envFile}`);
+  process.stderr.write(`[config] Fichier d'environnement introuvable : ${envFile}\n`);
   process.exit(1);
 }
 
 dotenv.config({ path: envFile });
-console.info(`[config] Environnement chargé : ${envFile}`);
+process.stdout.write(`[config] Environnement chargé : ${envFile}\n`);
 
 const app = require('./app');
 const { connectDB, disconnectDB } = require('./src/config/database');
