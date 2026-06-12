@@ -1,0 +1,30 @@
+[phases.setup]
+nixPkgs = [
+  "nodejs_20",
+  "chromium",
+  "nss",
+  "nspr",
+  "atk",
+  "cups",
+  "libdrm",
+  "mesa",
+  "libxkbcommon",
+  "expat",
+  "xorg.libX11",
+  "xorg.libXcomposite",
+  "xorg.libXdamage",
+  "xorg.libXext",
+  "xorg.libXfixes",
+  "xorg.libXrandr",
+  "xorg.libxcb",
+  "pango",
+  "cairo",
+  "alsa-lib",
+  "at-spi2-atk"
+]
+
+[phases.build]
+cmds = ["npm ci --production=false"]
+
+[start]
+cmd = "node server.js"

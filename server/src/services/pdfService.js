@@ -101,9 +101,20 @@ const generatePDF = async (templateName, data) => {
     const template = getTemplate(templateName);
     const html = template(data);
 
+    // Sur Railway/Linux : utiliser le Chromium système si disponible
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH ||
+      (process.env.RAILWAY_ENVIRONMENT ? '/run/current-system/sw/bin/chromium' : undefined);
+
     browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      executablePath,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+      ],
     });
 
     const page = await browser.newPage();
