@@ -9,6 +9,8 @@ const corsOptions = {
 
     const allowedOrigins = [
       process.env.CLIENT_URL,
+      'https://gescom-compta-senegal.com',
+      'https://www.gescom-compta-senegal.com',
       'http://localhost:3000',
       'http://localhost:5000',
     ].filter(Boolean);
