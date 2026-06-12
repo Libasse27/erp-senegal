@@ -1,8 +1,22 @@
 const http = require('http');
+const path = require('path');
 const dotenv = require('dotenv');
+const fs = require('fs');
 
-// Charger les variables d'environnement
-dotenv.config({ path: '../.env' });
+// Charger le bon fichier .env selon NODE_ENV
+// NODE_ENV doit être défini AVANT le lancement (ex: NODE_ENV=production node server.js)
+const isProd = process.env.NODE_ENV === 'production';
+const envFile = isProd
+  ? path.join(__dirname, '.env.prod')
+  : path.join(__dirname, '..', '.env');
+
+if (!fs.existsSync(envFile)) {
+  console.error(`[config] Fichier d'environnement introuvable : ${envFile}`);
+  process.exit(1);
+}
+
+dotenv.config({ path: envFile });
+console.info(`[config] Environnement chargé : ${envFile}`);
 
 const app = require('./app');
 const { connectDB, disconnectDB } = require('./src/config/database');
