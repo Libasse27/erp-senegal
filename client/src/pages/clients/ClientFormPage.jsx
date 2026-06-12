@@ -12,7 +12,6 @@ import {
   FiUser,
   FiBriefcase,
   FiMail,
-  FiPhone,
   FiMapPin,
   FiDollarSign,
   FiInfo,

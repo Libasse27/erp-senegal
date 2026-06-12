@@ -11,13 +11,11 @@ import {
   FiX,
   FiTruck,
   FiMail,
-  FiPhone,
   FiMapPin,
   FiDollarSign,
   FiStar,
   FiCreditCard,
   FiInfo,
-  FiUser,
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../hooks/usePageTitle';

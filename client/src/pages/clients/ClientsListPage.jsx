@@ -23,7 +23,7 @@ import {
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../hooks/usePageTitle';
-import { formatMoney, formatPhone } from '../../utils/formatters';
+import { formatMoney } from '../../utils/formatters';
 import { useAuth } from '../../contexts/AuthContext';
 import { PERM } from '../../config/permissions';
 import {
