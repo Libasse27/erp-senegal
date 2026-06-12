@@ -3,20 +3,23 @@ const path = require('path');
 const dotenv = require('dotenv');
 const fs = require('fs');
 
-// Charger le bon fichier .env selon NODE_ENV
-// NODE_ENV doit être défini AVANT le lancement (ex: NODE_ENV=production node server.js)
+// Charger les variables d'environnement
+// Priorité : variables déjà injectées (Vercel/Railway dashboard) > fichier .env.prod > .env
 const isProd = process.env.NODE_ENV === 'production';
 const envFile = isProd
   ? path.join(__dirname, '.env.prod')
   : path.join(__dirname, '..', '.env');
 
-if (!fs.existsSync(envFile)) {
-  process.stderr.write(`[config] Fichier d'environnement introuvable : ${envFile}\n`);
+if (fs.existsSync(envFile)) {
+  dotenv.config({ path: envFile });
+  process.stdout.write(`[config] Environnement chargé depuis fichier : ${envFile}\n`);
+} else if (process.env.MONGO_URI) {
+  // Variables injectées par la plateforme (Vercel, Railway) — pas de fichier nécessaire
+  process.stdout.write(`[config] Variables d'environnement injectées par la plateforme\n`);
+} else {
+  process.stderr.write(`[config] ERREUR : aucune variable d'environnement trouvée\n`);
   process.exit(1);
 }
-
-dotenv.config({ path: envFile });
-process.stdout.write(`[config] Environnement chargé : ${envFile}\n`);
 
 const app = require('./app');
 const { connectDB, disconnectDB } = require('./src/config/database');
