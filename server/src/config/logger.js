@@ -1,7 +1,46 @@
 const winston = require('winston');
 const path = require('path');
+const fs = require('fs');
 
-const logDir = process.env.LOG_DIR || './logs';
+// In Lambda, /var/task is read-only — use /tmp. Otherwise use an absolute path.
+const isLambda = !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+const defaultLogDir = isLambda
+  ? '/tmp/logs'
+  : path.join(__dirname, '..', '..', '..', 'logs');
+const logDir = process.env.LOG_DIR || defaultLogDir;
+
+const consoleFormat = winston.format.combine(
+  winston.format.colorize(),
+  winston.format.printf(({ level, message, timestamp, stack }) => {
+    return `${timestamp} ${level}: ${stack || message}`;
+  })
+);
+
+const fileTransports = [];
+try {
+  fs.mkdirSync(logDir, { recursive: true });
+  fileTransports.push(
+    new winston.transports.File({
+      filename: path.join(logDir, 'error.log'),
+      level: 'error',
+      maxsize: 5242880,
+      maxFiles: 5,
+    }),
+    new winston.transports.File({
+      filename: path.join(logDir, 'combined.log'),
+      maxsize: 5242880,
+      maxFiles: 5,
+    }),
+    new winston.transports.File({
+      filename: path.join(logDir, 'access.log'),
+      level: 'http',
+      maxsize: 5242880,
+      maxFiles: 3,
+    })
+  );
+} catch {
+  // File logging unavailable (read-only filesystem) — console only
+}
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -12,42 +51,14 @@ const logger = winston.createLogger({
   ),
   defaultMeta: { service: 'erp-senegal' },
   transports: [
-    // Error log file
-    new winston.transports.File({
-      filename: path.join(logDir, 'error.log'),
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
+    new winston.transports.Console({
+      format: process.env.NODE_ENV !== 'production'
+        ? consoleFormat
+        : winston.format.json(),
     }),
-    // Combined log file
-    new winston.transports.File({
-      filename: path.join(logDir, 'combined.log'),
-      maxsize: 5242880,
-      maxFiles: 5,
-    }),
-    // HTTP access log file (requests only)
-    new winston.transports.File({
-      filename: path.join(logDir, 'access.log'),
-      level: 'http',
-      maxsize: 5242880,
-      maxFiles: 3,
-    }),
+    ...fileTransports,
   ],
 });
-
-// In development, also output to console
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf(({ level, message, timestamp, stack }) => {
-          return `${timestamp} ${level}: ${stack || message}`;
-        })
-      ),
-    })
-  );
-}
 
 // Stream object for Morgan HTTP logging integration
 logger.stream = {
