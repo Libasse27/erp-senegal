@@ -8,7 +8,7 @@ import Button from 'react-bootstrap/Button';
 import Table from 'react-bootstrap/Table';
 import Alert from 'react-bootstrap/Alert';
 import Spinner from 'react-bootstrap/Spinner';
-import { FiPlus, FiTrash2, FiSave, FiArrowLeft, FiDownload } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiSave, FiArrowLeft } from 'react-icons/fi';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatMoney } from '../../utils/formatters';
 import {

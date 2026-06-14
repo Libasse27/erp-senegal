@@ -85,7 +85,7 @@ const TransfertFormPage = () => {
         stockDispo: null,
       })));
     }
-  }, [existingData]);
+  }, [existingData, id, navigate]);
 
   // Reset lignes when source warehouse changes
   const handleSourceChange = (wId) => {

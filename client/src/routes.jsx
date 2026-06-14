@@ -65,7 +65,9 @@ const AvoirsListPage = lazy(() => import('./pages/ventes/avoirs/AvoirsListPage')
 const AvoirDetailPage = lazy(() => import('./pages/ventes/avoirs/AvoirDetailPage'));
 
 // Ventes - Relances / Recouvrement
+// eslint-disable-next-line no-unused-vars
 const RecouvrementPage = lazy(() => import('./pages/ventes/relances/RecouvrementPage'));
+// eslint-disable-next-line no-unused-vars
 const RelanceDetailPage = lazy(() => import('./pages/ventes/relances/RelanceDetailPage'));
 
 // Paiements

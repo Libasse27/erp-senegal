@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { FiRefreshCw, FiLayers, FiAlertTriangle, FiCheckCircle, FiClock, FiUsers, FiFileText, FiArrowRight } from 'react-icons/fi';
 import { useGetUsageSaasQuery, useGetPaiementsSaasQuery } from '../../redux/api/saasApi';
 
@@ -33,7 +33,6 @@ const UsageBar = ({ label, icon: Icon, value, max, color }) => {
 };
 
 const AbonnementPage = () => {
-  const navigate = useNavigate();
   const { data: usage, isLoading, isError } = useGetUsageSaasQuery();
   const { data: paiementsRes } = useGetPaiementsSaasQuery({ limit: 5 });
 

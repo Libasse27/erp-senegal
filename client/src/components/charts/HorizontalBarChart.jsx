@@ -31,7 +31,7 @@ const CustomTooltip = ({ active, payload }) => {
 /**
  * Graphique à barres horizontales — top produits / classements.
  */
-const HorizontalBarChart = ({ data = [], dataKey = 'totalCA', nameKey = 'designation', height = 300, color = '#059669' }) => (
+const HorizontalBarChart = ({ data = [], dataKey = 'totalCA', nameKey = 'designation', height = 300 }) => (
   <ResponsiveContainer width="100%" height={height}>
     <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
       <CartesianGrid strokeDasharray="3 3" horizontal={false} />

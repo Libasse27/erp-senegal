@@ -24,7 +24,7 @@ import {
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../hooks/usePageTitle';
-import { formatMoney, formatDate } from '../../utils/formatters';
+import { formatDate } from '../../utils/formatters';
 import { useGetStockAlertsQuery } from '../../redux/api/stocksApi';
 import { useUpdateProductSeuilsMutation } from '../../redux/api/productsApi';
 import { useAuth } from '../../contexts/AuthContext';
@@ -85,7 +85,10 @@ const StockAlertsPage = () => {
   const { data, isLoading, error, refetch, isFetching } = useGetStockAlertsQuery();
   const [updateSeuils, { isLoading: savingSeuils }] = useUpdateProductSeuilsMutation();
 
-  const alerts = data?.data || { rupture: [], seuilAlerte: [], seuilMinimum: [], peremption: [] };
+  const alerts = useMemo(
+    () => data?.data || { rupture: [], seuilAlerte: [], seuilMinimum: [], peremption: [] },
+    [data]
+  );
   const summary = data?.summary || { rupture: 0, seuilAlerte: 0, seuilMinimum: 0, peremption: 0, total: 0 };
 
   const displayRows = useMemo(() => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { FiSmartphone, FiCreditCard, FiCheckCircle, FiAlertCircle, FiExternalLink, FiArrowLeft, FiRefreshCw } from 'react-icons/fi';
+import { FiSmartphone, FiCheckCircle, FiAlertCircle, FiExternalLink, FiArrowLeft, FiRefreshCw } from 'react-icons/fi';
 import { useGetForfaitsQuery, useGetUsageSaasQuery, useInitierPaiementSaasMutation, useGetStatutPaiementSaasQuery } from '../../redux/api/saasApi';
 
 const METHODES = [
@@ -13,7 +13,6 @@ const PaiementSaasPage = () => {
   const navigate  = useNavigate();
 
   const forfaitCode = location.state?.forfaitCode;
-  const forfaitId   = location.state?.forfaitId;
 
   const { data: usage }    = useGetUsageSaasQuery();
   const { data: forfaits } = useGetForfaitsQuery();
@@ -33,7 +32,7 @@ const PaiementSaasPage = () => {
 
   const { data: statut, refetch: refetchStatut } = useGetStatutPaiementSaasQuery(reference, {
     skip: !reference,
-    pollingInterval: reference && statut?.statut === 'EN_ATTENTE' ? 4000 : 0,
+    pollingInterval: reference ? 4000 : 0,
   });
 
   const forfait = forfaitCode

@@ -8,7 +8,7 @@ import Col from 'react-bootstrap/Col';
 import Badge from 'react-bootstrap/Badge';
 import Spinner from 'react-bootstrap/Spinner';
 import { FiInfo, FiCheckCircle, FiAlertTriangle, FiXCircle, FiTrash2, FiCheck, FiBell } from 'react-icons/fi';
-import { formatDistanceToNow, isToday, isThisWeek, startOfToday } from 'date-fns';
+import { formatDistanceToNow, isToday, isThisWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import usePageTitle from '../../hooks/usePageTitle';
 import useNotificationsHook from '../../hooks/useNotifications';
@@ -28,7 +28,6 @@ const groupByDate = (items) => {
   const today = [];
   const week = [];
   const older = [];
-  const todayStart = startOfToday();
 
   for (const n of items) {
     const d = new Date(n.createdAt);

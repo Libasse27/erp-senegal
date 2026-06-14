@@ -524,7 +524,7 @@ const FacturesRecurrentesPage = () => {
   }, [search, filterFrequence, filterActif]);
 
   const { data, isLoading, isError } = useGetFacturesRecurrentesQuery(queryParams);
-  const templates = data?.data || [];
+  const templates = useMemo(() => data?.data || [], [data]);
 
   const [toggleActive, { isLoading: toggling }] = useToggleFactureRecurrenteActiveMutation();
   const [genererMaintenant, { isLoading: generating }] = useGenererFactureMaintenantMutation();

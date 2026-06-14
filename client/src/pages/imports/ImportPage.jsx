@@ -188,7 +188,7 @@ const ImportPage = () => {
                 <div className="border rounded-2 p-3 d-flex align-items-center gap-3">
                   <div
                     className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                    style={{ width: 44, height: 44, backgroundColor: '#059669' + '15', color: '#059669' }}
+                    style={{ width: 44, height: 44, backgroundColor: '#05906915', color: '#059669' }}
                   >
                     <FiFile size={20} />
                   </div>
@@ -259,19 +259,19 @@ const ImportPage = () => {
               <Card.Body>
                 <Row className="g-2 mb-3">
                   <Col xs={4}>
-                    <div className="text-center p-2 rounded-2" style={{ backgroundColor: '#059669' + '10' }}>
+                    <div className="text-center p-2 rounded-2" style={{ backgroundColor: '#05906910' }}>
                       <div className="fw-bold fs-5 text-success">{result.imported}</div>
                       <div className="text-muted small">Ajoutés</div>
                     </div>
                   </Col>
                   <Col xs={4}>
-                    <div className="text-center p-2 rounded-2" style={{ backgroundColor: '#1a56db' + '10' }}>
+                    <div className="text-center p-2 rounded-2" style={{ backgroundColor: '#1a56db10' }}>
                       <div className="fw-bold fs-5 text-primary">{result.updated}</div>
                       <div className="text-muted small">Mis à jour</div>
                     </div>
                   </Col>
                   <Col xs={4}>
-                    <div className="text-center p-2 rounded-2" style={{ backgroundColor: '#dc2626' + '10' }}>
+                    <div className="text-center p-2 rounded-2" style={{ backgroundColor: '#dc262610' }}>
                       <div className="fw-bold fs-5 text-danger">{result.errors.length}</div>
                       <div className="text-muted small">Erreurs</div>
                     </div>
