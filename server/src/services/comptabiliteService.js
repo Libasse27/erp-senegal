@@ -241,6 +241,68 @@ const generateEcritureFromPaymentFournisseur = async (payment, userId) => {
 };
 
 /**
+ * Generate a SYSCOHADA accounting entry for a goods receipt (achat)
+ * Journal AC: Debit 601000 (Achats marchandises) + 445600 (TVA déductible) / Credit 401000 (Fournisseurs)
+ * @param {Object} commande - CommandeAchat document
+ * @param {{totalHT: number, totalTVA: number, totalTTC: number, dateReception: Date}} receptionData
+ * @param {string} userId
+ * @returns {Promise<Object>} Created EcritureComptable
+ */
+const generateEcritureFromReceptionAchat = async (commande, receptionData, userId) => {
+  const exercice = await getExerciceForDate(receptionData.dateReception || new Date());
+  const fournisseurName = commande.fournisseurSnapshot?.raisonSociale || 'Fournisseur';
+  const docRef = commande.numero;
+
+  const lignes = [
+    {
+      compteNumero: '601000',
+      libelle: `Achats marchandises - ${docRef}`,
+      debit: receptionData.totalHT,
+      credit: 0,
+    },
+  ];
+
+  if (receptionData.totalTVA > 0) {
+    lignes.push({
+      compteNumero: '445600',
+      libelle: `TVA deductible - ${docRef}`,
+      debit: receptionData.totalTVA,
+      credit: 0,
+    });
+  }
+
+  lignes.push({
+    compteNumero: '401000',
+    libelle: `${fournisseurName} - Reception ${docRef}`,
+    debit: 0,
+    credit: receptionData.totalTTC,
+  });
+
+  for (const ligne of lignes) {
+    const compte = await resolveCompte(ligne.compteNumero);
+    ligne.compte = compte._id;
+    ligne.compteLibelle = compte.libelle;
+  }
+
+  const ecriture = await EcritureComptable.create({
+    journal: 'AC',
+    dateEcriture: receptionData.dateReception || new Date(),
+    libelle: `Reception marchandises - ${docRef} - ${fournisseurName}`,
+    reference: docRef,
+    exercice: exercice._id,
+    lignes,
+    statut: 'validee',
+    sourceDocument: { type: 'commande_achat', id: commande._id },
+    validatedBy: userId,
+    validatedAt: new Date(),
+    createdBy: userId,
+  });
+
+  await updateCompteBalances(lignes);
+  return ecriture;
+};
+
+/**
  * Determine the accounting journal and account number based on payment mode
  * @param {Object} payment - Payment document
  * @returns {{journal: string, compteDebit: string}}
@@ -813,6 +875,7 @@ module.exports = {
   generateEcritureFromFacture,
   generateEcritureFromPaymentClient,
   generateEcritureFromPaymentFournisseur,
+  generateEcritureFromReceptionAchat,
   getPaymentAccounts,
   updateCompteBalances,
   reverseCompteBalances,

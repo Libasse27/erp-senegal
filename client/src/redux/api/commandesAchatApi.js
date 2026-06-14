@@ -42,6 +42,23 @@ export const commandesAchatApi = apiSlice.injectEndpoints({
         { type: 'CommandeAchat', id: 'LIST' },
       ],
     }),
+    recevoirMarchandise: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `/commandes-achat/${id}/reception`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'CommandeAchat', id },
+        { type: 'CommandeAchat', id: 'LIST' },
+        { type: 'CommandeAchat', id: 'STATS' },
+        { type: 'Stock', id: 'LIST' },
+      ],
+    }),
+    getCommandesAchatStats: builder.query({
+      query: () => '/commandes-achat/stats',
+      providesTags: [{ type: 'CommandeAchat', id: 'STATS' }],
+    }),
   }),
 });
 
@@ -52,4 +69,6 @@ export const {
   useUpdateCommandeAchatMutation,
   useDeleteCommandeAchatMutation,
   useUpdateCommandeAchatStatutMutation,
+  useRecevoirMarchandiseMutation,
+  useGetCommandesAchatStatsQuery,
 } = commandesAchatApi;

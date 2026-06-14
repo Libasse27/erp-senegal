@@ -57,8 +57,37 @@ const changeStatutCommandeAchat = Joi.object({
     }),
 });
 
+const receptionCommandeAchat = Joi.object({
+  lignes: Joi.array()
+    .items(
+      Joi.object({
+        ligneId: Joi.string().hex().length(24).required().messages({
+          'any.required': 'L\'identifiant de la ligne est requis',
+          'string.length': 'Identifiant de ligne invalide',
+        }),
+        quantiteRecue: Joi.number().positive().required().messages({
+          'any.required': 'La quantite recue est requise',
+          'number.positive': 'La quantite recue doit etre superieure a 0',
+        }),
+        warehouseId: Joi.string().hex().length(24).required().messages({
+          'any.required': 'L\'entrepot de destination est requis',
+          'string.length': 'Identifiant entrepot invalide',
+        }),
+      })
+    )
+    .min(1)
+    .required()
+    .messages({
+      'array.min': 'Au moins une ligne de reception est requise',
+      'any.required': 'Les lignes de reception sont requises',
+    }),
+  dateReception: Joi.date().optional(),
+  notes: Joi.string().max(2000).allow('').optional(),
+});
+
 module.exports = {
   createCommandeAchat,
   updateCommandeAchat,
   changeStatutCommandeAchat,
+  receptionCommandeAchat,
 };

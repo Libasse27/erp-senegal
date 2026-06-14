@@ -11,7 +11,7 @@ import Modal from 'react-bootstrap/Modal';
 import Pagination from 'react-bootstrap/Pagination';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import { FiPlus, FiEye, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiPlus, FiEye, FiEdit2, FiTrash2, FiShoppingCart, FiClock, FiTrendingUp } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../hooks/usePageTitle';
 import usePagination from '../../hooks/usePagination';
@@ -19,6 +19,7 @@ import { formatMoney, formatDate } from '../../utils/formatters';
 import {
   useGetCommandesAchatQuery,
   useDeleteCommandeAchatMutation,
+  useGetCommandesAchatStatsQuery,
 } from '../../redux/api/commandesAchatApi';
 
 const statusColors = {
@@ -54,7 +55,10 @@ const CommandesAchatListPage = () => {
 
   const params = { ...queryParams, ...(statutFilter && { statut: statutFilter }) };
   const { data, isLoading, isError, error } = useGetCommandesAchatQuery(params);
+  const { data: statsData } = useGetCommandesAchatStatsQuery();
   const [deleteCommande, { isLoading: isDeleting }] = useDeleteCommandeAchatMutation();
+
+  const stats = statsData?.data || {};
 
   const handleDelete = async () => {
     try {
@@ -87,6 +91,59 @@ const CommandesAchatListPage = () => {
           Nouvelle commande achat
         </Button>
       </div>
+
+      {/* KPI Cards */}
+      <Row className="g-3 mb-4">
+        <Col sm={6} lg={3}>
+          <Card className="shadow-sm border-0 h-100">
+            <Card.Body className="d-flex align-items-center gap-3">
+              <div className="p-3 rounded-3 bg-primary bg-opacity-10">
+                <FiTrendingUp size={22} className="text-primary" />
+              </div>
+              <div>
+                <div className="text-muted small">Achats du mois</div>
+                <div className="fw-bold fs-6">{formatMoney(stats.totalAchatsMois || 0)}</div>
+                <div className="text-muted" style={{ fontSize: 11 }}>{stats.nbCommandesMois || 0} commande(s)</div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col sm={6} lg={3}>
+          <Card className="shadow-sm border-0 h-100">
+            <Card.Body className="d-flex align-items-center gap-3">
+              <div className="p-3 rounded-3 bg-warning bg-opacity-10">
+                <FiClock size={22} className="text-warning" />
+              </div>
+              <div>
+                <div className="text-muted small">En attente</div>
+                <div className="fw-bold fs-6">{stats.commandesEnAttente || 0}</div>
+                <div className="text-muted" style={{ fontSize: 11 }}>brouillon / envoyee / confirmee</div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col lg={6}>
+          <Card className="shadow-sm border-0 h-100">
+            <Card.Body>
+              <div className="text-muted small mb-2 d-flex align-items-center gap-1">
+                <FiShoppingCart size={14} /> Top fournisseurs
+              </div>
+              {(stats.topFournisseurs || []).length === 0 ? (
+                <span className="text-muted small">Aucune donnee</span>
+              ) : (
+                <div className="d-flex flex-column gap-1">
+                  {(stats.topFournisseurs || []).map((f, i) => (
+                    <div key={i} className="d-flex justify-content-between align-items-center">
+                      <span className="small text-truncate" style={{ maxWidth: 200 }}>{f.raisonSociale}</span>
+                      <Badge bg="light" text="dark" className="ms-2">{formatMoney(f.total)}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
 
       <Card className="shadow-sm">
         <Card.Header className="bg-white">

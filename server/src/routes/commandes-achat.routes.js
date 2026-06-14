@@ -8,6 +8,8 @@ const {
   updateCommandeAchat,
   deleteCommandeAchat,
   changeStatut,
+  getCommandesAchatStats,
+  recevoirMarchandise,
 } = require('../controllers/commandeAchatController');
 const { protect } = require('../middlewares/auth');
 const tenantMiddleware = require('../middlewares/tenant');
@@ -18,12 +20,16 @@ const {
   createCommandeAchat: createSchema,
   updateCommandeAchat: updateSchema,
   changeStatutCommandeAchat: changeStatutSchema,
+  receptionCommandeAchat: receptionSchema,
 } = require('../validations/commandeAchat.validation');
 const audit = require('../middlewares/audit');
 
 router.use(protect);
 router.use(tenantMiddleware);
 router.use(subscriptionGuard('GESCOM'));
+
+// Stats must come before /:id to avoid route conflict
+router.get('/stats', authorize('commandes_achat:read'), getCommandesAchatStats);
 
 router.get('/', authorize('commandes_achat:read'), getCommandesAchat);
 router.get('/:id', authorize('commandes_achat:read'), getCommandeAchat);
@@ -53,6 +59,15 @@ router.put(
   validate(changeStatutSchema),
   audit('commandes_achat', 'update'),
   changeStatut
+);
+
+// Reception de marchandise
+router.post(
+  '/:id/reception',
+  authorize('commandes_achat:update'),
+  validate(receptionSchema),
+  audit('commandes_achat', 'update'),
+  recevoirMarchandise
 );
 
 module.exports = router;
