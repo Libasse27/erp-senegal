@@ -14,6 +14,7 @@ const {
   getDashboardCashflow,
   getDashboardFunnel,
   getDashboardPeriode,
+  getDashboardComparaison,
 } = require('../controllers/dashboardController');
 
 const { protect } = require('../middlewares/auth');
@@ -35,5 +36,6 @@ router.get('/recouvrement', getDashboardRecouvrement);
 router.get('/cashflow', getDashboardCashflow);
 router.get('/funnel', getDashboardFunnel);
 router.get('/periode', getDashboardPeriode);
+router.get('/comparaison', getDashboardComparaison);
 
 module.exports = router;

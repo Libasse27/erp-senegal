@@ -56,6 +56,10 @@ export const dashboardApi = apiSlice.injectEndpoints({
       query: (params) => ({ url: '/dashboard/periode', params }),
       providesTags: [{ type: 'Dashboard', id: 'PERIODE' }],
     }),
+    getDashboardComparaison: builder.query({
+      query: (params) => ({ url: '/dashboard/comparaison', params }),
+      providesTags: [{ type: 'Dashboard', id: 'COMPARAISON' }],
+    }),
   }),
 });
 
@@ -72,4 +76,5 @@ export const {
   useGetDashboardCashflowQuery,
   useGetDashboardFunnelQuery,
   useGetDashboardPeriodeQuery,
+  useGetDashboardComparaisonQuery,
 } = dashboardApi;

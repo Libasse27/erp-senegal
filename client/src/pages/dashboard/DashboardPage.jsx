@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -33,6 +34,8 @@ import {
   FiTrendingDown,
   FiTarget,
   FiZap,
+  FiDownload,
+  FiPrinter,
 } from 'react-icons/fi';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatMoney, formatDateTime } from '../../utils/formatters';
@@ -48,7 +51,9 @@ import {
   useGetDashboardCashflowQuery,
   useGetDashboardFunnelQuery,
   useGetDashboardPeriodeQuery,
+  useGetDashboardComparaisonQuery,
 } from '../../redux/api/dashboardApi';
+import { apiSlice } from '../../redux/api/apiSlice';
 import { useGetUsageSaasQuery } from '../../redux/api/saasApi';
 import useNotificationsHook from '../../hooks/useNotifications';
 import StatCard from '../../components/ui/StatCard';
@@ -107,7 +112,10 @@ const DashboardPage = () => {
 
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
+  const [showPrevYear, setShowPrevYear] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState(new Date());
 
+  const dispatch = useDispatch();
   const { user, hasPermission, hasRole } = useAuth();
   const { data: statsData, isLoading } = useGetDashboardStatsQuery();
   const stats = statsData?.data || {};
@@ -153,6 +161,10 @@ const DashboardPage = () => {
     { days: selectedPeriod },
     { skip: !canViewFactures }
   );
+  const { data: comparaisonData } = useGetDashboardComparaisonQuery(
+    { year: selectedYear },
+    { skip: !canViewFactures }
+  );
 
   const topClients     = topClientsData?.data     || [];
   const stockAlerts    = stockAlertsData?.data    || [];
@@ -163,6 +175,7 @@ const DashboardPage = () => {
   const cashflow       = cashflowData?.data       || { lignes: [], totalEntrees: 0, totalSorties: 0, soldeNet: 0 };
   const funnel         = funnelData?.data         || { steps: [], tauxConversionDevis: 0, tauxConversionFactures: 0 };
   const periode        = periodeData?.data        || {};
+  const comparaison    = comparaisonData?.data    || {};
 
   const isAdmin = hasRole('admin');
   const { data: usageData } = useGetUsageSaasQuery(undefined, { skip: !isAdmin });
@@ -178,6 +191,51 @@ const DashboardPage = () => {
     const found = (chartsData?.data?.caMensuel || []).find((m) => m._id === i + 1);
     return { mois, ca: found?.total || 0 };
   });
+
+  // ── CA mensuel année N-1 (pour comparaison graphique) ────────────────────
+  const prevRevenueData = MONTHS.map((mois, i) => {
+    const found = (chartsData?.data?.caMensuelPrevYear || []).find((m) => m._id === i + 1);
+    return { mois, ca: found?.total || 0 };
+  });
+
+  // ── Refresh manuel : invalide tout le cache Dashboard ────────────────────
+  const handleRefresh = () => {
+    const DASHBOARD_TAGS = ['STATS', 'CHARTS', 'KPIS', 'TOP_CLIENTS', 'TOP_PRODUCTS',
+      'STOCK_ALERTS', 'STOCK_EVOLUTION', 'RECOUVREMENT', 'CASHFLOW', 'FUNNEL', 'PERIODE', 'COMPARAISON'];
+    dispatch(apiSlice.util.invalidateTags(DASHBOARD_TAGS.map((id) => ({ type: 'Dashboard', id }))));
+    setLastRefreshed(new Date());
+  };
+
+  // ── Export CSV ────────────────────────────────────────────────────────────
+  const exportCSV = () => {
+    const csvLines = [
+      [`Tableau de bord ERP Sénégal — ${selectedYear}`],
+      [],
+      [`Évolution CA mensuelle`],
+      ['Mois', `CA ${selectedYear} (FCFA)`, `CA ${selectedYear - 1} (FCFA)`],
+      ...revenueData.map((d, i) => [d.mois, d.ca, prevRevenueData[i]?.ca || 0]),
+      [],
+      [`Top Clients ${selectedYear}`],
+      ['Client', 'CA (FCFA)', 'Nb Factures', 'Part (%)'],
+      ...topClients.map((c) => [c.displayName, c.totalCA, c.nbFactures, c.pct]),
+      [],
+      [`Top Produits ${selectedYear}`],
+      ['Produit', 'CA (FCFA)', 'Quantité', 'Nb Factures'],
+      ...topProducts.map((p) => [p.designation, p.totalCA, p.totalQte, p.nbFactures]),
+    ];
+    const csv = csvLines
+      .map((row) => row.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dashboard-${selectedYear}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   // ── Données graphique paiements par mode ─────────────────────────────────
   const rawPayments = chartsData?.data?.paiementsParMode || [];
@@ -400,6 +458,32 @@ const DashboardPage = () => {
               <option key={y} value={y}>{y}</option>
             ))}
           </Form.Select>
+          <div className="d-flex gap-1">
+            <Button
+              size="sm"
+              variant="outline-secondary"
+              onClick={exportCSV}
+              title={`Exporter en CSV — ${selectedYear}`}
+            >
+              <FiDownload size={13} className="me-1" />CSV
+            </Button>
+            <Button
+              size="sm"
+              variant="outline-secondary"
+              onClick={() => window.print()}
+              title="Imprimer / Exporter PDF"
+            >
+              <FiPrinter size={13} />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline-secondary"
+              onClick={handleRefresh}
+              title={`Actualiser — Dernière MAJ : ${lastRefreshed.toLocaleTimeString('fr-SN')}`}
+            >
+              <FiRefreshCw size={13} />
+            </Button>
+          </div>
           {headerActions}
         </div>
       </div>
@@ -540,12 +624,36 @@ const DashboardPage = () => {
           {showRevenueChart && (
             <Col lg={showPaymentChart ? 8 : 12}>
               <Card className="shadow-sm">
-                <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                <Card.Header className="bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
                   <h6 className="mb-0">Évolution du chiffre d'affaires ({selectedYear})</h6>
-                  {isLoadingCharts && <Spinner animation="border" size="sm" />}
+                  <div className="d-flex align-items-center gap-2">
+                    {isLoadingCharts && <Spinner animation="border" size="sm" />}
+                    <div className="form-check form-switch mb-0 d-flex align-items-center gap-1">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="togglePrevYear"
+                        checked={showPrevYear}
+                        onChange={(e) => setShowPrevYear(e.target.checked)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <label className="form-check-label small text-muted" htmlFor="togglePrevYear">
+                        Comparer {selectedYear - 1}
+                      </label>
+                    </div>
+                  </div>
                 </Card.Header>
                 <Card.Body>
-                  <SalesEvolutionChart data={revenueData} dataKey="ca" labelKey="mois" type="bar" />
+                  <SalesEvolutionChart
+                    data={revenueData}
+                    prevData={prevRevenueData}
+                    showPrev={showPrevYear}
+                    dataKey="ca"
+                    labelKey="mois"
+                    type="bar"
+                    currentLabel={String(selectedYear)}
+                    prevLabel={String(selectedYear - 1)}
+                  />
                 </Card.Body>
               </Card>
             </Col>
@@ -639,6 +747,55 @@ const DashboardPage = () => {
               </Card>
             </Col>
           )}
+        </Row>
+      )}
+
+      {/* ── Comparaison YTD N vs N-1 ───────────────────────────────── */}
+      {canViewFactures && comparaison.ca !== undefined && (
+        <Row className="g-3 mb-4">
+          <Col xs={12}>
+            <Card className="shadow-sm border-0" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f0f9f4 100%)' }}>
+              <Card.Header className="bg-transparent border-bottom-0 pb-1 pt-3 px-4">
+                <div className="d-flex align-items-center gap-2 flex-wrap">
+                  <FiTrendingUp size={16} className="text-success" />
+                  <h6 className="mb-0 fw-bold">
+                    Comparaison YTD — {comparaison.ytdLabel} &nbsp;·&nbsp; {selectedYear} <span className="text-muted fw-normal">vs</span> {selectedYear - 1}
+                  </h6>
+                  <small className="text-muted">(du 1er janvier à aujourd'hui)</small>
+                </div>
+              </Card.Header>
+              <Card.Body className="pt-2 px-4 pb-3">
+                <Row className="g-3">
+                  {[
+                    { label: 'CA facturé', curr: comparaison.ca?.current, prev: comparaison.ca?.prev, evol: comparaison.ca?.evol, isMoney: true, color: '#059669' },
+                    { label: 'Paiements encaissés', curr: comparaison.paiements?.current, prev: comparaison.paiements?.prev, evol: comparaison.paiements?.evol, isMoney: true, color: '#1a56db' },
+                    { label: 'Factures émises', curr: comparaison.factures?.current, prev: comparaison.factures?.prev, evol: comparaison.factures?.evol, isMoney: false, color: '#d97706' },
+                    { label: 'Nouveaux clients', curr: comparaison.clients?.current, prev: comparaison.clients?.prev, evol: comparaison.clients?.evol, isMoney: false, color: '#7c3aed' },
+                  ].map((kpi) => (
+                    <Col key={kpi.label} xs={6} lg={3}>
+                      <div className="bg-white rounded-3 p-3 shadow-sm h-100 border-start border-3" style={{ borderColor: `${kpi.color} !important` }}>
+                        <div className="small text-muted mb-1">{kpi.label}</div>
+                        <div className="fw-bold" style={{ fontSize: '1.2rem', color: kpi.color }}>
+                          {kpi.isMoney ? formatMoney(kpi.curr || 0) : (kpi.curr ?? 0)}
+                        </div>
+                        <div className="small text-muted mt-1">
+                          N-1 : <span className="fw-medium">{kpi.isMoney ? formatMoney(kpi.prev || 0) : (kpi.prev ?? 0)}</span>
+                        </div>
+                        {kpi.evol !== null && kpi.evol !== undefined ? (
+                          <div className={`d-flex align-items-center gap-1 mt-1 small fw-semibold ${kpi.evol >= 0 ? 'text-success' : 'text-danger'}`}>
+                            {kpi.evol >= 0 ? <FiTrendingUp size={12} /> : <FiTrendingDown size={12} />}
+                            {kpi.evol >= 0 ? '+' : ''}{kpi.evol}% vs N-1
+                          </div>
+                        ) : (
+                          <div className="small text-muted mt-1">Pas de données N-1</div>
+                        )}
+                      </div>
+                    </Col>
+                  ))}
+                </Row>
+              </Card.Body>
+            </Card>
+          </Col>
         </Row>
       )}
 

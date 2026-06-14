@@ -134,25 +134,33 @@ const getDashboardCharts = async (req, res, next) => {
   try {
     const year = parseInt(req.query.year) || new Date().getFullYear();
 
-    // CA mensuel
+    const factureStatuts = { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] };
+
+    // CA mensuel année N
     const caMensuel = await Facture.aggregate([
       {
         $match: {
           isActive: true,
           companyId: tenantId(req),
-          statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] },
-          dateFacture: {
-            $gte: new Date(year, 0, 1),
-            $lte: new Date(year, 11, 31, 23, 59, 59),
-          },
+          statut: factureStatuts,
+          dateFacture: { $gte: new Date(year, 0, 1), $lte: new Date(year, 11, 31, 23, 59, 59) },
         },
       },
+      { $group: { _id: { $month: '$dateFacture' }, total: { $sum: '$montantTTC' } } },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // CA mensuel année N-1 (pour comparaison graphique)
+    const caMensuelPrevYear = await Facture.aggregate([
       {
-        $group: {
-          _id: { $month: '$dateFacture' },
-          total: { $sum: '$montantTTC' },
+        $match: {
+          isActive: true,
+          companyId: tenantId(req),
+          statut: factureStatuts,
+          dateFacture: { $gte: new Date(year - 1, 0, 1), $lte: new Date(year - 1, 11, 31, 23, 59, 59) },
         },
       },
+      { $group: { _id: { $month: '$dateFacture' }, total: { $sum: '$montantTTC' } } },
       { $sort: { _id: 1 } },
     ]);
 
@@ -165,10 +173,7 @@ const getDashboardCharts = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: {
-        caMensuel,
-        paiementsParMode,
-      },
+      data: { caMensuel, caMensuelPrevYear, paiementsParMode },
     });
   } catch (error) {
     next(error);
@@ -708,6 +713,78 @@ const getDashboardPeriode = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Comparaison YTD (Jan→aujourd'hui) : N vs N-1 sur CA, paiements, factures, clients
+ * @route   GET /api/dashboard/comparaison?year=
+ * @access  Private
+ */
+const getDashboardComparaison = async (req, res, next) => {
+  try {
+    const now      = new Date();
+    const year     = parseInt(req.query.year) || now.getFullYear();
+    const isCurrentYear = year === now.getFullYear();
+
+    // Borne YTD : pour l'année courante → aujourd'hui ; pour les années passées → 31 déc
+    const ytdEnd     = isCurrentYear ? now : new Date(year, 11, 31, 23, 59, 59);
+    const ytdStart   = new Date(year, 0, 1);
+    // Même bornes décalées d'un an pour N-1
+    const prevEnd    = isCurrentYear
+      ? new Date(year - 1, now.getMonth(), now.getDate(), 23, 59, 59)
+      : new Date(year - 1, 11, 31, 23, 59, 59);
+    const prevStart  = new Date(year - 1, 0, 1);
+
+    const factStatuts = { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] };
+
+    const factMatch = (start, end) => ({
+      isActive: true,
+      companyId: tenantId(req),
+      statut: factStatuts,
+      dateFacture: { $gte: start, $lte: end },
+    });
+    const payMatch = (start, end) => ({
+      isActive: true,
+      companyId: tenantId(req),
+      statut: 'valide',
+      typePaiement: 'client',
+      datePaiement: { $gte: start, $lte: end },
+    });
+
+    const [caAgg, caPrevAgg, payAgg, payPrevAgg, nbFact, nbFactPrev, nbClients, nbClientsPrev] = await Promise.all([
+      Facture.aggregate([{ $match: factMatch(ytdStart, ytdEnd) }, { $group: { _id: null, total: { $sum: '$montantTTC' } } }]),
+      Facture.aggregate([{ $match: factMatch(prevStart, prevEnd) }, { $group: { _id: null, total: { $sum: '$montantTTC' } } }]),
+      Payment.aggregate([{ $match: payMatch(ytdStart, ytdEnd) }, { $group: { _id: null, total: { $sum: '$montant' } } }]),
+      Payment.aggregate([{ $match: payMatch(prevStart, prevEnd) }, { $group: { _id: null, total: { $sum: '$montant' } } }]),
+      Facture.countDocuments(factMatch(ytdStart, ytdEnd)),
+      Facture.countDocuments(factMatch(prevStart, prevEnd)),
+      Client.countDocuments({ companyId: tc(req), isActive: true, createdAt: { $gte: ytdStart, $lte: ytdEnd } }),
+      Client.countDocuments({ companyId: tc(req), isActive: true, createdAt: { $gte: prevStart, $lte: prevEnd } }),
+    ]);
+
+    const evol = (curr, prev) => (prev > 0 ? Math.round(((curr - prev) / prev) * 100) : null);
+
+    const caC = caAgg[0]?.total || 0;
+    const caP = caPrevAgg[0]?.total || 0;
+    const payC = payAgg[0]?.total || 0;
+    const payP = payPrevAgg[0]?.total || 0;
+
+    const ytdLabel = ytdEnd.toLocaleDateString('fr-SN', { day: '2-digit', month: 'short' });
+
+    res.json({
+      success: true,
+      data: {
+        year,
+        ytdLabel,
+        ca:        { current: caC,      prev: caP,      evol: evol(caC, caP) },
+        paiements: { current: payC,     prev: payP,     evol: evol(payC, payP) },
+        factures:  { current: nbFact,   prev: nbFactPrev, evol: evol(nbFact, nbFactPrev) },
+        clients:   { current: nbClients, prev: nbClientsPrev, evol: evol(nbClients, nbClientsPrev) },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getDashboardSummary,
@@ -721,4 +798,5 @@ module.exports = {
   getDashboardCashflow,
   getDashboardFunnel,
   getDashboardPeriode,
+  getDashboardComparaison,
 };
