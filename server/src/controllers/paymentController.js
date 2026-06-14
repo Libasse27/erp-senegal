@@ -12,6 +12,7 @@ const {
 } = require('../services/comptabiliteService');
 const logger = require('../config/logger');
 const { notifyPaymentReceived, notifyPaymentValidated, notifyInvoicePaid } = require('../services/notificationService');
+const { sendPaymentConfirmationEmail } = require('../services/emailService');
 const { tc, tenantId, findByTenant } = require('../utils/tenantHelper');
 
 /**
@@ -314,6 +315,31 @@ const validatePayment = async (req, res, next) => {
       .populate('compteBancaire', 'nom banque');
 
     notifyPaymentValidated(populated, tc(req));
+
+    // Email de confirmation au client (non bloquant)
+    if (payment.typePaiement === 'client') {
+      const clientEmail =
+        populated.client?.email ||
+        payment.clientSnapshot?.email;
+      if (clientEmail) {
+        const factureNumero = populated.facture?.numero || null;
+        const companyId = tc(req);
+        const Company = require('../models/Company');
+        Company.findById(companyId).select('name').then((company) => {
+          sendPaymentConfirmationEmail(clientEmail, {
+            clientName: populated.client?.raisonSociale ||
+              `${populated.client?.firstName || ''} ${populated.client?.lastName || ''}`.trim() ||
+              'Client',
+            paymentNumero: numero,
+            montant: payment.montant,
+            modePaiement: payment.modePaiement,
+            dateValidation: payment.validatedAt,
+            factureNumero,
+            companyName: company?.name || 'ERP Sénégal',
+          }).catch((err) => logger.warn(`[Email] Confirmation paiement non envoyée: ${err.message}`));
+        }).catch(() => {});
+      }
+    }
 
     res.json({
       success: true,

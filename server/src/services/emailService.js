@@ -407,11 +407,119 @@ const sendSubscriptionActivatedEmail = async (email, { firstName, companyName, f
   });
 };
 
+/**
+ * Email de confirmation de paiement envoyé au client
+ */
+const sendPaymentConfirmationEmail = async (
+  email,
+  { clientName, paymentNumero, montant, modePaiement, dateValidation, factureNumero, companyName }
+) => {
+  const fmt = (n) => new Intl.NumberFormat('fr-FR').format(n);
+  const modeLabels = {
+    virement: 'Virement bancaire',
+    cheque: 'Chèque',
+    especes: 'Espèces',
+    wave: 'Wave',
+    orange_money: 'Orange Money',
+    free_money: 'Free Money',
+  };
+
+  const html = baseLayout('Confirmation de paiement', `
+    <h2>Confirmation de paiement reçu</h2>
+    <p>Bonjour ${clientName},</p>
+    <p>Nous vous confirmons la bonne réception de votre paiement.</p>
+    <div class="card">
+      <table>
+        <tr><td>Référence paiement</td><td>${paymentNumero}</td></tr>
+        ${factureNumero ? `<tr><td>Facture concernée</td><td>${factureNumero}</td></tr>` : ''}
+        <tr><td>Montant reçu</td><td><strong>${fmt(montant)} FCFA</strong></td></tr>
+        <tr><td>Mode de paiement</td><td>${modeLabels[modePaiement] || modePaiement}</td></tr>
+        <tr><td>Date de validation</td><td>${new Date(dateValidation).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}</td></tr>
+        <tr><td>Statut</td><td><span class="badge badge-green">Validé</span></td></tr>
+      </table>
+    </div>
+    <p>Merci pour votre confiance. N'hésitez pas à nous contacter pour tout renseignement complémentaire.</p>
+    <p style="font-size:13px;color:#6b7280;">— ${companyName}</p>
+  `);
+
+  await sendEmail({
+    to: email,
+    subject: `Confirmation de paiement ${paymentNumero} — ${fmt(montant)} FCFA`,
+    html,
+  });
+
+  logger.info(`Email confirmation paiement ${paymentNumero} envoyé à ${email}`);
+};
+
+/**
+ * Email de rappel d'échéance(s) de facture(s)
+ * @param {string} email - Email du client
+ * @param {Object} opts
+ * @param {string} opts.clientName - Nom du client
+ * @param {Array}  opts.factures   - [{numero, montantRestant, dateEcheance, joursRestants}]
+ * @param {string} opts.companyName
+ */
+const sendEcheanceRappelEmail = async (email, { clientName, factures, companyName }) => {
+  const fmt = (n) => new Intl.NumberFormat('fr-FR').format(n);
+  const total = factures.reduce((s, f) => s + (f.montantRestant || 0), 0);
+
+  const factureRows = factures.map((f) => {
+    const urgence = f.joursRestants <= 0 ? 'badge-red' : f.joursRestants <= 3 ? 'badge-orange' : 'badge-orange';
+    const label   = f.joursRestants <= 0 ? 'En retard' : `J-${f.joursRestants}`;
+    return `
+      <tr>
+        <td>${f.numero}</td>
+        <td>${new Date(f.dateEcheance).toLocaleDateString('fr-FR')}</td>
+        <td style="text-align:right"><strong>${fmt(f.montantRestant)} FCFA</strong></td>
+        <td><span class="badge ${urgence}">${label}</span></td>
+      </tr>`;
+  }).join('');
+
+  const html = baseLayout("Rappel d'échéance", `
+    <h2>Rappel de paiement</h2>
+    <p>Bonjour ${clientName},</p>
+    <p>Nous vous rappelons que les factures suivantes arrivent à échéance prochainement :</p>
+    <div class="card">
+      <table>
+        <thead>
+          <tr style="font-size:12px;color:#6b7280;border-bottom:1px solid #e5e7eb">
+            <td style="padding-bottom:8px">Facture</td>
+            <td style="padding-bottom:8px">Échéance</td>
+            <td style="padding-bottom:8px;text-align:right">Montant restant</td>
+            <td style="padding-bottom:8px">Statut</td>
+          </tr>
+        </thead>
+        <tbody>${factureRows}</tbody>
+        <tfoot>
+          <tr style="border-top:2px solid #e5e7eb">
+            <td colspan="2" style="padding-top:8px;font-weight:700">Total dû</td>
+            <td style="padding-top:8px;text-align:right;font-weight:700;font-size:15px">${fmt(total)} FCFA</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <p>Merci de procéder au règlement dans les meilleurs délais afin d'éviter tout retard de paiement.</p>
+    <p style="font-size:13px;color:#6b7280;">Pour toute question, contactez-nous directement.</p>
+    <p style="font-size:13px;color:#6b7280;">— ${companyName}</p>
+  `);
+
+  await sendEmail({
+    to: email,
+    subject: `[Rappel] ${factures.length} facture${factures.length > 1 ? 's' : ''} à régler — ${fmt(total)} FCFA`,
+    html,
+  });
+
+  logger.info(`Email rappel échéance envoyé à ${email} (${factures.length} facture(s))`);
+};
+
 module.exports = {
   sendEmail,
   sendResetPasswordEmail,
   sendFactureEmail,
   sendDevisEmail,
+  sendPaymentConfirmationEmail,
+  sendEcheanceRappelEmail,
   sendWelcomeSaasEmail,
   sendRenewalReminderEmail,
   sendSubscriptionExpiredEmail,

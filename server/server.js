@@ -48,6 +48,7 @@ initNotificationService(io);
 // Jobs planifiés SaaS
 const subscriptionExpiry = require('./src/jobs/subscriptionExpiry');
 const renewalReminder    = require('./src/jobs/renewalReminder');
+const echeanceRappel     = require('./src/jobs/echeanceRappel');
 
 // Middleware d'authentification Socket.io
 const jwt = require('jsonwebtoken');
@@ -123,6 +124,7 @@ const startServer = async () => {
       // Démarrer les crons SaaS après écoute du serveur
       subscriptionExpiry.demarrer();
       renewalReminder.demarrer();
+      echeanceRappel.demarrer();
     });
   } catch (error) {
     logger.error(`Erreur au demarrage: ${error.message}`);
