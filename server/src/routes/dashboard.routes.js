@@ -8,6 +8,9 @@ const {
   getDashboardTopClients,
   getDashboardStockAlerts,
   getDashboardKpis,
+  getDashboardTopProducts,
+  getDashboardStockEvolution,
+  getDashboardRecouvrement,
 } = require('../controllers/dashboardController');
 
 const { protect } = require('../middlewares/auth');
@@ -21,7 +24,10 @@ router.get('/stats', getDashboardStats);
 router.get('/summary', getDashboardSummary);
 router.get('/charts', getDashboardCharts);
 router.get('/top-clients', getDashboardTopClients);
+router.get('/top-products', getDashboardTopProducts);
 router.get('/stock-alerts', getDashboardStockAlerts);
+router.get('/stock-evolution', getDashboardStockEvolution);
 router.get('/kpis', getDashboardKpis);
+router.get('/recouvrement', getDashboardRecouvrement);
 
 module.exports = router;

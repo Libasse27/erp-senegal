@@ -2,6 +2,7 @@ const Client = require('../models/Client');
 const Facture = require('../models/Facture');
 const Payment = require('../models/Payment');
 const Stock = require('../models/Stock');
+const StockMovement = require('../models/StockMovement');
 const Devis = require('../models/Devis');
 const Commande = require('../models/Commande');
 const Product = require('../models/Product');
@@ -362,6 +363,176 @@ const getDashboardKpis = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Top produits par CA (via lignes de factures)
+ * @route   GET /api/dashboard/top-products?year=&limit=
+ * @access  Private
+ */
+const getDashboardTopProducts = async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 10, 20);
+    const year  = parseInt(req.query.year)  || new Date().getFullYear();
+
+    const rows = await Facture.aggregate([
+      {
+        $match: {
+          isActive: true,
+          companyId: tenantId(req),
+          statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] },
+          dateFacture: {
+            $gte: new Date(year, 0, 1),
+            $lte: new Date(year, 11, 31, 23, 59, 59),
+          },
+        },
+      },
+      { $unwind: '$lignes' },
+      {
+        $group: {
+          _id: { $ifNull: ['$lignes.product', '$lignes.designation'] },
+          designation: { $first: '$lignes.designation' },
+          totalCA:     { $sum: '$lignes.montantTTC' },
+          totalQte:    { $sum: '$lignes.quantite' },
+          nbFactures:  { $sum: 1 },
+        },
+      },
+      { $sort: { totalCA: -1 } },
+      { $limit: limit },
+    ]);
+
+    const maxCA = rows[0]?.totalCA || 1;
+    const products = rows.map((r) => ({
+      productId:   r._id,
+      designation: r.designation || 'Produit inconnu',
+      totalCA:     r.totalCA,
+      totalQte:    r.totalQte,
+      nbFactures:  r.nbFactures,
+      pct:         Math.round((r.totalCA / maxCA) * 100),
+    }));
+
+    res.json({ success: true, data: products });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Évolution stock : entrées et sorties par mois
+ * @route   GET /api/dashboard/stock-evolution?year=
+ * @access  Private
+ */
+const getDashboardStockEvolution = async (req, res, next) => {
+  try {
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+
+    const MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+    const agg = await StockMovement.aggregate([
+      {
+        $match: {
+          companyId: tenantId(req),
+          isActive: true,
+          type: { $in: ['entree', 'sortie'] },
+          createdAt: {
+            $gte: new Date(year, 0, 1),
+            $lte: new Date(year, 11, 31, 23, 59, 59),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { mois: { $month: '$createdAt' }, type: '$type' },
+          total:   { $sum: '$quantite' },
+          valeur:  { $sum: { $ifNull: ['$coutTotal', 0] } },
+        },
+      },
+    ]);
+
+    // Build 12-month array
+    const data = MONTHS.map((mois, i) => {
+      const entree = agg.find((r) => r._id.mois === i + 1 && r._id.type === 'entree');
+      const sortie = agg.find((r) => r._id.mois === i + 1 && r._id.type === 'sortie');
+      return {
+        mois,
+        entrees:     entree?.total   || 0,
+        sorties:     sortie?.total   || 0,
+        valEntrees:  entree?.valeur  || 0,
+        valSorties:  sortie?.valeur  || 0,
+      };
+    });
+
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Taux de recouvrement : CA total vs montants payés
+ * @route   GET /api/dashboard/recouvrement?year=
+ * @access  Private
+ */
+const getDashboardRecouvrement = async (req, res, next) => {
+  try {
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+
+    const match = {
+      isActive: true,
+      companyId: tenantId(req),
+      statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee', 'en_retard'] },
+      dateFacture: {
+        $gte: new Date(year, 0, 1),
+        $lte: new Date(year, 11, 31, 23, 59, 59),
+      },
+    };
+
+    const [agg, parStatut] = await Promise.all([
+      Facture.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: null,
+            totalCA:    { $sum: '$totalTTC' },
+            totalPaye:  { $sum: '$montantPaye' },
+            nbFactures: { $sum: 1 },
+          },
+        },
+      ]),
+      Facture.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: '$statut',
+            montant:    { $sum: '$totalTTC' },
+            count:      { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    const totalCA    = agg[0]?.totalCA   || 0;
+    const totalPaye  = agg[0]?.totalPaye || 0;
+    const totalDu    = totalCA - totalPaye;
+    const tauxRecouvrement = totalCA > 0 ? Math.round((totalPaye / totalCA) * 100) : 0;
+
+    const statutMap = {};
+    parStatut.forEach((s) => { statutMap[s._id] = { montant: s.montant, count: s.count }; });
+
+    res.json({
+      success: true,
+      data: {
+        totalCA,
+        totalPaye,
+        totalDu,
+        tauxRecouvrement,
+        nbFactures: agg[0]?.nbFactures || 0,
+        parStatut: statutMap,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getDashboardSummary,
@@ -369,4 +540,7 @@ module.exports = {
   getDashboardTopClients,
   getDashboardStockAlerts,
   getDashboardKpis,
+  getDashboardTopProducts,
+  getDashboardStockEvolution,
+  getDashboardRecouvrement,
 };

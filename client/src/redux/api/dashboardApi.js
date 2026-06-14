@@ -32,6 +32,18 @@ export const dashboardApi = apiSlice.injectEndpoints({
       query: (params) => ({ url: '/dashboard/kpis', params }),
       providesTags: [{ type: 'Dashboard', id: 'KPIS' }],
     }),
+    getDashboardTopProducts: builder.query({
+      query: (params) => ({ url: '/dashboard/top-products', params }),
+      providesTags: [{ type: 'Dashboard', id: 'TOP_PRODUCTS' }, { type: 'Facture', id: 'LIST' }],
+    }),
+    getDashboardStockEvolution: builder.query({
+      query: (params) => ({ url: '/dashboard/stock-evolution', params }),
+      providesTags: [{ type: 'Dashboard', id: 'STOCK_EVOLUTION' }, { type: 'Stock', id: 'LIST' }],
+    }),
+    getDashboardRecouvrement: builder.query({
+      query: (params) => ({ url: '/dashboard/recouvrement', params }),
+      providesTags: [{ type: 'Dashboard', id: 'RECOUVREMENT' }, { type: 'Facture', id: 'LIST' }, { type: 'Paiement', id: 'LIST' }],
+    }),
   }),
 });
 
@@ -42,4 +54,7 @@ export const {
   useGetDashboardTopClientsQuery,
   useGetDashboardStockAlertsQuery,
   useGetDashboardKpisQuery,
+  useGetDashboardTopProductsQuery,
+  useGetDashboardStockEvolutionQuery,
+  useGetDashboardRecouvrementQuery,
 } = dashboardApi;

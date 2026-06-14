@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -9,6 +9,7 @@ import Alert from 'react-bootstrap/Alert';
 import Spinner from 'react-bootstrap/Spinner';
 import ProgressBar from 'react-bootstrap/ProgressBar';
 import Table from 'react-bootstrap/Table';
+import Form from 'react-bootstrap/Form';
 import {
   FiDollarSign,
   FiUsers,
@@ -41,11 +42,14 @@ import {
   useGetDashboardTopClientsQuery,
   useGetDashboardStockAlertsQuery,
   useGetDashboardKpisQuery,
+  useGetDashboardTopProductsQuery,
+  useGetDashboardStockEvolutionQuery,
+  useGetDashboardRecouvrementQuery,
 } from '../../redux/api/dashboardApi';
 import { useGetUsageSaasQuery } from '../../redux/api/saasApi';
 import useNotificationsHook from '../../hooks/useNotifications';
 import StatCard from '../../components/ui/StatCard';
-import { SalesEvolutionChart, TopProductsChart } from '../../components/charts';
+import { SalesEvolutionChart, TopProductsChart, HorizontalBarChart, StockEvolutionChart } from '../../components/charts';
 import { useAuth } from '../../contexts/AuthContext';
 import { PERM } from '../../config/permissions';
 
@@ -84,20 +88,25 @@ const NOTIF_COLOR = {
   info:    '#1a56db',
 };
 
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i);
+
 const DashboardPage = () => {
   usePageTitle('Tableau de bord', [{ label: 'Accueil', path: '/' }]);
+
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
 
   const { user, hasPermission, hasRole } = useAuth();
   const { data: statsData, isLoading } = useGetDashboardStatsQuery();
   const stats = statsData?.data || {};
 
-  const { data: chartsData, isLoading: isLoadingCharts } = useGetDashboardChartsQuery();
+  const { data: chartsData, isLoading: isLoadingCharts } = useGetDashboardChartsQuery({ year: selectedYear });
 
   const canViewFactures = hasPermission(PERM.FACTURES_READ);
   const canViewStock    = hasPermission(PERM.STOCKS_READ);
 
   const { data: topClientsData, isLoading: isLoadingTopClients } = useGetDashboardTopClientsQuery(
-    undefined,
+    { year: selectedYear },
     { skip: !canViewFactures, pollingInterval: 120000 }
   );
   const { data: stockAlertsData, isLoading: isLoadingStockAlerts } = useGetDashboardStockAlertsQuery(
@@ -108,10 +117,25 @@ const DashboardPage = () => {
     undefined,
     { skip: !canViewFactures, pollingInterval: 120000 }
   );
+  const { data: topProductsData, isLoading: isLoadingTopProducts } = useGetDashboardTopProductsQuery(
+    { year: selectedYear },
+    { skip: !canViewFactures }
+  );
+  const { data: stockEvolutionData, isLoading: isLoadingStockEvolution } = useGetDashboardStockEvolutionQuery(
+    { year: selectedYear },
+    { skip: !canViewStock }
+  );
+  const { data: recouvrementData } = useGetDashboardRecouvrementQuery(
+    { year: selectedYear },
+    { skip: !canViewFactures }
+  );
 
-  const topClients  = topClientsData?.data  || [];
-  const stockAlerts = stockAlertsData?.data || [];
-  const kpis        = kpisData?.data        || {};
+  const topClients     = topClientsData?.data     || [];
+  const stockAlerts    = stockAlertsData?.data    || [];
+  const kpis           = kpisData?.data           || {};
+  const topProducts    = topProductsData?.data    || [];
+  const stockEvolution = stockEvolutionData?.data || [];
+  const recouvrement   = recouvrementData?.data   || {};
 
   const isAdmin = hasRole('admin');
   const { data: usageData } = useGetUsageSaasQuery(undefined, { skip: !isAdmin });
@@ -320,11 +344,20 @@ const DashboardPage = () => {
             </p>
           )}
         </div>
-        {headerActions.length > 0 && (
-          <div className="d-flex gap-2 flex-wrap">
-            {headerActions}
-          </div>
-        )}
+        <div className="d-flex gap-2 flex-wrap align-items-center">
+          <Form.Select
+            size="sm"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            style={{ width: 'auto' }}
+            title="Filtrer par année"
+          >
+            {YEAR_OPTIONS.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </Form.Select>
+          {headerActions}
+        </div>
       </div>
 
       {/* ── Widget abonnement SaaS (admin uniquement) ────────────────── */}
@@ -403,7 +436,7 @@ const DashboardPage = () => {
             <Col lg={showPaymentChart ? 8 : 12}>
               <Card className="shadow-sm">
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
-                  <h6 className="mb-0">Evolution du chiffre d'affaires ({new Date().getFullYear()})</h6>
+                  <h6 className="mb-0">Évolution du chiffre d'affaires ({selectedYear})</h6>
                   {isLoadingCharts && <Spinner animation="border" size="sm" />}
                 </Card.Header>
                 <Card.Body>
@@ -504,6 +537,102 @@ const DashboardPage = () => {
         </Row>
       )}
 
+      {/* ── Top produits + Taux de recouvrement ────────────────────── */}
+      {canViewFactures && (
+        <Row className="g-3 mb-4">
+          <Col lg={8}>
+            <Card className="shadow-sm h-100">
+              <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                <h6 className="mb-0">
+                  <FiPackage size={16} className="me-2 text-primary" />
+                  Top produits — CA {selectedYear}
+                </h6>
+                {isLoadingTopProducts && <Spinner animation="border" size="sm" />}
+              </Card.Header>
+              <Card.Body>
+                {topProducts.length === 0 && !isLoadingTopProducts ? (
+                  <p className="text-muted text-center py-4 mb-0">Aucune vente cette année</p>
+                ) : (
+                  <HorizontalBarChart data={topProducts} dataKey="totalCA" nameKey="designation" height={280} />
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+
+          <Col lg={4}>
+            <Card className="shadow-sm h-100">
+              <Card.Header className="bg-white">
+                <h6 className="mb-0">
+                  <FiCheckCircle size={16} className="me-2 text-success" />
+                  Taux de recouvrement {selectedYear}
+                </h6>
+              </Card.Header>
+              <Card.Body>
+                {recouvrement.totalCA > 0 ? (
+                  <>
+                    <div className="text-center mb-3">
+                      <div
+                        className="fw-bold"
+                        style={{ fontSize: '2.5rem', color: recouvrement.tauxRecouvrement >= 80 ? '#059669' : recouvrement.tauxRecouvrement >= 50 ? '#d97706' : '#dc2626' }}
+                      >
+                        {recouvrement.tauxRecouvrement}%
+                      </div>
+                      <div className="text-muted small">de recouvrement</div>
+                    </div>
+                    <ProgressBar
+                      now={recouvrement.tauxRecouvrement}
+                      variant={recouvrement.tauxRecouvrement >= 80 ? 'success' : recouvrement.tauxRecouvrement >= 50 ? 'warning' : 'danger'}
+                      className="mb-3"
+                      style={{ height: 10 }}
+                    />
+                    <div className="d-flex flex-column gap-2" style={{ fontSize: '0.82rem' }}>
+                      <div className="d-flex justify-content-between">
+                        <span className="text-muted">CA total facturé</span>
+                        <span className="fw-semibold">{formatMoney(recouvrement.totalCA)}</span>
+                      </div>
+                      <div className="d-flex justify-content-between">
+                        <span className="text-success">Encaissé</span>
+                        <span className="fw-semibold text-success">{formatMoney(recouvrement.totalPaye)}</span>
+                      </div>
+                      <div className="d-flex justify-content-between border-top pt-2">
+                        <span className="text-danger">Créances restantes</span>
+                        <span className="fw-semibold text-danger">{formatMoney(recouvrement.totalDu)}</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted text-center py-4 mb-0">Aucune facture cette année</p>
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* ── Évolution des stocks ─────────────────────────────────────── */}
+      {canViewStock && (
+        <Row className="g-3 mb-4">
+          <Col lg={12}>
+            <Card className="shadow-sm">
+              <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                <h6 className="mb-0">
+                  <FiBox size={16} className="me-2 text-warning" />
+                  Évolution des stocks — entrées / sorties {selectedYear}
+                </h6>
+                {isLoadingStockEvolution && <Spinner animation="border" size="sm" />}
+              </Card.Header>
+              <Card.Body>
+                {stockEvolution.every((m) => m.entrees === 0 && m.sorties === 0) && !isLoadingStockEvolution ? (
+                  <p className="text-muted text-center py-4 mb-0">Aucun mouvement de stock cette année</p>
+                ) : (
+                  <StockEvolutionChart data={stockEvolution} height={280} />
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      )}
+
       {/* ── Top clients + Alertes stock ─────────────────────────────── */}
       {(canViewFactures || canViewStock) && (
         <Row className="g-3 mb-4">
@@ -513,7 +642,7 @@ const DashboardPage = () => {
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
                   <h6 className="mb-0">
                     <FiUsers size={16} className="me-2 text-primary" />
-                    Top clients — CA {new Date().getFullYear()}
+                    Top clients — CA {selectedYear}
                   </h6>
                   {isLoadingTopClients && <Spinner animation="border" size="sm" />}
                 </Card.Header>
