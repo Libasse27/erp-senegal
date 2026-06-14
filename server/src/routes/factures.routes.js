@@ -11,6 +11,7 @@ const {
   sendFacture,
   getFacturePDF,
   createAvoir,
+  exportFacturesExcelHandler,
 } = require('../controllers/factureController');
 const { protect } = require('../middlewares/auth');
 const tenantMiddleware = require('../middlewares/tenant');
@@ -27,6 +28,9 @@ const audit = require('../middlewares/audit');
 router.use(protect);
 router.use(tenantMiddleware);
 router.use(subscriptionGuard('FACTURATION'));
+
+// Export Excel (avant /:id pour éviter conflit de route)
+router.get('/export', authorize('factures:read'), exportFacturesExcelHandler);
 
 // CRUD
 router.get('/', authorize('factures:read'), getFactures);

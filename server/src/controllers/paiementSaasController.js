@@ -60,6 +60,32 @@ const activerAbonnement = async (paiement, session) => {
   );
 
   logger.info(`[SaaS] Abonnement activé — company=${paiement.entrepriseId} | ref=${paiement.reference}`);
+
+  // Email de confirmation d'activation (non bloquant, hors transaction)
+  setImmediate(async () => {
+    try {
+      const { sendSubscriptionActivatedEmail } = require('../services/emailService');
+      const User    = require('../models/User');
+      const company = await Company.findById(paiement.entrepriseId).populate('forfaitId');
+      if (!company?.adminUser) return;
+      const admin   = await User.findById(company.adminUser).select('email firstName');
+      if (!admin?.email) return;
+      const forfaitNom = (await Forfait.findById(abonnement.forfaitId).select('nom'))?.nom || '';
+      const dateFin    = abonnement.dateFin
+        ? new Date(abonnement.dateFin).toLocaleDateString('fr-SN', { day: '2-digit', month: 'long', year: 'numeric' })
+        : '';
+      await sendSubscriptionActivatedEmail(admin.email, {
+        firstName:    admin.firstName || 'Admin',
+        companyName:  company.name,
+        forfaitNom,
+        montant:      paiement.montant,
+        dateFin,
+        dashboardUrl: `${FRONTEND_URL}/`,
+      });
+    } catch (err) {
+      logger.warn(`[Email] Activation SaaS non envoyée : ${err.message}`);
+    }
+  });
 };
 
 // ─── POST /paiements-saas/initier ───────────────────────────────────────────

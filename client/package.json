@@ -30,6 +30,7 @@
     "@testing-library/jest-dom": "^6.2.0",
     "@testing-library/react": "^14.1.2",
     "@testing-library/user-event": "^14.5.2",
+    "cypress": "^13.6.0",
     "eslint": "^8.56.0",
     "patch-package": "^8.0.1",
     "prettier": "^3.2.4"
@@ -38,6 +39,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "cy:run:auth": "cypress run --spec cypress/e2e/01-auth.cy.js",
     "lint": "eslint src/ --ext .js,.jsx",
     "postinstall": "patch-package"
   },

@@ -7,8 +7,10 @@
 const cron   = require('node-cron');
 const Abonnement = require('../models/Abonnement');
 const Company    = require('../models/Company');
+const User       = require('../models/User');
 const logger     = require('../config/logger');
 const { createAndNotify } = require('../services/notificationService');
+const { sendRenewalReminderEmail } = require('../services/emailService');
 
 const SEUILS_JOURS = [7, 3, 1]; // J-X avant expiration
 
@@ -77,6 +79,23 @@ const envoyerRappels = async () => {
 
         logger.info(`[Cron] Rappel J-${jours} envoyé — company=${company.name}`);
         total++;
+
+        // Email de rappel (non bloquant)
+        const admin = await User.findById(company.adminUser).select('email firstName');
+        if (admin?.email) {
+          const forfaitNom = abo.forfaitId?.nom || '';
+          const dateFin    = company.subscriptionEndDate
+            ? new Date(company.subscriptionEndDate).toLocaleDateString('fr-SN', { day: '2-digit', month: 'long', year: 'numeric' })
+            : '';
+          sendRenewalReminderEmail(admin.email, {
+            firstName:    admin.firstName || 'Admin',
+            companyName:  company.name,
+            forfaitNom,
+            dateFin,
+            joursRestants: jours,
+            renewUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/abonnement/paiement`,
+          }).catch((err) => logger.warn(`[Email] Rappel J-${jours} non envoyé : ${err.message}`));
+        }
       } catch (err) {
         logger.error(`[Cron] Erreur rappel abonnement ${abo._id}: ${err.message}`);
       }

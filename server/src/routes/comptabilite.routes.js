@@ -28,6 +28,9 @@ const {
   getBilan,
   getDeclarationTVA,
   exportFEC,
+  exportBalanceExcelHandler,
+  exportGrandLivreExcelHandler,
+  exportCompteResultatExcelHandler,
 } = require('../controllers/comptabiliteController');
 const { protect } = require('../middlewares/auth');
 const tenantMiddleware = require('../middlewares/tenant');
@@ -141,5 +144,10 @@ router.get('/compte-resultat', authorize('comptabilite:read'), getCompteResultat
 router.get('/bilan', authorize('comptabilite:read'), getBilan);
 router.get('/tva', authorize('comptabilite:read'), getDeclarationTVA);
 router.get('/fec', authorize('comptabilite:export'), exportFEC);
+
+// === Exports Excel ===
+router.get('/balance/export', authorize('comptabilite:export'), exportBalanceExcelHandler);
+router.get('/grand-livre/export', authorize('comptabilite:export'), exportGrandLivreExcelHandler);
+router.get('/compte-resultat/export', authorize('comptabilite:export'), exportCompteResultatExcelHandler);
 
 module.exports = router;

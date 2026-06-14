@@ -151,6 +151,15 @@ const registerSaaS = async (req, res, next) => {
 
     logger.info(`Inscription SaaS: entreprise="${companyName}" admin="${email}"`);
 
+    // Email de bienvenue (non bloquant)
+    const { sendWelcomeSaasEmail } = require('../services/emailService');
+    sendWelcomeSaasEmail(email, {
+      firstName:   firstName,
+      companyName: companyName,
+      forfaitNom:  forfait.nom,
+      loginUrl:    `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`,
+    }).catch((err) => logger.warn(`[Email] Welcome SaaS non envoyé : ${err.message}`));
+
     res.status(201).json({
       success: true,
       message: 'Compte cree avec succes. Finalisez l\'inscription en effectuant le paiement.',

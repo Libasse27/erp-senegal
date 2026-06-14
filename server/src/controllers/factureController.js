@@ -8,6 +8,7 @@ const { generateFacturePDF } = require('../services/pdfService');
 const { sendFactureEmail } = require('../services/emailService');
 const { notifyNewInvoice, notifyInvoiceValidated } = require('../services/notificationService');
 const { tc, findByTenant } = require('../utils/tenantHelper');
+const { exportFacturesExcel } = require('../services/exportService');
 
 /**
  * @desc    Get all factures with pagination, filters, and search
@@ -503,6 +504,28 @@ const createAvoir = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Export liste des factures en Excel
+ * @route   GET /api/factures/export
+ * @access  Private
+ */
+const exportFacturesExcelHandler = async (req, res, next) => {
+  try {
+    const buffer = await exportFacturesExcel(tc(req), {
+      statut:   req.query.statut,
+      type:     req.query.type,
+      dateFrom: req.query.dateFrom,
+      dateTo:   req.query.dateTo,
+    });
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="factures-${Date.now()}.xlsx"`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  } catch (error) { next(error); }
+};
+
 module.exports = {
   getFactures,
   getFacture,
@@ -513,4 +536,5 @@ module.exports = {
   sendFacture,
   getFacturePDF,
   createAvoir,
+  exportFacturesExcelHandler,
 };

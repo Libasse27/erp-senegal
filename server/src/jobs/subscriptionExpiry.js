@@ -10,8 +10,10 @@
 const cron = require('node-cron');
 const Abonnement = require('../models/Abonnement');
 const Company    = require('../models/Company');
+const User       = require('../models/User');
 const logger     = require('../config/logger');
 const { createAndNotify } = require('../services/notificationService');
+const { sendSubscriptionExpiredEmail } = require('../services/emailService');
 
 const traiterExpirations = async () => {
   const maintenant = new Date();
@@ -56,6 +58,20 @@ const traiterExpirations = async () => {
       }
 
       logger.info(`[Cron] Abonnement expiré — company=${company.name} (${company._id})`);
+
+      // Email d'expiration (non bloquant)
+      const admin = await User.findById(company.adminUser).select('email firstName');
+      if (admin?.email) {
+        const forfait = abo.forfaitId ? await require('../models/Forfait').findById(abo.forfaitId).select('nom') : null;
+        const dateFin = new Date(abo.dateFin).toLocaleDateString('fr-SN', { day: '2-digit', month: 'long', year: 'numeric' });
+        sendSubscriptionExpiredEmail(admin.email, {
+          firstName:   admin.firstName || 'Admin',
+          companyName: company.name,
+          forfaitNom:  forfait?.nom || '',
+          dateFin,
+          renewUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/abonnement/paiement`,
+        }).catch((err) => logger.warn(`[Email] Expiration non envoyée : ${err.message}`));
+      }
     } catch (err) {
       logger.error(`[Cron] Erreur expiration abonnement ${abo._id}: ${err.message}`);
     }

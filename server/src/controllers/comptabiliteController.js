@@ -4,6 +4,7 @@ const ExerciceComptable = require('../models/ExerciceComptable');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
 const comptabiliteService = require('../services/comptabiliteService');
+const exportService = require('../services/exportService');
 const logger = require('../config/logger');
 
 // =====================================================
@@ -759,6 +760,57 @@ const exportFEC = async (req, res, next) => {
   }
 };
 
+// ─── Exports Excel ────────────────────────────────────────────────────────────
+
+const exportBalanceExcelHandler = async (req, res, next) => {
+  try {
+    const buffer = await exportService.exportBalanceExcel(req.companyId, {
+      exercice: req.query.exercice,
+      dateFrom: req.query.dateFrom,
+      dateTo:   req.query.dateTo,
+    });
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="balance-${Date.now()}.xlsx"`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  } catch (err) { next(err); }
+};
+
+const exportGrandLivreExcelHandler = async (req, res, next) => {
+  try {
+    if (!req.query.compteNumero) return next(new AppError('compteNumero requis', 400));
+    const buffer = await exportService.exportGrandLivreExcel(req.companyId, req.query.compteNumero, {
+      exercice: req.query.exercice,
+      dateFrom: req.query.dateFrom,
+      dateTo:   req.query.dateTo,
+    });
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="grand-livre-${req.query.compteNumero}-${Date.now()}.xlsx"`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  } catch (err) { next(err); }
+};
+
+const exportCompteResultatExcelHandler = async (req, res, next) => {
+  try {
+    const buffer = await exportService.exportCompteResultatExcel(req.companyId, {
+      exercice: req.query.exercice,
+      dateFrom: req.query.dateFrom,
+      dateTo:   req.query.dateTo,
+    });
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="compte-resultat-${Date.now()}.xlsx"`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   // Plan comptable
   getPlanComptable,
@@ -786,4 +838,7 @@ module.exports = {
   getBilan,
   getDeclarationTVA,
   exportFEC,
+  exportBalanceExcelHandler,
+  exportGrandLivreExcelHandler,
+  exportCompteResultatExcelHandler,
 };
