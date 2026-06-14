@@ -34,7 +34,7 @@ beforeEach(async () => {
   await createTestSettings(companyB._id);
 
   forfait = await createTestForfait({
-    code: 'STD_USG', nom: 'Standard Usage',
+    code: 'STANDARD', nom: 'Standard Usage',
     limites: { maxFacturesMois: 5, maxUtilisateurs: 3 },
   });
 
@@ -59,14 +59,14 @@ beforeEach(async () => {
 
 describe('compterFacturesDuMois()', () => {
   it("compte uniquement les factures du mois courant pour la company", async () => {
-    // Créer 3 factures pour companyA ce mois
     const clientId = new mongoose.Types.ObjectId();
     for (let i = 0; i < 3; i++) {
-      await Facture.create({
-        client: clientId, type: 'FACTURE', statut: 'BROUILLON',
-        lignes: [], montantHT: 0, montantTVA: 0, montantTTC: 0,
+      await Facture.collection.insertOne({
+        client: clientId, type: 'facture', statut: 'brouillon',
+        lignes: [{ designation: 'Test', quantite: 1, prixUnitaire: 100, tauxTVA: 18, montantHT: 100, montantTVA: 18, montantTTC: 118 }],
+        montantHT: 100, montantTVA: 18, montantTTC: 118,
         companyId: companyA._id, createdBy: userA._id,
-        numero: `FA${i}`,
+        numero: `FA${i}`, createdAt: new Date(), updatedAt: new Date(),
       });
     }
 
@@ -76,17 +76,16 @@ describe('compterFacturesDuMois()', () => {
 
   it("ne compte pas les factures de l'autre company", async () => {
     const clientId = new mongoose.Types.ObjectId();
-    // Créer des factures pour companyB
     for (let i = 0; i < 5; i++) {
-      await Facture.create({
-        client: clientId, type: 'FACTURE', statut: 'BROUILLON',
-        lignes: [], montantHT: 0, montantTVA: 0, montantTTC: 0,
+      await Facture.collection.insertOne({
+        client: clientId, type: 'facture', statut: 'brouillon',
+        lignes: [{ designation: 'Test', quantite: 1, prixUnitaire: 100, tauxTVA: 18, montantHT: 100, montantTVA: 18, montantTTC: 118 }],
+        montantHT: 100, montantTVA: 18, montantTTC: 118,
         companyId: companyB._id, createdBy: userA._id,
-        numero: `FB${i}`,
+        numero: `FB${i}`, createdAt: new Date(), updatedAt: new Date(),
       });
     }
 
-    // companyA ne doit voir aucune facture de companyB
     const countA = await compterFacturesDuMois(companyA._id);
     expect(countA).toBe(0);
   });
@@ -98,8 +97,9 @@ describe('compterFacturesDuMois()', () => {
 
     // Insérer directement en DB pour avoir une date arbitraire
     await Facture.collection.insertOne({
-      client: clientId, type: 'FACTURE', statut: 'BROUILLON',
-      lignes: [], montantHT: 0, montantTVA: 0, montantTTC: 0,
+      client: clientId, type: 'facture', statut: 'brouillon',
+      lignes: [{ designation: 'Test', quantite: 1, prixUnitaire: 100, tauxTVA: 18, montantHT: 100, montantTVA: 18, montantTTC: 118 }],
+      montantHT: 100, montantTVA: 18, montantTTC: 118,
       companyId: companyA._id, createdBy: userA._id,
       numero: 'FA-OLD', createdAt: lastMonth, updatedAt: lastMonth,
     });
@@ -142,11 +142,12 @@ describe('limiteFacturesAtteinte()', () => {
   it("retourne true quand la limite mensuelle est atteinte (maxFacturesMois=5)", async () => {
     const clientId = new mongoose.Types.ObjectId();
     for (let i = 0; i < 5; i++) {
-      await Facture.create({
-        client: clientId, type: 'FACTURE', statut: 'BROUILLON',
-        lignes: [], montantHT: 0, montantTVA: 0, montantTTC: 0,
+      await Facture.collection.insertOne({
+        client: clientId, type: 'facture', statut: 'brouillon',
+        lignes: [{ designation: 'Test', quantite: 1, prixUnitaire: 100, tauxTVA: 18, montantHT: 100, montantTVA: 18, montantTTC: 118 }],
+        montantHT: 100, montantTVA: 18, montantTTC: 118,
         companyId: companyA._id, createdBy: userA._id,
-        numero: `FLIM${i}`,
+        numero: `FLIM${i}`, createdAt: new Date(), updatedAt: new Date(),
       });
     }
 
@@ -180,11 +181,12 @@ describe('getUsage()', () => {
     // 4 factures sur 5 = 80%
     const clientId = new mongoose.Types.ObjectId();
     for (let i = 0; i < 4; i++) {
-      await Facture.create({
-        client: clientId, type: 'FACTURE', statut: 'BROUILLON',
-        lignes: [], montantHT: 0, montantTVA: 0, montantTTC: 0,
+      await Facture.collection.insertOne({
+        client: clientId, type: 'facture', statut: 'brouillon',
+        lignes: [{ designation: 'Test', quantite: 1, prixUnitaire: 100, tauxTVA: 18, montantHT: 100, montantTVA: 18, montantTTC: 118 }],
+        montantHT: 100, montantTVA: 18, montantTTC: 118,
         companyId: companyA._id, createdBy: userA._id,
-        numero: `FALRT${i}`,
+        numero: `FALRT${i}`, createdAt: new Date(), updatedAt: new Date(),
       });
     }
 
@@ -196,11 +198,12 @@ describe('getUsage()', () => {
   it("génère une alerte 'Quota atteint' à 100%", async () => {
     const clientId = new mongoose.Types.ObjectId();
     for (let i = 0; i < 5; i++) {
-      await Facture.create({
-        client: clientId, type: 'FACTURE', statut: 'BROUILLON',
-        lignes: [], montantHT: 0, montantTVA: 0, montantTTC: 0,
+      await Facture.collection.insertOne({
+        client: clientId, type: 'facture', statut: 'brouillon',
+        lignes: [{ designation: 'Test', quantite: 1, prixUnitaire: 100, tauxTVA: 18, montantHT: 100, montantTVA: 18, montantTTC: 118 }],
+        montantHT: 100, montantTVA: 18, montantTTC: 118,
         companyId: companyA._id, createdBy: userA._id,
-        numero: `FMAX${i}`,
+        numero: `FMAX${i}`, createdAt: new Date(), updatedAt: new Date(),
       });
     }
 

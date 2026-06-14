@@ -82,7 +82,14 @@ class WaveProvider extends PaymentProvider {
   }
 
   _simulerWebhook(rawBody) {
-    const body = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
+    let body;
+    if (typeof rawBody === 'string') {
+      body = JSON.parse(rawBody);
+    } else if (Buffer.isBuffer(rawBody)) {
+      body = JSON.parse(rawBody.toString());
+    } else {
+      body = rawBody;
+    }
     return this._parseWebhookPayload(body);
   }
 

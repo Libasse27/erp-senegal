@@ -20,7 +20,7 @@ const compterFacturesDuMois = async (companyId) => {
 
   return Facture.countDocuments({
     companyId,
-    type:      'FACTURE',
+    type:      'facture',
     createdAt: { $gte: debut },
   });
 };

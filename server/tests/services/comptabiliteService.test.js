@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const comptabiliteService = require('../../src/services/comptabiliteService');
 const CompteComptable = require('../../src/models/CompteComptable');
 const ExerciceComptable = require('../../src/models/ExerciceComptable');
@@ -99,7 +100,7 @@ describe('comptabiliteService', () => {
   describe('generateEcritureFromFacture', () => {
     it('should create accounting entry for normal facture', async () => {
       const mockFacture = {
-        _id: 'facture123',
+        _id: new mongoose.Types.ObjectId(),
         typeDocument: 'facture',
         numero: 'FA-2025-0001',
         dateFacture: new Date('2025-02-15'),
@@ -143,7 +144,7 @@ describe('comptabiliteService', () => {
 
     it('should create balanced entry', async () => {
       const mockFacture = {
-        _id: 'facture124',
+        _id: new mongoose.Types.ObjectId(),
         typeDocument: 'facture',
         numero: 'FA-2025-0002',
         dateFacture: new Date('2025-02-15'),
@@ -167,7 +168,7 @@ describe('comptabiliteService', () => {
 
     it('should create reversed entries for avoir', async () => {
       const mockAvoir = {
-        _id: 'avoir123',
+        _id: new mongoose.Types.ObjectId(),
         typeDocument: 'avoir',
         numero: 'AV-2025-0001',
         dateFacture: new Date('2025-02-15'),
@@ -201,7 +202,7 @@ describe('comptabiliteService', () => {
 
     it('should skip TVA line if totalTVA is 0', async () => {
       const mockFacture = {
-        _id: 'facture125',
+        _id: new mongoose.Types.ObjectId(),
         typeDocument: 'facture',
         numero: 'FA-2025-0003',
         dateFacture: new Date('2025-02-15'),
@@ -227,7 +228,7 @@ describe('comptabiliteService', () => {
   describe('generateEcritureFromPaymentClient', () => {
     it('should create entry for cash payment', async () => {
       const mockPayment = {
-        _id: 'payment123',
+        _id: new mongoose.Types.ObjectId(),
         numero: 'PAY-2025-0001',
         datePaiement: new Date('2025-02-20'),
         montant: 50000,
@@ -262,7 +263,7 @@ describe('comptabiliteService', () => {
 
     it('should create entry for bank payment', async () => {
       const mockPayment = {
-        _id: 'payment124',
+        _id: new mongoose.Types.ObjectId(),
         numero: 'PAY-2025-0002',
         datePaiement: new Date('2025-02-20'),
         montant: 100000,
@@ -287,7 +288,7 @@ describe('comptabiliteService', () => {
 
     it('should create entry for mobile money payment', async () => {
       const mockPayment = {
-        _id: 'payment125',
+        _id: new mongoose.Types.ObjectId(),
         numero: 'PAY-2025-0003',
         datePaiement: new Date('2025-02-20'),
         montant: 75000,

@@ -10,15 +10,33 @@ const app     = require('../../app');
 const {
   createTestCompany,
   createTestSettings,
+  createTestForfait,
+  createTestAbonnement,
   createSaasUser,
 } = require('../helpers');
-const Client  = require('../../src/models/Client');
-const Product = require('../../src/models/Product');
+const Client   = require('../../src/models/Client');
+const Product  = require('../../src/models/Product');
 const Category = require('../../src/models/Category');
+const Company  = require('../../src/models/Company');
 
 let companyA, companyB;
 let userA, tokenA;
 let userB, tokenB;
+
+const creerAbonnementActif = async (company, forfaitId) => {
+  const abonnement = await createTestAbonnement(company._id, forfaitId, {
+    statut:    'ACTIF',
+    dateDebut: new Date(),
+    dateFin:   new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    montant:   15000,
+  });
+  await Company.findByIdAndUpdate(company._id, {
+    status:            'active',
+    abonnementActifId: abonnement._id,
+    forfaitId,
+  });
+  return abonnement;
+};
 
 beforeEach(async () => {
   // Créer deux entreprises indépendantes
@@ -27,6 +45,17 @@ beforeEach(async () => {
 
   await createTestSettings(companyA._id);
   await createTestSettings(companyB._id);
+
+  // Un forfait partagé (code est unique en DB) — inclut tous les modules testés
+  const forfait = await createTestForfait({
+    code: 'STANDARD',
+    nom: 'Standard',
+    modulesInclus: ['GESCOM', 'FACTURATION', 'STOCK'],
+  });
+
+  // Abonnements actifs requis par subscriptionGuard
+  await creerAbonnementActif(companyA, forfait._id);
+  await creerAbonnementActif(companyB, forfait._id);
 
   const resA = await createSaasUser(companyA._id, 'admin', { email: 'admin@alpha.sn' });
   const resB = await createSaasUser(companyB._id, 'admin', { email: 'admin@beta.sn'  });

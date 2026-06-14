@@ -17,8 +17,8 @@
     "lint:fix": "eslint src/ --ext .js --fix",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
-    "test:saas": "jest --testPathPattern=tests/saas --coverage",
-    "test:unit": "jest --testPathPattern=tests/services --coverage"
+    "test:saas": "jest --testPathPattern=tests/saas --verbose",
+    "test:unit": "jest --testPathPattern=tests/services --verbose"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
