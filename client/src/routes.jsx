@@ -92,6 +92,9 @@ const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 // Notifications
 const NotificationsListPage = lazy(() => import('./pages/notifications/NotificationsListPage'));
 
+// Import / Export
+const ImportPage = lazy(() => import('./pages/imports/ImportPage'));
+
 // Abonnement SaaS
 const AbonnementPage        = lazy(() => import('./pages/abonnement/AbonnementPage'));
 const PricingPage           = lazy(() => import('./pages/abonnement/PricingPage'));
@@ -213,6 +216,7 @@ const AppRoutes = () => {
 
           {/* Notifications */}
           <Route path="/notifications" element={<NotificationsListPage />} />
+          <Route path="/imports" element={<ImportPage />} />
 
           {/* Administration */}
           <Route path="/admin/utilisateurs" element={<UsersListPage />} />

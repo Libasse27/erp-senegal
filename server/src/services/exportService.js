@@ -6,7 +6,12 @@
  */
 const XLSX = require('xlsx');
 const comptabiliteService = require('./comptabiliteService');
-const Facture = require('../models/Facture');
+const Facture  = require('../models/Facture');
+const Client   = require('../models/Client');
+const Fournisseur = require('../models/Fournisseur');
+const Product  = require('../models/Product');
+const Stock    = require('../models/Stock');
+const Payment  = require('../models/Payment');
 
 const fmt = (n) => (n == null ? 0 : Math.round(n));
 
@@ -242,9 +247,183 @@ const exportFacturesExcel = async (companyId, filter = {}) => {
   return buildWorkbookWithWidth('Factures', rows);
 };
 
+// ─── Clients ─────────────────────────────────────────────────────────────────
+
+const exportClientsExcel = async (companyId, filter = {}) => {
+  const query = { companyId, isActive: true };
+  if (filter.type) query.type = filter.type;
+
+  const clients = await Client.find(query).sort({ raisonSociale: 1, lastName: 1 }).limit(5000).lean();
+
+  const header = ['Type', 'Raison Sociale / Nom', 'Prénom', 'Email', 'Téléphone', 'NINEA', 'Ville', 'Adresse', 'Solde (FCFA)'];
+  const rows = [
+    header,
+    ...clients.map((c) => [
+      c.type || 'professionnel',
+      c.raisonSociale || c.lastName || '',
+      c.firstName || '',
+      c.email || '',
+      c.phone || '',
+      c.ninea || '',
+      c.address?.city || '',
+      c.address?.street || '',
+      fmt(c.solde || 0),
+    ]),
+  ];
+
+  return buildWorkbookWithWidth('Clients', rows);
+};
+
+// ─── Fournisseurs ─────────────────────────────────────────────────────────────
+
+const exportFournisseursExcel = async (companyId, filter = {}) => {
+  const query = { companyId, isActive: true };
+  const fournisseurs = await Fournisseur.find(query).sort({ raisonSociale: 1 }).limit(5000).lean();
+
+  const header = ['Raison Sociale', 'Email', 'Téléphone', 'NINEA', 'RCCM', 'Ville', 'Adresse', 'Délai paiement (j)'];
+  const rows = [
+    header,
+    ...fournisseurs.map((f) => [
+      f.raisonSociale || '',
+      f.email || '',
+      f.phone || '',
+      f.ninea || '',
+      f.rccm || '',
+      f.address?.city || '',
+      f.address?.street || '',
+      f.delaiPaiement || 30,
+    ]),
+  ];
+
+  return buildWorkbookWithWidth('Fournisseurs', rows);
+};
+
+// ─── Produits ─────────────────────────────────────────────────────────────────
+
+const exportProduitsExcel = async (companyId, filter = {}) => {
+  const query = { companyId, isActive: true };
+  if (filter.categorie) query.categorie = filter.categorie;
+
+  const products = await Product.find(query)
+    .populate('categorie', 'name')
+    .sort({ name: 1 })
+    .limit(5000)
+    .lean();
+
+  const header = ['Référence', 'Nom', 'Catégorie', 'Prix Achat (FCFA)', 'Prix Vente (FCFA)', 'TVA (%)', 'Stock Min', 'Unité', 'Actif'];
+  const rows = [
+    header,
+    ...products.map((p) => [
+      p.reference || p.code || '',
+      p.name || '',
+      p.categorie?.name || '',
+      fmt(p.prixAchat),
+      fmt(p.prixVente),
+      p.tauxTVA ?? 18,
+      p.stockMinimum || 0,
+      p.unite || 'Unité',
+      p.isActive ? 'Oui' : 'Non',
+    ]),
+  ];
+
+  return buildWorkbookWithWidth('Produits', rows);
+};
+
+// ─── Stocks ───────────────────────────────────────────────────────────────────
+
+const exportStocksExcel = async (companyId, filter = {}) => {
+  const query = { companyId, isActive: true };
+
+  const stocks = await Stock.find(query)
+    .populate('product', 'name reference code stockMinimum')
+    .populate('warehouse', 'name code')
+    .sort({ 'product.name': 1 })
+    .limit(5000)
+    .lean();
+
+  const header = ['Référence', 'Produit', 'Dépôt', 'Quantité', 'CUMP (FCFA)', 'Valeur Stock (FCFA)', 'Stock Min', 'Statut'];
+  const rows = [
+    header,
+    ...stocks.map((s) => {
+      const seuil = s.product?.stockMinimum || 0;
+      const statut = s.quantite <= 0 ? 'Rupture' : s.quantite <= seuil ? 'Faible' : 'OK';
+      return [
+        s.product?.reference || s.product?.code || '',
+        s.product?.name || '',
+        s.warehouse?.name || '',
+        s.quantite || 0,
+        fmt(s.cump),
+        fmt(s.valeurStock || (s.quantite * s.cump)),
+        seuil,
+        statut,
+      ];
+    }),
+  ];
+
+  const totalValeur = stocks.reduce((acc, s) => acc + (s.valeurStock || s.quantite * s.cump || 0), 0);
+  rows.push(['', `${stocks.length} article(s)`, '', '', 'Valeur totale', fmt(totalValeur), '', '']);
+
+  return buildWorkbookWithWidth('Stocks', rows);
+};
+
+// ─── Paiements ────────────────────────────────────────────────────────────────
+
+const exportPaiementsExcel = async (companyId, filter = {}) => {
+  const query = { companyId, isActive: true, statut: 'valide' };
+  if (filter.typePaiement) query.typePaiement = filter.typePaiement;
+  if (filter.modePaiement) query.modePaiement = filter.modePaiement;
+  if (filter.dateFrom || filter.dateTo) {
+    query.datePaiement = {};
+    if (filter.dateFrom) query.datePaiement.$gte = new Date(filter.dateFrom);
+    if (filter.dateTo)   query.datePaiement.$lte = new Date(filter.dateTo);
+  }
+
+  const MODE_LABELS = {
+    especes: 'Espèces', virement: 'Virement', cheque: 'Chèque',
+    wave: 'Wave', orange_money: 'Orange Money', free_money: 'Free Money',
+  };
+
+  const paiements = await Payment.find(query)
+    .populate('client', 'raisonSociale firstName lastName')
+    .populate('fournisseur', 'raisonSociale')
+    .populate('facture', 'numero')
+    .sort({ datePaiement: -1 })
+    .limit(5000)
+    .lean();
+
+  const header = ['N° Paiement', 'Date', 'Type', 'Tiers', 'Mode', 'Facture', 'Montant (FCFA)'];
+  const rows = [
+    header,
+    ...paiements.map((p) => {
+      const tiers = p.typePaiement === 'client'
+        ? (p.client?.raisonSociale || `${p.client?.firstName || ''} ${p.client?.lastName || ''}`.trim() || '')
+        : (p.fournisseur?.raisonSociale || '');
+      return [
+        p.numero || '',
+        p.datePaiement ? new Date(p.datePaiement).toLocaleDateString('fr-FR') : '',
+        p.typePaiement === 'client' ? 'Encaissement' : 'Décaissement',
+        tiers,
+        MODE_LABELS[p.modePaiement] || p.modePaiement || '',
+        p.facture?.numero || '',
+        fmt(p.montant),
+      ];
+    }),
+  ];
+
+  const total = paiements.reduce((s, p) => s + (p.montant || 0), 0);
+  rows.push(['', `${paiements.length} paiement(s)`, '', '', '', 'TOTAL', fmt(total)]);
+
+  return buildWorkbookWithWidth('Paiements', rows);
+};
+
 module.exports = {
   exportBalanceExcel,
   exportGrandLivreExcel,
   exportCompteResultatExcel,
   exportFacturesExcel,
+  exportClientsExcel,
+  exportFournisseursExcel,
+  exportProduitsExcel,
+  exportStocksExcel,
+  exportPaiementsExcel,
 };

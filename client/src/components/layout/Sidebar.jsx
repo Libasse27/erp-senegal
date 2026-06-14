@@ -25,6 +25,7 @@ import {
   FiActivity,
   FiStar,
   FiTrendingUp,
+  FiUploadCloud,
 } from 'react-icons/fi';
 import {
   selectSidebarCollapsed,
@@ -126,8 +127,9 @@ const navItems = [
   { path: '/comptabilite/exercices',  label: 'Exercices',           icon: FiSettings, permission: PERM.COMPTABILITE_READ },
 
   { section: 'ANALYSE' },
-  { path: '/rapports',    label: 'Rapports',           icon: FiBarChart2,  permission: PERM.RAPPORTS_READ },
-  { path: '/rapports/ca', label: "Chiffre d'Affaires", icon: FiTrendingUp, permission: PERM.RAPPORTS_READ },
+  { path: '/rapports',    label: 'Rapports',           icon: FiBarChart2,    permission: PERM.RAPPORTS_READ },
+  { path: '/rapports/ca', label: "Chiffre d'Affaires", icon: FiTrendingUp,   permission: PERM.RAPPORTS_READ },
+  { path: '/imports',     label: 'Import / Export',    icon: FiUploadCloud,  permission: PERM.PRODUITS_READ },
 
   { section: 'SYSTEME' },
   { path: '/admin/utilisateurs', label: 'Utilisateurs',    icon: FiUsers,    roles: ['admin', 'super_admin'] },

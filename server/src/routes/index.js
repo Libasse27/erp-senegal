@@ -38,6 +38,9 @@ const dashboardRoutes = require('./dashboard.routes');
 // Notifications
 const notificationsRoutes = require('./notifications.routes');
 
+// Import / Export
+const importsRoutes = require('./imports.routes');
+
 // SaaS — Forfaits publics
 const forfaitsRoutes = require('./forfaits.routes');
 
@@ -85,6 +88,9 @@ router.use('/dashboard', dashboardRoutes);
 
 // === Notifications ===
 router.use('/notifications', notificationsRoutes);
+
+// === Import / Export ===
+router.use('/imports', importsRoutes);
 
 // === SaaS — Forfaits (public) ===
 router.use('/forfaits', forfaitsRoutes);
