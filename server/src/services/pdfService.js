@@ -226,6 +226,60 @@ const generateResultatPDF = async (resultat, company, options = {}) => {
 };
 
 /**
+ * Generate balance generale SYSCOHADA PDF
+ * @param {Object} balance - Result from comptabiliteService.getBalance()
+ * @param {Object} company - Company document
+ * @param {Object} options - { dateFrom?, dateTo? }
+ * @returns {Promise<Buffer>} PDF buffer
+ */
+const generateBalancePDF = async (balance, company, options = {}) => {
+  // Regroup comptes by SYSCOHADA class with subtotals
+  const CLASSE_LABELS = {
+    1: 'Comptes de capitaux',
+    2: "Comptes d'immobilisations",
+    3: 'Comptes de stocks',
+    4: 'Comptes de tiers',
+    5: 'Comptes de tresorerie',
+    6: 'Comptes de charges',
+    7: 'Comptes de produits',
+    8: 'Comptes speciaux',
+  };
+
+  const comptes = balance.comptes || [];
+  const grouped = {};
+  comptes.forEach((c) => {
+    const cls = c.numero ? String(c.numero).charAt(0) : '0';
+    if (!grouped[cls]) {
+      grouped[cls] = { classe: cls, libelle: CLASSE_LABELS[cls] || `Classe ${cls}`, comptes: [], totalDebit: 0, totalCredit: 0, totalSoldeDebiteur: 0, totalSoldeCrediteur: 0 };
+    }
+    grouped[cls].comptes.push(c);
+    grouped[cls].totalDebit += c.totalDebit || 0;
+    grouped[cls].totalCredit += c.totalCredit || 0;
+    grouped[cls].totalSoldeDebiteur += c.soldeDebiteur || 0;
+    grouped[cls].totalSoldeCrediteur += c.soldeCrediteur || 0;
+  });
+
+  const classesSorted = Object.values(grouped).sort((a, b) => a.classe.localeCompare(b.classe));
+
+  const ecart = Math.abs((balance.totaux?.totalDebit || 0) - (balance.totaux?.totalCredit || 0));
+  const enrichedBalance = {
+    ...balance,
+    classesSorted,
+    totalComptes: comptes.length,
+    isBalanced: ecart < 1,
+    ecart,
+  };
+
+  return generatePDF('rapport-balance', {
+    balance: enrichedBalance,
+    company: company.toObject ? company.toObject() : company,
+    dateFrom: options.dateFrom || null,
+    dateTo: options.dateTo || null,
+    generatedAt: new Date(),
+  });
+};
+
+/**
  * Generate chiffre d'affaires (revenue) PDF
  * @param {Object} rapport - { lignes, totalHT, totalTVA, totalTTC, nbFacturesTotal }
  * @param {Object} company - Company document
@@ -251,4 +305,5 @@ module.exports = {
   generateBilanPDF,
   generateResultatPDF,
   generateCAPDF,
+  generateBalancePDF,
 };

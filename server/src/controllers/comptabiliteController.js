@@ -1,10 +1,12 @@
 const CompteComptable = require('../models/CompteComptable');
 const EcritureComptable = require('../models/EcritureComptable');
 const ExerciceComptable = require('../models/ExerciceComptable');
+const Company = require('../models/Company');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
 const comptabiliteService = require('../services/comptabiliteService');
 const exportService = require('../services/exportService');
+const { generateBalancePDF } = require('../services/pdfService');
 const logger = require('../config/logger');
 
 // =====================================================
@@ -649,6 +651,42 @@ const getBalance = async (req, res, next) => {
 };
 
 /**
+ * @desc    Get Balance Generale as PDF download
+ * @route   GET /api/comptabilite/balance/pdf
+ * @access  Private
+ */
+const getBalancePDF = async (req, res, next) => {
+  try {
+    const options = {
+      exercice: req.query.exercice,
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+    };
+
+    const [balance, company] = await Promise.all([
+      comptabiliteService.getBalance(options),
+      Company.findById(req.companyId).lean(),
+    ]);
+
+    if (!company) {
+      return next(new AppError('Entreprise introuvable.', 404));
+    }
+
+    const pdfBuffer = await generateBalancePDF(balance, company, options);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="balance-${Date.now()}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+    res.end(pdfBuffer);
+  } catch (error) {
+    logger.error(`Erreur generation PDF balance: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
  * @desc    Get Compte de Resultat (Income Statement)
  * @route   GET /api/comptabilite/compte-resultat
  * @access  Private
@@ -834,6 +872,7 @@ module.exports = {
   // Etats financiers
   getGrandLivre,
   getBalance,
+  getBalancePDF,
   getCompteResultat,
   getBilan,
   getDeclarationTVA,

@@ -24,6 +24,7 @@ const {
   // Etats financiers
   getGrandLivre,
   getBalance,
+  getBalancePDF,
   getCompteResultat,
   getBilan,
   getDeclarationTVA,
@@ -47,7 +48,7 @@ const {
 } = require('../validations/comptabilite.validation');
 const audit = require('../middlewares/audit');
 const { cache } = require('../middlewares/cache');
-const { exportLimiter } = require('../middlewares/rateLimiter');
+const { exportLimiter, pdfLimiter } = require('../middlewares/rateLimiter');
 
 router.use(protect);
 router.use(tenantMiddleware);
@@ -145,6 +146,9 @@ router.get('/compte-resultat', authorize('comptabilite:read'), getCompteResultat
 router.get('/bilan', authorize('comptabilite:read'), getBilan);
 router.get('/tva', authorize('comptabilite:read'), getDeclarationTVA);
 router.get('/fec', exportLimiter, authorize('comptabilite:export'), exportFEC);
+
+// === Export PDF Balance ===
+router.get('/balance/pdf', pdfLimiter, authorize('comptabilite:read'), getBalancePDF);
 
 // === Exports Excel ===
 router.get('/balance/export', exportLimiter, authorize('comptabilite:export'), exportBalanceExcelHandler);

@@ -60,8 +60,12 @@ const BalancePage = () => {
 
   const handleExportExcel = () =>
     downloadPdf(buildExportPath('/comptabilite/balance/export'), `balance-${Date.now()}.xlsx`);
+
+  const handleDownloadPdf = () =>
+    downloadPdf(buildExportPath('/comptabilite/balance/pdf'), `balance-${Date.now()}.pdf`);
+
   const handlePrint = () =>
-    window.print();
+    printPdf(buildExportPath('/comptabilite/balance/pdf'));
 
   const groupedComptes = comptes.reduce((acc, compte) => {
     const classe = compte.numero.charAt(0);
@@ -77,21 +81,16 @@ const BalancePage = () => {
       <div className="page-header">
         <h1>Balance Generale</h1>
         <div className="d-flex gap-2">
-          <Button variant="outline-secondary" size="sm" onClick={handlePrint}>
-            <FiPrinter className="me-1" />
+          <Button variant="outline-secondary" size="sm" onClick={handlePrint} disabled={pdfLoading}>
+            {pdfLoading ? <Spinner animation="border" size="sm" className="me-1" /> : <FiPrinter className="me-1" />}
             Imprimer
           </Button>
-          <Button
-            variant="outline-success"
-            size="sm"
-            onClick={handleExportExcel}
-            disabled={pdfLoading}
-          >
-            {pdfLoading ? (
-              <Spinner animation="border" size="sm" className="me-1" />
-            ) : (
-              <FiDownload className="me-1" />
-            )}
+          <Button variant="outline-primary" size="sm" onClick={handleDownloadPdf} disabled={pdfLoading}>
+            {pdfLoading ? <Spinner animation="border" size="sm" className="me-1" /> : <FiDownload className="me-1" />}
+            Exporter PDF
+          </Button>
+          <Button variant="outline-success" size="sm" onClick={handleExportExcel} disabled={pdfLoading}>
+            {pdfLoading ? <Spinner animation="border" size="sm" className="me-1" /> : <FiDownload className="me-1" />}
             Exporter Excel
           </Button>
         </div>
