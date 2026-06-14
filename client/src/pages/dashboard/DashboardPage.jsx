@@ -8,6 +8,7 @@ import Badge from 'react-bootstrap/Badge';
 import Alert from 'react-bootstrap/Alert';
 import Spinner from 'react-bootstrap/Spinner';
 import ProgressBar from 'react-bootstrap/ProgressBar';
+import Table from 'react-bootstrap/Table';
 import {
   FiDollarSign,
   FiUsers,
@@ -27,10 +28,20 @@ import {
   FiAlertCircle,
   FiCalendar,
   FiRefreshCw,
+  FiTrendingUp,
+  FiTrendingDown,
+  FiTarget,
+  FiZap,
 } from 'react-icons/fi';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatMoney, formatDateTime } from '../../utils/formatters';
-import { useGetDashboardStatsQuery, useGetDashboardChartsQuery } from '../../redux/api/dashboardApi';
+import {
+  useGetDashboardStatsQuery,
+  useGetDashboardChartsQuery,
+  useGetDashboardTopClientsQuery,
+  useGetDashboardStockAlertsQuery,
+  useGetDashboardKpisQuery,
+} from '../../redux/api/dashboardApi';
 import { useGetUsageSaasQuery } from '../../redux/api/saasApi';
 import useNotificationsHook from '../../hooks/useNotifications';
 import StatCard from '../../components/ui/StatCard';
@@ -82,6 +93,26 @@ const DashboardPage = () => {
 
   const { data: chartsData, isLoading: isLoadingCharts } = useGetDashboardChartsQuery();
 
+  const canViewFactures = hasPermission(PERM.FACTURES_READ);
+  const canViewStock    = hasPermission(PERM.STOCKS_READ);
+
+  const { data: topClientsData, isLoading: isLoadingTopClients } = useGetDashboardTopClientsQuery(
+    undefined,
+    { skip: !canViewFactures, pollingInterval: 120000 }
+  );
+  const { data: stockAlertsData, isLoading: isLoadingStockAlerts } = useGetDashboardStockAlertsQuery(
+    undefined,
+    { skip: !canViewStock, pollingInterval: 60000 }
+  );
+  const { data: kpisData } = useGetDashboardKpisQuery(
+    undefined,
+    { skip: !canViewFactures, pollingInterval: 120000 }
+  );
+
+  const topClients  = topClientsData?.data  || [];
+  const stockAlerts = stockAlertsData?.data || [];
+  const kpis        = kpisData?.data        || {};
+
   const isAdmin = hasRole('admin');
   const { data: usageData } = useGetUsageSaasQuery(undefined, { skip: !isAdmin });
 
@@ -123,6 +154,12 @@ const DashboardPage = () => {
   const dureeTotal = dateFin && dateDebut ? Math.ceil((dateFin - dateDebut) / (1000 * 60 * 60 * 24)) : 30;
   const progressPct = dateFin ? Math.round(((dureeTotal - joursRestants) / dureeTotal) * 100) : 0;
 
+  // ── Trend CA mois en cours vs mois précédent ─────────────────────────────
+  const caTrendPct = kpis.caTrend;
+  const caTrend = caTrendPct !== null && caTrendPct !== undefined
+    ? { value: `${caTrendPct > 0 ? '+' : ''}${caTrendPct}% vs mois préc.`, isUp: caTrendPct >= 0 }
+    : undefined;
+
   // ── Stat cards filtrées par permission ───────────────────────────────────
   const statCards = [
     hasPermission(PERM.FACTURES_READ) && {
@@ -131,6 +168,7 @@ const DashboardPage = () => {
       icon: FiDollarSign,
       color: '#059669',
       subtitle: 'Chiffre d\'affaires',
+      trend: caTrend,
     },
     hasPermission(PERM.CLIENTS_READ) && {
       title: 'Clients actifs',
@@ -346,6 +384,7 @@ const DashboardPage = () => {
                 icon={card.icon}
                 color={card.color}
                 subtitle={card.subtitle}
+                trend={card.trend}
                 loading={isLoading}
               />
             </Col>
@@ -385,6 +424,219 @@ const DashboardPage = () => {
                     <TopProductsChart data={paymentData} />
                   ) : (
                     <p className="text-muted text-center py-4 mb-0">Aucun paiement enregistré</p>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+          )}
+        </Row>
+      )}
+
+      {/* ── KPIs avancés : conversion + délai paiement ─────────────── */}
+      {canViewFactures && (kpis.tauxConversion !== undefined || kpis.delaiMoyenPaiement !== null) && (
+        <Row className="g-3 mb-4">
+          <Col sm={6} lg={3}>
+            <Card className="shadow-sm h-100">
+              <Card.Body className="d-flex align-items-center">
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
+                  style={{ width: 48, height: 48, backgroundColor: '#818cf815', color: '#818cf8' }}
+                >
+                  <FiTarget size={24} />
+                </div>
+                <div>
+                  <div className="text-muted small">Taux conversion devis</div>
+                  <div className="fw-bold" style={{ fontSize: '1.5rem', color: '#818cf8' }}>
+                    {kpis.tauxConversion ?? 0}%
+                  </div>
+                  <small className="text-muted">{kpis.devisConverts ?? 0}/{kpis.totalDevis ?? 0} ce mois</small>
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+          {kpis.delaiMoyenPaiement !== null && kpis.delaiMoyenPaiement !== undefined && (
+            <Col sm={6} lg={3}>
+              <Card className="shadow-sm h-100">
+                <Card.Body className="d-flex align-items-center">
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
+                    style={{ width: 48, height: 48, backgroundColor: '#22d3ee15', color: '#0891b2' }}
+                  >
+                    <FiClock size={24} />
+                  </div>
+                  <div>
+                    <div className="text-muted small">Délai moyen paiement</div>
+                    <div className="fw-bold" style={{ fontSize: '1.5rem', color: '#0891b2' }}>
+                      {kpis.delaiMoyenPaiement} j
+                    </div>
+                    <small className="text-muted">jours entre facture et paiement</small>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          )}
+          {kpis.caPrevMonth !== undefined && (
+            <Col sm={6} lg={3}>
+              <Card className="shadow-sm h-100">
+                <Card.Body className="d-flex align-items-center">
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
+                    style={{ width: 48, height: 48, backgroundColor: '#fb923c15', color: '#ea580c' }}
+                  >
+                    <FiZap size={24} />
+                  </div>
+                  <div>
+                    <div className="text-muted small">CA mois précédent</div>
+                    <div className="fw-bold" style={{ fontSize: '1.25rem', color: '#ea580c' }}>
+                      {formatMoney(kpis.caPrevMonth || 0)}
+                    </div>
+                    {caTrend && (
+                      <small className={caTrend.isUp ? 'text-success' : 'text-danger'} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {caTrend.isUp ? <FiTrendingUp size={12} /> : <FiTrendingDown size={12} />}
+                        {caTrend.value}
+                      </small>
+                    )}
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          )}
+        </Row>
+      )}
+
+      {/* ── Top clients + Alertes stock ─────────────────────────────── */}
+      {(canViewFactures || canViewStock) && (
+        <Row className="g-3 mb-4">
+          {canViewFactures && (
+            <Col lg={canViewStock ? 7 : 12}>
+              <Card className="shadow-sm h-100">
+                <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                  <h6 className="mb-0">
+                    <FiUsers size={16} className="me-2 text-primary" />
+                    Top clients — CA {new Date().getFullYear()}
+                  </h6>
+                  {isLoadingTopClients && <Spinner animation="border" size="sm" />}
+                </Card.Header>
+                <Card.Body className="p-0">
+                  {topClients.length === 0 && !isLoadingTopClients ? (
+                    <p className="text-muted text-center py-4 mb-0">Aucune facture cette année</p>
+                  ) : (
+                    <div className="table-responsive">
+                      <Table hover className="mb-0 align-middle">
+                        <thead className="table-light">
+                          <tr>
+                            <th>#</th>
+                            <th>Client</th>
+                            <th className="text-end">CA</th>
+                            <th className="text-end d-none d-md-table-cell">Factures</th>
+                            <th className="d-none d-lg-table-cell" style={{ width: 120 }}>Part</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {topClients.map((c, i) => (
+                            <tr key={c.clientId}>
+                              <td className="text-muted small">{i + 1}</td>
+                              <td>
+                                <span className="fw-medium">{c.displayName}</span>
+                              </td>
+                              <td className="text-end fw-semibold text-success">
+                                {formatMoney(c.totalCA)}
+                              </td>
+                              <td className="text-end d-none d-md-table-cell text-muted small">
+                                {c.nbFactures}
+                              </td>
+                              <td className="d-none d-lg-table-cell">
+                                <div className="d-flex align-items-center gap-2">
+                                  <div
+                                    className="flex-grow-1 bg-light rounded"
+                                    style={{ height: 6 }}
+                                  >
+                                    <div
+                                      className="rounded"
+                                      style={{
+                                        width: `${c.pct}%`,
+                                        height: 6,
+                                        backgroundColor: '#059669',
+                                        transition: 'width 0.4s ease',
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-muted small" style={{ minWidth: 30 }}>
+                                    {c.pct}%
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                    </div>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+          )}
+
+          {canViewStock && (
+            <Col lg={canViewFactures ? 5 : 12}>
+              <Card className="shadow-sm h-100">
+                <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                  <h6 className="mb-0">
+                    <FiAlertTriangle size={16} className="me-2 text-danger" />
+                    Alertes stock
+                  </h6>
+                  {isLoadingStockAlerts ? (
+                    <Spinner animation="border" size="sm" />
+                  ) : (
+                    <Badge bg={stockAlerts.some((a) => a.severity === 'critical') ? 'danger' : 'warning'}>
+                      {stockAlerts.length}
+                    </Badge>
+                  )}
+                </Card.Header>
+                <Card.Body className="p-0" style={{ maxHeight: 340, overflowY: 'auto' }}>
+                  {stockAlerts.length === 0 && !isLoadingStockAlerts ? (
+                    <div className="text-center text-success py-4">
+                      <FiCheckCircle size={32} className="mb-2 opacity-50" />
+                      <p className="mb-0 small">Tous les stocks sont au-dessus du seuil</p>
+                    </div>
+                  ) : (
+                    <div className="list-group list-group-flush">
+                      {stockAlerts.map((alert) => (
+                        <div
+                          key={alert.stockId}
+                          className="list-group-item list-group-item-action d-flex align-items-center py-2 px-3"
+                        >
+                          <div
+                            className="rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0"
+                            style={{
+                              width: 32,
+                              height: 32,
+                              backgroundColor: alert.severity === 'critical' ? '#dc262615' : '#d9770615',
+                              color: alert.severity === 'critical' ? '#dc2626' : '#d97706',
+                            }}
+                          >
+                            <FiAlertTriangle size={14} />
+                          </div>
+                          <div className="flex-grow-1 overflow-hidden">
+                            <div
+                              className="fw-medium text-truncate small"
+                              title={alert.productName}
+                            >
+                              {alert.productName}
+                            </div>
+                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                              {alert.warehouseName} — {alert.quantite} / {alert.seuil}
+                            </div>
+                          </div>
+                          <Badge
+                            bg={alert.severity === 'critical' ? 'danger' : 'warning'}
+                            className="ms-2 flex-shrink-0"
+                          >
+                            {alert.severity === 'critical' ? 'Rupture' : 'Faible'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </Card.Body>
               </Card>

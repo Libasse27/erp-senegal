@@ -3,10 +3,7 @@ import { apiSlice } from './apiSlice';
 export const dashboardApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getDashboardSummary: builder.query({
-      query: (params) => ({
-        url: '/dashboard/summary',
-        params,
-      }),
+      query: (params) => ({ url: '/dashboard/summary', params }),
       providesTags: [
         { type: 'Dashboard', id: 'SUMMARY' },
         { type: 'Client', id: 'LIST' },
@@ -16,18 +13,24 @@ export const dashboardApi = apiSlice.injectEndpoints({
       ],
     }),
     getDashboardStats: builder.query({
-      query: (params) => ({
-        url: '/dashboard/stats',
-        params,
-      }),
+      query: (params) => ({ url: '/dashboard/stats', params }),
       providesTags: [{ type: 'Dashboard', id: 'STATS' }],
     }),
     getDashboardCharts: builder.query({
-      query: (params) => ({
-        url: '/dashboard/charts',
-        params,
-      }),
+      query: (params) => ({ url: '/dashboard/charts', params }),
       providesTags: [{ type: 'Dashboard', id: 'CHARTS' }],
+    }),
+    getDashboardTopClients: builder.query({
+      query: (params) => ({ url: '/dashboard/top-clients', params }),
+      providesTags: [{ type: 'Dashboard', id: 'TOP_CLIENTS' }, { type: 'Facture', id: 'LIST' }],
+    }),
+    getDashboardStockAlerts: builder.query({
+      query: (params) => ({ url: '/dashboard/stock-alerts', params }),
+      providesTags: [{ type: 'Dashboard', id: 'STOCK_ALERTS' }, { type: 'Stock', id: 'LIST' }],
+    }),
+    getDashboardKpis: builder.query({
+      query: (params) => ({ url: '/dashboard/kpis', params }),
+      providesTags: [{ type: 'Dashboard', id: 'KPIS' }],
     }),
   }),
 });
@@ -36,4 +39,7 @@ export const {
   useGetDashboardSummaryQuery,
   useGetDashboardStatsQuery,
   useGetDashboardChartsQuery,
+  useGetDashboardTopClientsQuery,
+  useGetDashboardStockAlertsQuery,
+  useGetDashboardKpisQuery,
 } = dashboardApi;

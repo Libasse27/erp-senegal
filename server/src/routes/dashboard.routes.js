@@ -5,6 +5,9 @@ const {
   getDashboardStats,
   getDashboardSummary,
   getDashboardCharts,
+  getDashboardTopClients,
+  getDashboardStockAlerts,
+  getDashboardKpis,
 } = require('../controllers/dashboardController');
 
 const { protect } = require('../middlewares/auth');
@@ -17,5 +20,8 @@ router.use(tenantMiddleware);
 router.get('/stats', getDashboardStats);
 router.get('/summary', getDashboardSummary);
 router.get('/charts', getDashboardCharts);
+router.get('/top-clients', getDashboardTopClients);
+router.get('/stock-alerts', getDashboardStockAlerts);
+router.get('/kpis', getDashboardKpis);
 
 module.exports = router;

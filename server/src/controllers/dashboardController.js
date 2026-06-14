@@ -4,6 +4,8 @@ const Payment = require('../models/Payment');
 const Stock = require('../models/Stock');
 const Devis = require('../models/Devis');
 const Commande = require('../models/Commande');
+const Product = require('../models/Product');
+const Warehouse = require('../models/Warehouse');
 const { tc, tenantId } = require('../utils/tenantHelper');
 
 /**
@@ -172,8 +174,199 @@ const getDashboardCharts = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Top clients par CA sur l'année
+ * @route   GET /api/dashboard/top-clients
+ * @access  Private
+ */
+const getDashboardTopClients = async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 10, 20);
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+
+    const rows = await Facture.aggregate([
+      {
+        $match: {
+          isActive: true,
+          companyId: tenantId(req),
+          statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] },
+          dateFacture: {
+            $gte: new Date(year, 0, 1),
+            $lte: new Date(year, 11, 31, 23, 59, 59),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: '$client',
+          totalCA: { $sum: '$totalTTC' },
+          nbFactures: { $sum: 1 },
+          displayName: { $first: '$clientSnapshot.displayName' },
+        },
+      },
+      { $sort: { totalCA: -1 } },
+      { $limit: limit },
+    ]);
+
+    const maxCA = rows[0]?.totalCA || 1;
+    const clients = rows.map((r) => ({
+      clientId: r._id,
+      displayName: r.displayName || 'Client inconnu',
+      totalCA: r.totalCA,
+      nbFactures: r.nbFactures,
+      pct: Math.round((r.totalCA / maxCA) * 100),
+    }));
+
+    res.json({ success: true, data: clients });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Alertes stock détaillées (produits sous seuil)
+ * @route   GET /api/dashboard/stock-alerts
+ * @access  Private
+ */
+const getDashboardStockAlerts = async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 10, 30);
+
+    const stocks = await Stock.find({ companyId: tc(req), isActive: true })
+      .populate('product', 'name code stockMinimum stockAlerte')
+      .populate('warehouse', 'name code')
+      .sort({ quantite: 1 });
+
+    const alerts = stocks
+      .filter((s) => {
+        if (!s.product) return false;
+        const seuil = s.product.stockAlerte || s.product.stockMinimum || 0;
+        return s.quantite <= seuil;
+      })
+      .slice(0, limit)
+      .map((s) => {
+        const seuil = s.product.stockAlerte || s.product.stockMinimum || 0;
+        return {
+          stockId: s._id,
+          productId: s.product._id,
+          productName: s.product.name,
+          productCode: s.product.code,
+          warehouseName: s.warehouse?.name || 'Dépôt principal',
+          quantite: s.quantite,
+          seuil,
+          severity: s.quantite <= 0 ? 'critical' : 'warning',
+        };
+      });
+
+    res.json({ success: true, data: alerts });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    KPIs avancés : trend CA, taux conversion devis, délai moyen paiement
+ * @route   GET /api/dashboard/kpis
+ * @access  Private
+ */
+const getDashboardKpis = async (req, res, next) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+    const factureMatch = {
+      isActive: true,
+      companyId: tenantId(req),
+      statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] },
+    };
+
+    const [caMois, caLastMois, totalDevis, devisConverts, delaiAgg] = await Promise.all([
+      Facture.aggregate([
+        { $match: { ...factureMatch, dateFacture: { $gte: startOfMonth, $lte: endOfMonth } } },
+        { $group: { _id: null, total: { $sum: '$totalTTC' } } },
+      ]),
+      Facture.aggregate([
+        { $match: { ...factureMatch, dateFacture: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
+        { $group: { _id: null, total: { $sum: '$totalTTC' } } },
+      ]),
+      Devis.countDocuments({
+        companyId: tc(req),
+        isActive: true,
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+      }),
+      Devis.countDocuments({
+        companyId: tc(req),
+        isActive: true,
+        statut: 'converti',
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+      }),
+      Payment.aggregate([
+        {
+          $match: {
+            isActive: true,
+            companyId: tenantId(req),
+            statut: 'valide',
+            type: 'encaissement',
+            facture: { $exists: true, $ne: null },
+          },
+        },
+        {
+          $lookup: {
+            from: 'factures',
+            localField: 'facture',
+            foreignField: '_id',
+            as: 'factureData',
+          },
+        },
+        { $unwind: '$factureData' },
+        {
+          $project: {
+            delai: {
+              $divide: [
+                { $subtract: ['$datePaiement', '$factureData.dateFacture'] },
+                86400000,
+              ],
+            },
+          },
+        },
+        { $group: { _id: null, delaiMoyen: { $avg: '$delai' } } },
+      ]),
+    ]);
+
+    const caCurrentMonth = caMois[0]?.total || 0;
+    const caPrevMonth = caLastMois[0]?.total || 0;
+    const caTrend = caPrevMonth > 0
+      ? Math.round(((caCurrentMonth - caPrevMonth) / caPrevMonth) * 100)
+      : null;
+
+    const tauxConversion = totalDevis > 0 ? Math.round((devisConverts / totalDevis) * 100) : 0;
+    const delaiMoyenPaiement = delaiAgg[0] ? Math.round(delaiAgg[0].delaiMoyen) : null;
+
+    res.json({
+      success: true,
+      data: {
+        caCurrentMonth,
+        caPrevMonth,
+        caTrend,
+        tauxConversion,
+        totalDevis,
+        devisConverts,
+        delaiMoyenPaiement,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getDashboardSummary,
   getDashboardCharts,
+  getDashboardTopClients,
+  getDashboardStockAlerts,
+  getDashboardKpis,
 };
