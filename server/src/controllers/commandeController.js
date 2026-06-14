@@ -5,6 +5,7 @@ const Company = require('../models/Company');
 const { generateCommandePDF } = require('../services/pdfService');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
+const { tc, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all commandes with pagination, filters, and search
@@ -15,6 +16,7 @@ const getCommandes = async (req, res, next) => {
   try {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.statut) filter.statut = req.query.statut;
     if (req.query.client) filter.client = req.query.client;
@@ -66,7 +68,7 @@ const getCommandes = async (req, res, next) => {
  */
 const getCommande = async (req, res, next) => {
   try {
-    const commande = await Commande.findById(req.params.id)
+    const commande = await Commande.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('client')
       .populate('commercial', 'firstName lastName email')
       .populate('devis', 'numero statut')
@@ -91,7 +93,7 @@ const getCommande = async (req, res, next) => {
  */
 const createCommande = async (req, res, next) => {
   try {
-    const client = await Client.findById(req.body.client);
+    const client = await findByTenant(Client, req.body.client, req);
     if (!client) {
       return next(new AppError('Client non trouve.', 404));
     }
@@ -107,6 +109,7 @@ const createCommande = async (req, res, next) => {
 
     const commande = await Commande.create({
       ...req.body,
+      companyId: tc(req),
       clientSnapshot,
       createdBy: req.user._id,
       commercial: req.body.commercial || req.user._id,
@@ -133,7 +136,7 @@ const createCommande = async (req, res, next) => {
  */
 const updateCommande = async (req, res, next) => {
   try {
-    const commande = await Commande.findById(req.params.id);
+    const commande = await findByTenant(Commande, req.params.id, req);
     if (!commande) {
       return next(new AppError('Commande non trouvee.', 404));
     }
@@ -169,7 +172,7 @@ const updateCommande = async (req, res, next) => {
  */
 const deleteCommande = async (req, res, next) => {
   try {
-    const commande = await Commande.findById(req.params.id);
+    const commande = await findByTenant(Commande, req.params.id, req);
     if (!commande) {
       return next(new AppError('Commande non trouvee.', 404));
     }
@@ -192,7 +195,7 @@ const deleteCommande = async (req, res, next) => {
  */
 const changeStatut = async (req, res, next) => {
   try {
-    const commande = await Commande.findById(req.params.id);
+    const commande = await findByTenant(Commande, req.params.id, req);
     if (!commande) {
       return next(new AppError('Commande non trouvee.', 404));
     }
@@ -216,7 +219,7 @@ const changeStatut = async (req, res, next) => {
  */
 const generateBL = async (req, res, next) => {
   try {
-    const commande = await Commande.findById(req.params.id).populate('client');
+    const commande = await Commande.findOne({ _id: req.params.id, companyId: tc(req) }).populate('client');
     if (!commande) {
       return next(new AppError('Commande non trouvee.', 404));
     }
@@ -263,6 +266,7 @@ const generateBL = async (req, res, next) => {
       client: commande.client._id,
       clientSnapshot: commande.clientSnapshot,
       lignes: blLignes,
+      companyId: tc(req),
       dateLivraison: req.body.dateLivraison || new Date(),
       adresseLivraison: req.body.adresseLivraison || commande.clientSnapshot.address,
       notes: req.body.notes,
@@ -299,7 +303,7 @@ const generateBL = async (req, res, next) => {
  */
 const getCommandePDF = async (req, res, next) => {
   try {
-    const commande = await Commande.findById(req.params.id)
+    const commande = await Commande.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('client', 'raisonSociale firstName lastName code')
       .populate('commercial', 'firstName lastName')
       .populate('devis', 'numero')
@@ -309,7 +313,7 @@ const getCommandePDF = async (req, res, next) => {
       return next(new AppError('Commande non trouvee.', 404));
     }
 
-    const company = await Company.findOne({ isActive: true });
+    const company = await Company.findById(req.companyId);
     if (!company) {
       return next(new AppError('Informations entreprise non trouvees.', 404));
     }

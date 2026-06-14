@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const bankAccountSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     nom: {
       type: String,
       required: [true, 'Le nom du compte est requis'],
@@ -15,7 +20,6 @@ const bankAccountSchema = new mongoose.Schema(
     numeroCompte: {
       type: String,
       required: [true, 'Le numero de compte est requis'],
-      unique: true,
       trim: true,
     },
     iban: {
@@ -103,6 +107,7 @@ const bankAccountSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // numeroCompte already indexed via unique: true in schema definition
+bankAccountSchema.index({ companyId: 1, numeroCompte: 1 }, { unique: true, sparse: true });
 bankAccountSchema.index({ type: 1, isActive: 1 });
 
 // === VIRTUALS ===

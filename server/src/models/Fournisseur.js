@@ -2,10 +2,15 @@ const mongoose = require('mongoose');
 
 const fournisseurSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
+
     // === IDENTIFICATION ===
     code: {
       type: String,
-      unique: true,
       trim: true,
     },
     raisonSociale: {
@@ -158,6 +163,7 @@ const fournisseurSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // code already indexed via unique: true in schema definition
+fournisseurSchema.index({ companyId: 1, code: 1 }, { unique: true, sparse: true });
 fournisseurSchema.index({ email: 1 }, { sparse: true });
 fournisseurSchema.index({ isActive: 1, createdAt: -1 });
 fournisseurSchema.index({ raisonSociale: 'text', email: 'text' });
@@ -180,8 +186,8 @@ fournisseurSchema.virtual('fullAddress').get(function () {
 
 // === PRE-SAVE: Auto-generate code ===
 fournisseurSchema.pre('save', async function (next) {
-  if (!this.code) {
-    const count = await mongoose.model('Fournisseur').countDocuments();
+  if (!this.code && this.companyId) {
+    const count = await mongoose.model('Fournisseur').countDocuments({ companyId: this.companyId });
     this.code = `FRN-${String(count + 1).padStart(5, '0')}`;
   }
   next();

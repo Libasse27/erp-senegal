@@ -9,13 +9,16 @@ const {
   deleteFournisseur,
 } = require('../controllers/fournisseurController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
+const subscriptionGuard = require('../middlewares/subscriptionGuard');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const { createFournisseur: createSchema, updateFournisseur: updateSchema } = require('../validations/fournisseur.validation');
 const audit = require('../middlewares/audit');
 
-// All routes require authentication
 router.use(protect);
+router.use(tenantMiddleware);
+router.use(subscriptionGuard('GESCOM'));
 
 router.get('/', authorize('fournisseurs:read'), getFournisseurs);
 router.get('/:id', authorize('fournisseurs:read'), getFournisseur);

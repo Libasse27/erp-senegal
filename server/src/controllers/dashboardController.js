@@ -4,6 +4,7 @@ const Payment = require('../models/Payment');
 const Stock = require('../models/Stock');
 const Devis = require('../models/Devis');
 const Commande = require('../models/Commande');
+const { tc, tenantId } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get dashboard stats (KPIs)
@@ -21,6 +22,7 @@ const getDashboardStats = async (req, res, next) => {
       {
         $match: {
           isActive: true,
+          companyId: tenantId(req),
           statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] },
           dateFacture: { $gte: startOfMonth, $lte: endOfMonth },
         },
@@ -30,16 +32,17 @@ const getDashboardStats = async (req, res, next) => {
     const caDuMois = facturesMois[0]?.total || 0;
 
     // Clients actifs
-    const clientsActifs = await Client.countDocuments({ isActive: true });
+    const clientsActifs = await Client.countDocuments({ companyId: tc(req), isActive: true });
 
     // Factures impayees
     const facturesImpayees = await Facture.countDocuments({
+      companyId: tc(req),
       isActive: true,
       statut: { $in: ['validee', 'envoyee', 'partiellement_payee'] },
     });
 
     // Alertes stock (rupture + seuil minimum)
-    const stocks = await Stock.find({ isActive: true }).populate('product', 'stockMinimum stockAlerte');
+    const stocks = await Stock.find({ companyId: tc(req), isActive: true }).populate('product', 'stockMinimum stockAlerte');
     let alertesStock = 0;
     stocks.forEach((stock) => {
       if (!stock.product) return;
@@ -53,6 +56,7 @@ const getDashboardStats = async (req, res, next) => {
       {
         $match: {
           isActive: true,
+          companyId: tenantId(req),
           statut: 'valide',
           datePaiement: { $gte: startOfMonth, $lte: endOfMonth },
         },
@@ -62,12 +66,14 @@ const getDashboardStats = async (req, res, next) => {
 
     // Devis en attente
     const devisEnAttente = await Devis.countDocuments({
+      companyId: tc(req),
       isActive: true,
       statut: { $in: ['brouillon', 'envoye'] },
     });
 
     // Commandes en cours
     const commandesEnCours = await Commande.countDocuments({
+      companyId: tc(req),
       isActive: true,
       statut: { $in: ['en_attente', 'confirmee', 'en_preparation'] },
     });
@@ -99,9 +105,9 @@ const getDashboardSummary = async (req, res, next) => {
     // Reuse stats
     const stats = {};
 
-    const clientsActifs = await Client.countDocuments({ isActive: true });
-    const totalFactures = await Facture.countDocuments({ isActive: true });
-    const totalPaiements = await Payment.countDocuments({ isActive: true, statut: 'valide' });
+    const clientsActifs = await Client.countDocuments({ companyId: tc(req), isActive: true });
+    const totalFactures = await Facture.countDocuments({ companyId: tc(req), isActive: true });
+    const totalPaiements = await Payment.countDocuments({ companyId: tc(req), isActive: true, statut: 'valide' });
 
     stats.clientsActifs = clientsActifs;
     stats.totalFactures = totalFactures;
@@ -130,6 +136,7 @@ const getDashboardCharts = async (req, res, next) => {
       {
         $match: {
           isActive: true,
+          companyId: tenantId(req),
           statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] },
           dateFacture: {
             $gte: new Date(year, 0, 1),
@@ -148,7 +155,7 @@ const getDashboardCharts = async (req, res, next) => {
 
     // Paiements par mode
     const paiementsParMode = await Payment.aggregate([
-      { $match: { isActive: true, statut: 'valide' } },
+      { $match: { isActive: true, companyId: tenantId(req), statut: 'valide' } },
       { $group: { _id: '$modePaiement', total: { $sum: '$montant' }, count: { $sum: 1 } } },
       { $sort: { total: -1 } },
     ]);

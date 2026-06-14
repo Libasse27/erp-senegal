@@ -9,9 +9,10 @@ const {
   deleteNotification,
 } = require('../controllers/notificationController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
 
-// Toutes les routes necessitent une authentification
 router.use(protect);
+router.use(tenantMiddleware);
 
 // Routes specifiques avant les routes parametrees
 router.get('/unread-count', getUnreadCount);

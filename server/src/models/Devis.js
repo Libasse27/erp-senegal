@@ -53,9 +53,13 @@ const ligneSchema = new mongoose.Schema(
 
 const devisSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     numero: {
       type: String,
-      unique: true,
       trim: true,
     },
 
@@ -163,6 +167,7 @@ const devisSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // numero already indexed via unique: true in schema definition
+devisSchema.index({ companyId: 1, numero: 1 }, { unique: true, sparse: true });
 devisSchema.index({ client: 1, statut: 1 });
 devisSchema.index({ statut: 1, createdAt: -1 });
 devisSchema.index({ dateValidite: 1 });
@@ -201,8 +206,8 @@ const calculateTotals = (doc) => {
 // === PRE-SAVE ===
 devisSchema.pre('save', async function (next) {
   // Auto-generate numero
-  if (!this.numero) {
-    const { numero } = await getNextSequence('quote');
+  if (!this.numero && this.companyId) {
+    const { numero } = await getNextSequence('quote', this.companyId);
     this.numero = numero;
   }
 

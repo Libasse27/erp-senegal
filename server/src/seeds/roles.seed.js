@@ -25,6 +25,13 @@ const getRolesData = (permMap) => {
 
   return [
     {
+      name: ROLES.SUPER_ADMIN,
+      displayName: 'Super Administrateur',
+      description: 'Propriétaire technique de la plateforme — controle absolu et sans restriction',
+      permissions: [...permMap.values()],
+      isSystem: true,
+    },
+    {
       name: ROLES.ADMIN,
       displayName: 'Administrateur',
       description: 'Acces complet a toutes les fonctionnalites',

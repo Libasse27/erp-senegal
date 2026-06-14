@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 const clientSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
+
     // === IDENTIFICATION ===
     type: {
       type: String,
@@ -10,7 +16,6 @@ const clientSchema = new mongoose.Schema(
     },
     code: {
       type: String,
-      unique: true,
       trim: true,
     },
     raisonSociale: {
@@ -162,6 +167,7 @@ const clientSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // code already indexed via unique: true in schema definition
+clientSchema.index({ companyId: 1, code: 1 }, { unique: true, sparse: true });
 clientSchema.index({ email: 1 }, { sparse: true });
 clientSchema.index({ type: 1, segment: 1 });
 clientSchema.index({ 'address.city': 1 });
@@ -192,8 +198,8 @@ clientSchema.virtual('fullAddress').get(function () {
 
 // === PRE-SAVE: Auto-generate client code ===
 clientSchema.pre('save', async function (next) {
-  if (!this.code) {
-    const count = await mongoose.model('Client').countDocuments();
+  if (!this.code && this.companyId) {
+    const count = await mongoose.model('Client').countDocuments({ companyId: this.companyId });
     this.code = `CLI-${String(count + 1).padStart(5, '0')}`;
   }
   next();
@@ -221,8 +227,9 @@ clientSchema.methods.softDelete = async function (userId) {
  * Update ABC segmentation based on total CA
  * A = top 20%, B = next 30%, C = bottom 50%
  */
-clientSchema.statics.updateSegmentation = async function () {
-  const clients = await this.find({ isActive: true }).sort({ totalCA: -1 });
+clientSchema.statics.updateSegmentation = async function (companyId) {
+  const filter = companyId ? { companyId, isActive: true } : { isActive: true };
+  const clients = await this.find(filter).sort({ totalCA: -1 });
   const total = clients.length;
   if (total === 0) return;
 

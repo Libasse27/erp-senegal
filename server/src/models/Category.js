@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const categorySchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     name: {
       type: String,
       required: [true, 'Le nom de la categorie est requis'],
@@ -10,7 +15,6 @@ const categorySchema = new mongoose.Schema(
     },
     slug: {
       type: String,
-      unique: true,
       trim: true,
       lowercase: true,
     },
@@ -64,6 +68,7 @@ const categorySchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
+categorySchema.index({ companyId: 1, slug: 1 }, { unique: true, sparse: true });
 categorySchema.index({ parent: 1 });
 categorySchema.index({ isActive: 1, order: 1 });
 categorySchema.index({ name: 'text' });

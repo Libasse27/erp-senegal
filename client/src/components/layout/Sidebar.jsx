@@ -18,6 +18,11 @@ import {
   FiDatabase,
   FiClipboard,
   FiLayers,
+  FiShield,
+  FiServer,
+  FiArchive,
+  FiAlertTriangle,
+  FiActivity,
 } from 'react-icons/fi';
 import {
   selectSidebarCollapsed,
@@ -29,6 +34,12 @@ import { PERM } from '../../config/permissions';
 
 // Thème visuel par rôle
 const ROLE_THEMES = {
+  super_admin: {
+    gradient: 'linear-gradient(160deg, #3b0764 0%, #0c0020 100%)',
+    accent: '#e879f9',
+    label: 'Super Admin',
+    icon: '👑',
+  },
   admin: {
     gradient: 'linear-gradient(160deg, #7f1d1d 0%, #1a0505 100%)',
     accent: '#f87171',
@@ -116,10 +127,20 @@ const navItems = [
   { path: '/rapports', label: 'Rapports', icon: FiBarChart2, permission: PERM.RAPPORTS_READ },
 
   { section: 'SYSTEME' },
-  { path: '/admin/utilisateurs', label: 'Utilisateurs',    icon: FiUsers,    roles: ['admin'] },
-  { path: '/admin/entreprise',   label: 'Entreprise',      icon: FiHome,     roles: ['admin'] },
-  { path: '/admin/parametres',   label: 'Parametres',      icon: FiSettings, roles: ['admin'] },
-  { path: '/admin/audit',        label: "Journal d'Audit", icon: FiFileText, roles: ['admin'] },
+  { path: '/admin/utilisateurs', label: 'Utilisateurs',    icon: FiUsers,    roles: ['admin', 'super_admin'] },
+  { path: '/admin/entreprise',   label: 'Entreprise',      icon: FiHome,     roles: ['admin', 'super_admin'] },
+  { path: '/admin/parametres',   label: 'Parametres',      icon: FiSettings, roles: ['admin', 'super_admin'] },
+  { path: '/admin/audit',        label: "Journal d'Audit", icon: FiFileText, roles: ['admin', 'super_admin'] },
+
+  { section: 'SUPER ADMIN', superAdminOnly: true },
+  { path: '/super-admin',                label: 'Tableau de bord SA',   icon: FiShield,       roles: ['super_admin'] },
+  { path: '/super-admin/entreprises',    label: 'Entreprises',          icon: FiDatabase,     roles: ['super_admin'] },
+  { path: '/super-admin/utilisateurs',   label: 'Utilisateurs (SA)',    icon: FiUsers,        roles: ['super_admin'] },
+  { path: '/super-admin/rbac',           label: 'Matrice RBAC',         icon: FiActivity,     roles: ['super_admin'] },
+  { path: '/super-admin/monitoring',     label: 'Monitoring',           icon: FiServer,       roles: ['super_admin'] },
+  { path: '/super-admin/logs',           label: 'Journaux système',     icon: FiFileText,     roles: ['super_admin'] },
+  { path: '/super-admin/sauvegardes',    label: 'Sauvegardes',          icon: FiArchive,      roles: ['super_admin'] },
+  { path: '/super-admin/audit',          label: "Audit (SA)",           icon: FiAlertTriangle,roles: ['super_admin'] },
 ];
 
 const Sidebar = () => {
@@ -191,6 +212,7 @@ const Sidebar = () => {
         {navItems.map((item, index) => {
           if (item.section) {
             if (collapsed) return null;
+            if (item.superAdminOnly && !hasRole('super_admin')) return null;
             return (
               <div key={`section-${index}`} className="nav-section">
                 {item.section}

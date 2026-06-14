@@ -79,10 +79,14 @@ const ecritureComptableSchema = new mongoose.Schema(
 
 const factureSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     // Numero assigned ONLY at validation (DGI compliance - no gaps)
     numero: {
       type: String,
-      unique: true,
       sparse: true,
       trim: true,
     },
@@ -236,6 +240,7 @@ const factureSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // numero already indexed via unique+sparse: true in schema definition
+factureSchema.index({ companyId: 1, numero: 1 }, { unique: true, sparse: true });
 factureSchema.index({ client: 1, statut: 1 });
 factureSchema.index({ statut: 1, createdAt: -1 });
 factureSchema.index({ dateEcheance: 1 });
@@ -284,8 +289,8 @@ const calculateTotals = (doc) => {
 // === PRE-SAVE ===
 factureSchema.pre('save', async function (next) {
   // Generate internal reference for drafts (not DGI-compliant numero)
-  if (!this.referenceInterne) {
-    const count = await mongoose.model('Facture').countDocuments();
+  if (!this.referenceInterne && this.companyId) {
+    const count = await mongoose.model('Facture').countDocuments({ companyId: this.companyId });
     const prefix = this.typeDocument === 'avoir' ? 'TMP-AV' : 'TMP-FA';
     this.referenceInterne = `${prefix}-${String(count + 1).padStart(5, '0')}`;
   }

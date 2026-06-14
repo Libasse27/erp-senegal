@@ -30,6 +30,8 @@ const {
   exportFEC,
 } = require('../controllers/comptabiliteController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
+const subscriptionGuard = require('../middlewares/subscriptionGuard');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const {
@@ -43,8 +45,9 @@ const {
 const audit = require('../middlewares/audit');
 const { cache } = require('../middlewares/cache');
 
-// All routes require authentication
 router.use(protect);
+router.use(tenantMiddleware);
+router.use(subscriptionGuard('COMPTABILITE'));
 
 // === Plan Comptable ===
 router.get('/plan', authorize('comptabilite:read'), cache(300), getPlanComptable);

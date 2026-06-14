@@ -2,10 +2,15 @@ const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
+
     // === IDENTIFICATION ===
     code: {
       type: String,
-      unique: true,
       trim: true,
     },
     barcode: {
@@ -175,6 +180,7 @@ const productSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // code already indexed via unique: true in schema definition
+productSchema.index({ companyId: 1, code: 1 }, { unique: true, sparse: true });
 productSchema.index({ category: 1 });
 productSchema.index({ type: 1, isActive: 1 });
 productSchema.index({ prixVente: 1 });
@@ -205,8 +211,8 @@ productSchema.virtual('primaryImage').get(function () {
 
 // === PRE-SAVE: Auto-generate product code ===
 productSchema.pre('save', async function (next) {
-  if (!this.code) {
-    const count = await mongoose.model('Product').countDocuments();
+  if (!this.code && this.companyId) {
+    const count = await mongoose.model('Product').countDocuments({ companyId: this.companyId });
     this.code = `PRD-${String(count + 1).padStart(5, '0')}`;
   }
   // Sync TVA

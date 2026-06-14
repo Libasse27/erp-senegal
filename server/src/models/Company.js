@@ -68,6 +68,66 @@ const companySchema = new mongoose.Schema(
       type: String,
       default: 'XOF',
     },
+
+    // ── Champs de gestion Super Admin ──────────────────────────────────────
+    status: {
+      type: String,
+      enum: ['active', 'suspended', 'trial', 'expired', 'pending_payment'],
+      default: 'pending_payment',
+    },
+    plan: {
+      type: String,
+      enum: ['starter', 'professional', 'enterprise', 'STANDARD', 'PROFESSIONNEL', 'COMPLET'],
+      default: 'STANDARD',
+    },
+    forfaitId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Forfait',
+      default: null,
+    },
+    abonnementActifId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Abonnement',
+      default: null,
+    },
+    sector: {
+      type: String,
+      trim: true,
+    },
+    employeeCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    adminUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
+    suspendedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    suspensionReason: {
+      type: String,
+      trim: true,
+    },
+    superAdminNotes: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
+    subscriptionStartDate: {
+      type: Date,
+      default: Date.now,
+    },
+    subscriptionEndDate: {
+      type: Date,
+    },
+
     isActive: {
       type: Boolean,
       default: true,
@@ -95,6 +155,8 @@ const companySchema = new mongoose.Schema(
 
 // Index
 companySchema.index({ ninea: 1 });
+companySchema.index({ status: 1 });
+companySchema.index({ plan: 1 });
 
 // Virtual: adresse complete
 companySchema.virtual('fullAddress').get(function () {

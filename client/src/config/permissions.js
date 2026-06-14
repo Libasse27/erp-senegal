@@ -109,4 +109,18 @@ export const PERM = {
   RAPPORTS_EXPORT:      'rapports:export',
 
   DASHBOARD_READ:       'dashboard:read',
+
+  // ── Super Admin — Système ─────────────────────────────────────────────
+  ROLES_READ:           'roles:read',
+  ROLES_CREATE:         'roles:create',
+  ROLES_UPDATE:         'roles:update',
+  ROLES_DELETE:         'roles:delete',
+
+  SYSTEM_MONITORING:    'system_monitoring:read',
+  SYSTEM_CONFIG:        'system_config:update',
+  BACKUPS_READ:         'backups:read',
+  BACKUPS_CREATE:       'backups:create',
+  BACKUPS_RESTORE:      'backups:restore',
+  SYSTEM_LOGS_READ:     'system_logs:read',
+  SYSTEM_LOGS_PURGE:    'system_logs:purge',
 };

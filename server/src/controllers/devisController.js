@@ -7,6 +7,7 @@ const { buildPaginationOptions, buildPaginationResponse } = require('../utils/he
 const { generateDevisPDF } = require('../services/pdfService');
 const { sendDevisEmail } = require('../services/emailService');
 const { notifyDevisConverted } = require('../services/notificationService');
+const { tc, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all devis with pagination, filters, and search
@@ -17,6 +18,7 @@ const getDevisList = async (req, res, next) => {
   try {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.statut) filter.statut = req.query.statut;
     if (req.query.client) filter.client = req.query.client;
@@ -67,7 +69,7 @@ const getDevisList = async (req, res, next) => {
  */
 const getDevis = async (req, res, next) => {
   try {
-    const devis = await Devis.findById(req.params.id)
+    const devis = await Devis.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('client')
       .populate('commercial', 'firstName lastName email')
       .populate('commandeGeneree', 'numero statut')
@@ -90,7 +92,7 @@ const getDevis = async (req, res, next) => {
  */
 const createDevis = async (req, res, next) => {
   try {
-    const client = await Client.findById(req.body.client);
+    const client = await findByTenant(Client, req.body.client, req);
     if (!client) {
       return next(new AppError('Client non trouve.', 404));
     }
@@ -107,6 +109,7 @@ const createDevis = async (req, res, next) => {
 
     const devis = await Devis.create({
       ...req.body,
+      companyId: tc(req),
       clientSnapshot,
       createdBy: req.user._id,
       commercial: req.body.commercial || req.user._id,
@@ -133,7 +136,7 @@ const createDevis = async (req, res, next) => {
  */
 const updateDevis = async (req, res, next) => {
   try {
-    const devis = await Devis.findById(req.params.id);
+    const devis = await findByTenant(Devis, req.params.id, req);
     if (!devis) {
       return next(new AppError('Devis non trouve.', 404));
     }
@@ -169,7 +172,7 @@ const updateDevis = async (req, res, next) => {
  */
 const deleteDevis = async (req, res, next) => {
   try {
-    const devis = await Devis.findById(req.params.id);
+    const devis = await findByTenant(Devis, req.params.id, req);
     if (!devis) {
       return next(new AppError('Devis non trouve.', 404));
     }
@@ -192,7 +195,7 @@ const deleteDevis = async (req, res, next) => {
  */
 const changeStatut = async (req, res, next) => {
   try {
-    const devis = await Devis.findById(req.params.id);
+    const devis = await findByTenant(Devis, req.params.id, req);
     if (!devis) {
       return next(new AppError('Devis non trouve.', 404));
     }
@@ -216,7 +219,7 @@ const changeStatut = async (req, res, next) => {
  */
 const sendDevis = async (req, res, next) => {
   try {
-    const devis = await Devis.findById(req.params.id)
+    const devis = await Devis.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('client')
       .populate('commercial', 'firstName lastName email')
       .populate('lignes.product', 'name code');
@@ -229,7 +232,7 @@ const sendDevis = async (req, res, next) => {
       return next(new AppError('Le client n\'a pas d\'adresse email.', 400));
     }
 
-    const company = await Company.findOne({ isActive: true });
+    const company = await Company.findById(req.companyId);
     if (!company) {
       return next(new AppError('Parametres entreprise non trouves.', 500));
     }
@@ -264,7 +267,7 @@ const sendDevis = async (req, res, next) => {
  */
 const convertDevis = async (req, res, next) => {
   try {
-    const devis = await Devis.findById(req.params.id).populate('client');
+    const devis = await Devis.findOne({ _id: req.params.id, companyId: tc(req) }).populate('client');
     if (!devis) {
       return next(new AppError('Devis non trouve.', 404));
     }
@@ -295,6 +298,7 @@ const convertDevis = async (req, res, next) => {
       createdBy: req.user._id,
     };
 
+    commandeData.companyId = tc(req);
     const commande = await Commande.create(commandeData);
 
     // Update devis status and link
@@ -325,7 +329,7 @@ const convertDevis = async (req, res, next) => {
  */
 const getDevisPDF = async (req, res, next) => {
   try {
-    const devis = await Devis.findById(req.params.id)
+    const devis = await Devis.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('client')
       .populate('commercial', 'firstName lastName email')
       .populate('lignes.product', 'name code');
@@ -334,7 +338,7 @@ const getDevisPDF = async (req, res, next) => {
       return next(new AppError('Devis non trouve.', 404));
     }
 
-    const company = await Company.findOne({ isActive: true });
+    const company = await Company.findById(req.companyId);
     if (!company) {
       return next(new AppError('Parametres entreprise non trouves.', 500));
     }

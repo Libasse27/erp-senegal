@@ -4,10 +4,13 @@ import { Routes, Route } from 'react-router-dom';
 // Layout and Guards (critical path - not lazy loaded)
 import Layout from './components/layout/Layout';
 import PrivateRoute from './guards/PrivateRoute';
+import SuperAdminGuard from './guards/SuperAdminGuard';
 
 // Auth pages (critical path - not lazy loaded)
 import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import RegisterPage from './pages/auth/RegisterPage';
 
 // Lazy loaded pages
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
@@ -91,6 +94,16 @@ const NotificationsListPage = lazy(() => import('./pages/notifications/Notificat
 // 404
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
+// Super Admin
+const SuperAdminDashboard = lazy(() => import('./pages/super-admin/SuperAdminDashboard'));
+const SystemMonitoringPage = lazy(() => import('./pages/super-admin/SystemMonitoringPage'));
+const SuperAdminUsersPage = lazy(() => import('./pages/super-admin/SuperAdminUsersPage'));
+const RbacMatrixPage = lazy(() => import('./pages/super-admin/RbacMatrixPage'));
+const SystemLogsPage = lazy(() => import('./pages/super-admin/SystemLogsPage'));
+const BackupManagementPage = lazy(() => import('./pages/super-admin/BackupManagementPage'));
+const SuperAdminAuditPage = lazy(() => import('./pages/super-admin/SuperAdminAuditPage'));
+const SuperAdminCompaniesPage = lazy(() => import('./pages/super-admin/SuperAdminCompaniesPage'));
+
 // Loading fallback component
 const PageLoader = () => (
   <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
@@ -106,7 +119,9 @@ const AppRoutes = () => {
     <Routes>
       {/* Public routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
       {/* Protected routes */}
       <Route element={<PrivateRoute />}>
@@ -198,6 +213,18 @@ const AppRoutes = () => {
           <Route path="/admin/parametres" element={<SettingsPage />} />
           <Route path="/admin/entreprise" element={<CompanyPage />} />
           <Route path="/admin/audit" element={<AuditLogPage />} />
+
+          {/* Super Administration — accès restreint au rôle super_admin */}
+          <Route element={<SuperAdminGuard />}>
+            <Route path="/super-admin" element={<SuperAdminDashboard />} />
+            <Route path="/super-admin/entreprises" element={<SuperAdminCompaniesPage />} />
+            <Route path="/super-admin/utilisateurs" element={<SuperAdminUsersPage />} />
+            <Route path="/super-admin/rbac" element={<RbacMatrixPage />} />
+            <Route path="/super-admin/monitoring" element={<SystemMonitoringPage />} />
+            <Route path="/super-admin/logs" element={<SystemLogsPage />} />
+            <Route path="/super-admin/sauvegardes" element={<BackupManagementPage />} />
+            <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
+          </Route>
         </Route>
       </Route>
 

@@ -2,6 +2,7 @@ const CommandeAchat = require('../models/CommandeAchat');
 const Fournisseur = require('../models/Fournisseur');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
+const { tc, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all commandes achat with pagination and filters
@@ -12,6 +13,7 @@ const getCommandesAchat = async (req, res, next) => {
   try {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.statut) filter.statut = req.query.statut;
     if (req.query.fournisseur) filter.fournisseur = req.query.fournisseur;
@@ -56,7 +58,7 @@ const getCommandesAchat = async (req, res, next) => {
  */
 const getCommandeAchat = async (req, res, next) => {
   try {
-    const commande = await CommandeAchat.findById(req.params.id)
+    const commande = await CommandeAchat.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('fournisseur')
       .populate('lignes.product', 'nom reference prixAchat')
       .populate('createdBy', 'firstName lastName')
@@ -79,7 +81,7 @@ const getCommandeAchat = async (req, res, next) => {
  */
 const createCommandeAchat = async (req, res, next) => {
   try {
-    const fournisseur = await Fournisseur.findById(req.body.fournisseur);
+    const fournisseur = await findByTenant(Fournisseur, req.body.fournisseur, req);
     if (!fournisseur) {
       return next(new AppError('Fournisseur non trouve.', 404));
     }
@@ -95,6 +97,7 @@ const createCommandeAchat = async (req, res, next) => {
 
     const commande = await CommandeAchat.create({
       ...req.body,
+      companyId: tc(req),
       fournisseurSnapshot,
       createdBy: req.user._id,
     });
@@ -119,7 +122,7 @@ const createCommandeAchat = async (req, res, next) => {
  */
 const updateCommandeAchat = async (req, res, next) => {
   try {
-    const commande = await CommandeAchat.findById(req.params.id);
+    const commande = await findByTenant(CommandeAchat, req.params.id, req);
     if (!commande) {
       return next(new AppError('Commande achat non trouvee.', 404));
     }
@@ -156,7 +159,7 @@ const updateCommandeAchat = async (req, res, next) => {
  */
 const deleteCommandeAchat = async (req, res, next) => {
   try {
-    const commande = await CommandeAchat.findById(req.params.id);
+    const commande = await findByTenant(CommandeAchat, req.params.id, req);
     if (!commande) {
       return next(new AppError('Commande achat non trouvee.', 404));
     }
@@ -176,7 +179,7 @@ const deleteCommandeAchat = async (req, res, next) => {
  */
 const changeStatut = async (req, res, next) => {
   try {
-    const commande = await CommandeAchat.findById(req.params.id);
+    const commande = await findByTenant(CommandeAchat, req.params.id, req);
     if (!commande) {
       return next(new AppError('Commande achat non trouvee.', 404));
     }

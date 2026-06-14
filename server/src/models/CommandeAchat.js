@@ -37,7 +37,12 @@ const ligneCmdAchatSchema = new mongoose.Schema(
 
 const commandeAchatSchema = new mongoose.Schema(
   {
-    numero: { type: String, unique: true, trim: true },
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
+    numero: { type: String, trim: true },
 
     fournisseur: {
       type: mongoose.Schema.Types.ObjectId,
@@ -98,6 +103,7 @@ const commandeAchatSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
+commandeAchatSchema.index({ companyId: 1, numero: 1 }, { unique: true, sparse: true });
 commandeAchatSchema.index({ fournisseur: 1, statut: 1 });
 commandeAchatSchema.index({ statut: 1, createdAt: -1 });
 
@@ -131,8 +137,8 @@ const calculateTotals = (doc) => {
 
 // === PRE-SAVE ===
 commandeAchatSchema.pre('save', async function (next) {
-  if (!this.numero) {
-    const { numero } = await getNextSequence('purchaseOrder');
+  if (!this.numero && this.companyId) {
+    const { numero } = await getNextSequence('purchaseOrder', this.companyId);
     this.numero = numero;
   }
   if (this.lignes && this.lignes.length > 0) {

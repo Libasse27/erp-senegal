@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {
   register,
+  registerSaaS,
   login,
   refreshToken,
   logout,
@@ -22,11 +23,19 @@ router.post('/refresh-token', refreshToken);
 router.post('/forgot-password', authLimiter, validate(authValidation.forgotPassword), forgotPassword);
 router.put('/reset-password/:token', validate(authValidation.resetPassword), resetPassword);
 
+// Inscription publique SaaS (entreprise + admin + forfait)
+router.post(
+  '/register-saas',
+  authLimiter,
+  validate(authValidation.registerSaaS),
+  registerSaaS
+);
+
 // Routes protegees
 router.post(
   '/register',
   protect,
-  authorizeRoles('admin'),
+  authorizeRoles('admin', 'super_admin'),
   validate(authValidation.register),
   audit('users', 'create'),
   register

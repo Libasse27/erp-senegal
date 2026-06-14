@@ -7,6 +7,7 @@ const usersRoutes = require('./users.routes');
 const companyRoutes = require('./company.routes');
 const settingsRoutes = require('./settings.routes');
 const adminRoutes = require('./admin.routes');
+const superAdminRoutes = require('./superAdmin.routes');
 
 // Phase 2 routes — Modules Commerciaux
 const clientsRoutes = require('./clients.routes');
@@ -36,6 +37,12 @@ const dashboardRoutes = require('./dashboard.routes');
 // Notifications
 const notificationsRoutes = require('./notifications.routes');
 
+// SaaS — Forfaits publics
+const forfaitsRoutes = require('./forfaits.routes');
+
+// SaaS — Paiements abonnements
+const paiementsSaasRoutes = require('./paiements-saas.routes');
+
 const { limiter } = require('../middlewares/rateLimiter');
 
 // Appliquer le rate limiter global
@@ -47,6 +54,7 @@ router.use('/users', usersRoutes);
 router.use('/company', companyRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/admin', adminRoutes);
+router.use('/super-admin', superAdminRoutes);
 
 // === Phase 2 — Modules Commerciaux ===
 router.use('/clients', clientsRoutes);
@@ -75,5 +83,11 @@ router.use('/dashboard', dashboardRoutes);
 
 // === Notifications ===
 router.use('/notifications', notificationsRoutes);
+
+// === SaaS — Forfaits (public) ===
+router.use('/forfaits', forfaitsRoutes);
+
+// === SaaS — Paiements abonnements ===
+router.use('/paiements-saas', paiementsSaasRoutes);
 
 module.exports = router;

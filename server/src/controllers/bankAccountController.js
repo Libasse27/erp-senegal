@@ -2,6 +2,7 @@ const BankAccount = require('../models/BankAccount');
 const Payment = require('../models/Payment');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
+const { tc, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all bank accounts
@@ -12,6 +13,7 @@ const getBankAccounts = async (req, res, next) => {
   try {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.type) filter.type = req.query.type;
     if (req.query.search) {
@@ -53,7 +55,7 @@ const getBankAccounts = async (req, res, next) => {
  */
 const getBankAccount = async (req, res, next) => {
   try {
-    const account = await BankAccount.findById(req.params.id)
+    const account = await BankAccount.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('compteComptable', 'numero libelle');
 
     if (!account) {
@@ -63,6 +65,7 @@ const getBankAccount = async (req, res, next) => {
     // Get recent payments for this account
     const recentPayments = await Payment.find({
       compteBancaire: account._id,
+      companyId: tc(req),
       statut: 'valide',
       isActive: true,
     })
@@ -93,11 +96,12 @@ const createBankAccount = async (req, res, next) => {
   try {
     // If setting as default, unset previous default
     if (req.body.isDefault) {
-      await BankAccount.updateMany({ isDefault: true }, { isDefault: false });
+      await BankAccount.updateMany({ isDefault: true, companyId: tc(req) }, { isDefault: false });
     }
 
     const account = await BankAccount.create({
       ...req.body,
+      companyId: tc(req),
       soldeActuel: req.body.soldeInitial || 0,
       createdBy: req.user._id,
     });
@@ -122,7 +126,7 @@ const createBankAccount = async (req, res, next) => {
  */
 const updateBankAccount = async (req, res, next) => {
   try {
-    const account = await BankAccount.findById(req.params.id);
+    const account = await findByTenant(BankAccount, req.params.id, req);
     if (!account) {
       return next(new AppError('Compte bancaire non trouve.', 404));
     }
@@ -132,7 +136,7 @@ const updateBankAccount = async (req, res, next) => {
     // If setting as default, unset previous default
     if (req.body.isDefault) {
       await BankAccount.updateMany(
-        { _id: { $ne: account._id }, isDefault: true },
+        { _id: { $ne: account._id }, isDefault: true, companyId: tc(req) },
         { isDefault: false }
       );
     }
@@ -161,7 +165,7 @@ const updateBankAccount = async (req, res, next) => {
  */
 const deleteBankAccount = async (req, res, next) => {
   try {
-    const account = await BankAccount.findById(req.params.id);
+    const account = await findByTenant(BankAccount, req.params.id, req);
     if (!account) {
       return next(new AppError('Compte bancaire non trouve.', 404));
     }
@@ -169,6 +173,7 @@ const deleteBankAccount = async (req, res, next) => {
     // Check if account has linked payments
     const linkedPayments = await Payment.countDocuments({
       compteBancaire: account._id,
+      companyId: tc(req),
       statut: 'valide',
       isActive: true,
     });
@@ -200,13 +205,14 @@ const deleteBankAccount = async (req, res, next) => {
  */
 const getReconciliation = async (req, res, next) => {
   try {
-    const account = await BankAccount.findById(req.params.id);
+    const account = await findByTenant(BankAccount, req.params.id, req);
     if (!account) {
       return next(new AppError('Compte bancaire non trouve.', 404));
     }
 
     const filter = {
       compteBancaire: account._id,
+      companyId: tc(req),
       statut: 'valide',
       isActive: true,
     };

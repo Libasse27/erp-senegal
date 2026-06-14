@@ -8,6 +8,7 @@ import {
   selectIsAuthenticated,
   selectAccessToken,
   selectAuthLoading,
+  selectAuthScope,
 } from '../redux/slices/authSlice';
 import { useGetMeQuery, useLogoutMutation } from '../redux/api/authApi';
 
@@ -19,37 +20,47 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const accessToken = useSelector(selectAccessToken);
   const isLoading = useSelector(selectAuthLoading);
+  const scope = useSelector(selectAuthScope);
 
-  const { data: meData, isLoading: isMeLoading } = useGetMeQuery(undefined, {
+  const {
+    data: meData,
+    isLoading: isMeLoading,
+    isError: isMeError,
+  } = useGetMeQuery(undefined, {
     skip: !accessToken,
   });
+
   const [logoutMutation] = useLogoutMutation();
 
   useEffect(() => {
     if (meData?.data) {
-      dispatch(
-        setCredentials({
-          user: meData.data,
-          accessToken,
-        })
-      );
+      dispatch(setCredentials({ user: meData.data, accessToken }));
     } else if (!accessToken) {
+      // Pas de token — terminer le chargement immédiatement
       dispatch(setLoading(false));
+    } else if (isMeError) {
+      // Token invalide ou expiré non récupérable — nettoyer la session
+      dispatch(logoutAction());
     }
-  }, [meData, accessToken, dispatch]);
+  }, [meData, accessToken, isMeError, dispatch]);
 
   const logout = async () => {
     try {
       await logoutMutation().unwrap();
     } catch {
-      // Logout even if API call fails
+      // Déconnexion locale même si l'appel API échoue
     }
     dispatch(logoutAction());
   };
 
+  const isSuperAdmin = () => {
+    return user?.role?.name === 'super_admin' || scope === 'PLATFORM';
+  };
+
   const hasPermission = (permissionCode) => {
     if (!user || !user.role) return false;
-    if (user.role.name === 'admin') return true;
+    const roleName = user.role.name;
+    if (roleName === 'super_admin' || roleName === 'admin') return true;
     if (!user.role.permissions) return false;
     return user.role.permissions.some(
       (perm) => perm.code === permissionCode && perm.isActive
@@ -58,6 +69,7 @@ export const AuthProvider = ({ children }) => {
 
   const hasRole = (...roles) => {
     if (!user || !user.role) return false;
+    if (user.role.name === 'super_admin') return true;
     return roles.includes(user.role.name);
   };
 
@@ -65,7 +77,9 @@ export const AuthProvider = ({ children }) => {
     user,
     isAuthenticated,
     isLoading: isLoading || isMeLoading,
+    scope,
     logout,
+    isSuperAdmin,
     hasPermission,
     hasRole,
   };
@@ -74,11 +88,7 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth doit être utilisé dans AuthProvider');
+  return ctx;
 };
-
-export default AuthContext;

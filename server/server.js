@@ -45,6 +45,10 @@ app.set('io', io);
 const { initNotificationService } = require('./src/services/notificationService');
 initNotificationService(io);
 
+// Jobs planifiés SaaS
+const subscriptionExpiry = require('./src/jobs/subscriptionExpiry');
+const renewalReminder    = require('./src/jobs/renewalReminder');
+
 // Middleware d'authentification Socket.io
 const jwt = require('jsonwebtoken');
 const jwtConfig = require('./src/config/jwt');
@@ -108,6 +112,10 @@ const startServer = async () => {
     server.listen(PORT, () => {
       logger.info(`Serveur demarre sur le port ${PORT} en mode ${process.env.NODE_ENV}`);
       logger.info(`API disponible sur http://localhost:${PORT}/api`);
+
+      // Démarrer les crons SaaS après écoute du serveur
+      subscriptionExpiry.demarrer();
+      renewalReminder.demarrer();
     });
   } catch (error) {
     logger.error(`Erreur au demarrage: ${error.message}`);

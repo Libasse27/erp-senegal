@@ -2,9 +2,13 @@ const mongoose = require('mongoose');
 
 const stockMovementSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     reference: {
       type: String,
-      unique: true,
       trim: true,
     },
     type: {
@@ -123,6 +127,7 @@ const stockMovementSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // reference already indexed via unique: true in schema definition
+stockMovementSchema.index({ companyId: 1, reference: 1 }, { unique: true, sparse: true });
 stockMovementSchema.index({ product: 1, createdAt: -1 });
 stockMovementSchema.index({ warehouseSource: 1, createdAt: -1 });
 stockMovementSchema.index({ warehouseDestination: 1, createdAt: -1 });
@@ -130,8 +135,8 @@ stockMovementSchema.index({ type: 1 });
 
 // === PRE-SAVE ===
 stockMovementSchema.pre('save', async function (next) {
-  if (!this.reference) {
-    const count = await mongoose.model('StockMovement').countDocuments();
+  if (!this.reference && this.companyId) {
+    const count = await mongoose.model('StockMovement').countDocuments({ companyId: this.companyId });
     const prefix = this.type === 'entree' ? 'MVE' : this.type === 'sortie' ? 'MVS' : 'MVT';
     this.reference = `${prefix}-${String(count + 1).padStart(6, '0')}`;
   }

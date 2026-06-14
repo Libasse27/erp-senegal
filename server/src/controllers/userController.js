@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
+const { tc } = require('../utils/tenantHelper');
 
 /**
  * @desc    Obtenir la liste des utilisateurs (pagine + filtres)
@@ -11,8 +12,9 @@ const getUsers = async (req, res, next) => {
   try {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
 
-    // Construire le filtre
+    // Construire le filtre — limité aux utilisateurs de l'entreprise courante
     const filter = {};
+    filter.companyId = tc(req);
     if (req.query.isActive !== undefined) {
       filter.isActive = req.query.isActive === 'true';
     }
@@ -95,6 +97,8 @@ const createUser = async (req, res, next) => {
       phone,
       role,
       isActive,
+      scope: 'ENTREPRISE',
+      companyId: tc(req),
       createdBy: req.user._id,
     });
 
@@ -120,15 +124,15 @@ const createUser = async (req, res, next) => {
 const updateUser = async (req, res, next) => {
   try {
     // Sauvegarder les anciennes donnees pour l'audit
-    const previousUser = await User.findById(req.params.id);
+    const previousUser = await User.findOne({ _id: req.params.id, companyId: tc(req) });
     if (!previousUser) {
       return next(new AppError('Utilisateur non trouve.', 404));
     }
 
     req._previousData = previousUser.toObject();
 
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: req.params.id, companyId: tc(req) },
       { ...req.body, modifiedBy: req.user._id },
       { new: true, runValidators: true }
     ).populate('role', 'name displayName');

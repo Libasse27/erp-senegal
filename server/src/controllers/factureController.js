@@ -7,6 +7,7 @@ const { getNextSequence } = require('../utils/sequenceHelper');
 const { generateFacturePDF } = require('../services/pdfService');
 const { sendFactureEmail } = require('../services/emailService');
 const { notifyNewInvoice, notifyInvoiceValidated } = require('../services/notificationService');
+const { tc, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all factures with pagination, filters, and search
@@ -17,6 +18,7 @@ const getFactures = async (req, res, next) => {
   try {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.statut) filter.statut = req.query.statut;
     if (req.query.typeDocument) filter.typeDocument = req.query.typeDocument;
@@ -69,7 +71,7 @@ const getFactures = async (req, res, next) => {
  */
 const getFacture = async (req, res, next) => {
   try {
-    const facture = await Facture.findById(req.params.id)
+    const facture = await Facture.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('client')
       .populate('commercial', 'firstName lastName email')
       .populate('commande', 'numero statut')
@@ -94,7 +96,7 @@ const getFacture = async (req, res, next) => {
  */
 const createFacture = async (req, res, next) => {
   try {
-    const client = await Client.findById(req.body.client);
+    const client = await findByTenant(Client, req.body.client, req);
     if (!client) {
       return next(new AppError('Client non trouve.', 404));
     }
@@ -115,6 +117,7 @@ const createFacture = async (req, res, next) => {
 
     const facture = await Facture.create({
       ...req.body,
+      companyId: tc(req),
       clientSnapshot,
       dateEcheance,
       createdBy: req.user._id,
@@ -144,7 +147,7 @@ const createFacture = async (req, res, next) => {
  */
 const updateFacture = async (req, res, next) => {
   try {
-    const facture = await Facture.findById(req.params.id);
+    const facture = await findByTenant(Facture, req.params.id, req);
     if (!facture) {
       return next(new AppError('Facture non trouvee.', 404));
     }
@@ -180,7 +183,7 @@ const updateFacture = async (req, res, next) => {
  */
 const deleteFacture = async (req, res, next) => {
   try {
-    const facture = await Facture.findById(req.params.id);
+    const facture = await findByTenant(Facture, req.params.id, req);
     if (!facture) {
       return next(new AppError('Facture non trouvee.', 404));
     }
@@ -203,7 +206,7 @@ const deleteFacture = async (req, res, next) => {
  */
 const validateFacture = async (req, res, next) => {
   try {
-    const facture = await Facture.findById(req.params.id).populate('client');
+    const facture = await Facture.findOne({ _id: req.params.id, companyId: tc(req) }).populate('client');
     if (!facture) {
       return next(new AppError('Facture non trouvee.', 404));
     }
@@ -212,9 +215,9 @@ const validateFacture = async (req, res, next) => {
       return next(new AppError('Seules les factures en brouillon peuvent etre validees.', 400));
     }
 
-    // 1. Assign sequential numero (DGI: no gaps allowed)
+    // 1. Assign sequential numero (DGI: no gaps allowed) — tenant-scoped via companyId
     const type = facture.typeDocument === 'avoir' ? 'creditNote' : 'invoice';
-    const { numero } = await getNextSequence(type);
+    const { numero } = await getNextSequence(type, tc(req));
     facture.numero = numero;
 
     // 2. Create SYSCOHADA accounting entry
@@ -337,7 +340,7 @@ const buildEcritureComptable = (facture) => {
  */
 const sendFacture = async (req, res, next) => {
   try {
-    const facture = await Facture.findById(req.params.id)
+    const facture = await Facture.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('client')
       .populate('commercial', 'firstName lastName email')
       .populate('lignes.product', 'name code');
@@ -354,7 +357,7 @@ const sendFacture = async (req, res, next) => {
       return next(new AppError('Le client n\'a pas d\'adresse email.', 400));
     }
 
-    const company = await Company.findOne({ isActive: true });
+    const company = await Company.findById(req.companyId);
     if (!company) {
       return next(new AppError('Parametres entreprise non trouves.', 500));
     }
@@ -387,7 +390,7 @@ const sendFacture = async (req, res, next) => {
  */
 const getFacturePDF = async (req, res, next) => {
   try {
-    const facture = await Facture.findById(req.params.id)
+    const facture = await Facture.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('client')
       .populate('commercial', 'firstName lastName email')
       .populate('lignes.product', 'name code');
@@ -396,7 +399,7 @@ const getFacturePDF = async (req, res, next) => {
       return next(new AppError('Facture non trouvee.', 404));
     }
 
-    const company = await Company.findOne({ isActive: true });
+    const company = await Company.findById(req.companyId);
     if (!company) {
       return next(new AppError('Parametres entreprise non trouves.', 500));
     }
@@ -423,7 +426,7 @@ const getFacturePDF = async (req, res, next) => {
  */
 const createAvoir = async (req, res, next) => {
   try {
-    const factureOrigine = await Facture.findById(req.params.id);
+    const factureOrigine = await findByTenant(Facture, req.params.id, req);
     if (!factureOrigine) {
       return next(new AppError('Facture non trouvee.', 404));
     }
@@ -478,6 +481,7 @@ const createAvoir = async (req, res, next) => {
       client: factureOrigine.client,
       clientSnapshot: factureOrigine.clientSnapshot,
       commande: factureOrigine.commande,
+      companyId: tc(req),
       lignes: avoirLignes,
       remiseGlobale: req.body.lignes ? 0 : factureOrigine.remiseGlobale,
       conditionsPaiement: factureOrigine.conditionsPaiement,

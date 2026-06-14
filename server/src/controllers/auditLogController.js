@@ -12,6 +12,11 @@ const getAuditLogs = async (req, res, next) => {
 
     const filter = {};
 
+    // Tenant isolation — super_admin voit tout, admin voit son entreprise
+    if (req.companyId) {
+      filter.companyId = req.companyId;
+    }
+
     // Filter by user
     if (req.query.userId) {
       filter.user = req.query.userId;
@@ -97,7 +102,10 @@ const getAuditLog = async (req, res, next) => {
  */
 const getAuditStats = async (req, res, next) => {
   try {
+    const matchStage = req.companyId ? { $match: { companyId: req.companyId } } : { $match: {} };
+
     const stats = await AuditLog.aggregate([
+      matchStage,
       {
         $group: {
           _id: { action: '$action', module: '$module' },
@@ -108,7 +116,8 @@ const getAuditStats = async (req, res, next) => {
       { $sort: { count: -1 } },
     ]);
 
-    const totalLogs = await AuditLog.countDocuments();
+    const totalFilter = req.companyId ? { companyId: req.companyId } : {};
+    const totalLogs = await AuditLog.countDocuments(totalFilter);
 
     res.json({
       success: true,

@@ -10,6 +10,8 @@ const {
   changeStatut,
 } = require('../controllers/commandeAchatController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
+const subscriptionGuard = require('../middlewares/subscriptionGuard');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const {
@@ -20,6 +22,8 @@ const {
 const audit = require('../middlewares/audit');
 
 router.use(protect);
+router.use(tenantMiddleware);
+router.use(subscriptionGuard('GESCOM'));
 
 router.get('/', authorize('commandes_achat:read'), getCommandesAchat);
 router.get('/:id', authorize('commandes_achat:read'), getCommandeAchat);

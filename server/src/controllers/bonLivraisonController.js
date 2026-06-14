@@ -10,6 +10,7 @@ const { generateBonLivraisonPDF } = require('../services/pdfService');
 const { notifyNewInvoice, createAndNotifyRole, notifyStockAlert } = require('../services/notificationService');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
+const { tc, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all bons de livraison with pagination
@@ -20,6 +21,7 @@ const getBonsLivraison = async (req, res, next) => {
   try {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.statut) filter.statut = req.query.statut;
     if (req.query.client) filter.client = req.query.client;
@@ -70,7 +72,7 @@ const getBonsLivraison = async (req, res, next) => {
  */
 const getBonLivraison = async (req, res, next) => {
   try {
-    const bl = await BonLivraison.findById(req.params.id)
+    const bl = await BonLivraison.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('commande', 'numero statut dateCommande')
       .populate('client')
       .populate('lignes.product', 'name code')
@@ -94,13 +96,14 @@ const getBonLivraison = async (req, res, next) => {
  */
 const createBonLivraison = async (req, res, next) => {
   try {
-    const commande = await Commande.findById(req.body.commande);
+    const commande = await findByTenant(Commande, req.body.commande, req);
     if (!commande) {
       return next(new AppError('Commande non trouvee.', 404));
     }
 
     const bl = await BonLivraison.create({
       ...req.body,
+      companyId: tc(req),
       clientSnapshot: commande.clientSnapshot,
       createdBy: req.user._id,
     });
@@ -130,7 +133,7 @@ const createBonLivraison = async (req, res, next) => {
  */
 const validateBL = async (req, res, next) => {
   try {
-    const bl = await BonLivraison.findById(req.params.id)
+    const bl = await BonLivraison.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('commande')
       .populate('client');
 
@@ -147,6 +150,7 @@ const validateBL = async (req, res, next) => {
       const stock = await Stock.findOne({
         product: ligne.product,
         warehouse: ligne.warehouse,
+        companyId: tc(req),
         isActive: true,
       });
 
@@ -180,6 +184,7 @@ const validateBL = async (req, res, next) => {
         motif: 'vente',
         product: ligne.product,
         warehouseSource: ligne.warehouse,
+        companyId: tc(req),
         quantite: ligne.quantite,
         coutUnitaire: stock.cump,
         stockAvant,
@@ -256,6 +261,7 @@ const validateBL = async (req, res, next) => {
           bonLivraison: bl._id,
           client: bl.client._id || bl.client,
           clientSnapshot: bl.clientSnapshot,
+          companyId: tc(req),
           lignes: commande.lignes.map((l) => ({
             product: l.product,
             designation: l.designation,
@@ -304,7 +310,7 @@ const validateBL = async (req, res, next) => {
  */
 const getBonLivraisonPDF = async (req, res, next) => {
   try {
-    const bl = await BonLivraison.findById(req.params.id)
+    const bl = await BonLivraison.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('commande', 'numero statut')
       .populate('client', 'raisonSociale firstName lastName code')
       .populate('lignes.product', 'name code');
@@ -313,7 +319,7 @@ const getBonLivraisonPDF = async (req, res, next) => {
       return next(new AppError('Bon de livraison non trouve.', 404));
     }
 
-    const company = await Company.findOne({ isActive: true });
+    const company = await Company.findById(req.companyId);
     if (!company) {
       return next(new AppError('Informations entreprise non trouvees.', 404));
     }

@@ -1,5 +1,9 @@
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const User = require('../models/User');
+const Company = require('../models/Company');
+const Role = require('../models/Role');
+const Forfait = require('../models/Forfait');
 const { AppError } = require('../middlewares/errorHandler');
 const {
   generateAccessToken,
@@ -10,17 +14,17 @@ const {
 } = require('../services/tokenService');
 const { sendResetPasswordEmail } = require('../services/emailService');
 const logger = require('../config/logger');
+const { ROLES, SCOPE } = require('../config/constants');
 
 /**
- * @desc    Inscription d'un nouvel utilisateur (admin only)
+ * @desc    Inscription interne — crée un utilisateur dans une entreprise (admin_entreprise only)
  * @route   POST /api/auth/register
- * @access  Private/Admin
+ * @access  Private / admin_entreprise
  */
 const register = async (req, res, next) => {
   try {
     const { firstName, lastName, email, password, phone, role } = req.body;
 
-    // Verifier si l'email existe deja
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return next(new AppError('Un utilisateur avec cet email existe deja.', 400));
@@ -33,10 +37,11 @@ const register = async (req, res, next) => {
       password,
       phone,
       role,
+      scope: SCOPE.ENTREPRISE,
+      companyId: req.companyId || (req.user ? req.user.companyId : undefined),
       createdBy: req.user ? req.user._id : undefined,
     });
 
-    // Ne pas retourner le mot de passe
     user.password = undefined;
 
     res.status(201).json({
@@ -46,6 +51,126 @@ const register = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+/**
+ * @desc    Inscription publique SaaS — crée l'entreprise + l'admin en transaction atomique
+ * @route   POST /api/auth/register-saas
+ * @access  Public
+ */
+const registerSaaS = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const {
+      // Createur / futur admin
+      firstName, lastName, email, password, phone,
+      // Entreprise
+      companyName, legalForm, ninea, rccm, sector,
+      address, city, companyPhone, companyEmail, website,
+      // Forfait choisi
+      forfaitCode, periodicite,
+    } = req.body;
+
+    // 1. Verifier unicite email
+    const existingUser = await User.findOne({ email }).session(session);
+    if (existingUser) {
+      await session.abortTransaction();
+      return next(new AppError('Un compte existe deja avec cet email.', 400));
+    }
+
+    // 2. Verifier que le forfait existe
+    const forfait = await Forfait.findOne({ code: forfaitCode, actif: true }).session(session);
+    if (!forfait) {
+      await session.abortTransaction();
+      return next(new AppError('Forfait invalide ou inactif.', 400));
+    }
+
+    // 3. Recuperer le role admin_entreprise
+    const adminRole = await Role.findOne({ name: ROLES.ADMIN }).session(session);
+    if (!adminRole) {
+      await session.abortTransaction();
+      return next(new AppError('Configuration systeme manquante : role admin introuvable.', 500));
+    }
+
+    // 4. Creer l'entreprise en attente de paiement
+    const [company] = await Company.create(
+      [
+        {
+          name: companyName,
+          legalForm: legalForm || undefined,
+          ninea: ninea || undefined,
+          rccm: rccm || undefined,
+          sector: sector || undefined,
+          address: {
+            street: address || undefined,
+            city: city || 'Dakar',
+            country: 'Senegal',
+          },
+          phone: companyPhone || undefined,
+          email: companyEmail || email,
+          website: website || undefined,
+          status: 'pending_payment',
+          plan: forfaitCode,
+          forfaitId: forfait._id,
+          subscriptionStartDate: new Date(),
+        },
+      ],
+      { session }
+    );
+
+    // 5. Creer l'utilisateur admin de cette entreprise
+    const [user] = await User.create(
+      [
+        {
+          firstName,
+          lastName,
+          email,
+          password,
+          phone: phone || undefined,
+          role: adminRole._id,
+          scope: SCOPE.ENTREPRISE,
+          companyId: company._id,
+        },
+      ],
+      { session }
+    );
+
+    // 6. Lier l'admin à l'entreprise
+    company.adminUser = user._id;
+    await company.save({ session });
+
+    await session.commitTransaction();
+
+    // Ne pas renvoyer le mot de passe
+    user.password = undefined;
+
+    const montant = periodicite === 'ANNUEL' ? forfait.prixAnnuel : forfait.prixMensuel;
+
+    logger.info(`Inscription SaaS: entreprise="${companyName}" admin="${email}"`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Compte cree avec succes. Finalisez l\'inscription en effectuant le paiement.',
+      data: {
+        user,
+        company,
+        paiement: {
+          forfait: { code: forfait.code, nom: forfait.nom },
+          periodicite: periodicite || 'MENSUEL',
+          montant,
+          devise: 'FCFA',
+          statut: 'EN_ATTENTE',
+        },
+      },
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    next(error);
+  } finally {
+    session.endSession();
   }
 };
 
@@ -80,23 +205,30 @@ const login = async (req, res, next) => {
       return next(new AppError('Email ou mot de passe incorrect.', 401));
     }
 
-    // Generer les tokens
-    const accessToken = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+    // Construire le payload JWT enrichi (scope + companyId pour le tenant middleware)
+    const tokenPayload = {
+      scope: user.scope || SCOPE.ENTREPRISE,
+      companyId: user.companyId ? user.companyId.toString() : null,
+      roleName: user.role?.name || null,
+    };
+
+    const accessToken = generateAccessToken(user._id, tokenPayload);
+    const refreshToken = generateRefreshToken(user._id, { scope: tokenPayload.scope });
 
     // Sauvegarder le refresh token en DB
     user.refreshToken = refreshToken;
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
 
-    // Configurer le cookie
     setRefreshTokenCookie(res, refreshToken);
 
-    // Ne pas retourner le mot de passe
     user.password = undefined;
     user.refreshToken = undefined;
 
-    logger.info(`Connexion reussie: ${user.email}`);
+    // Cible de redirection selon le perimetre
+    const redirectTo = user.scope === SCOPE.PLATFORM ? '/super-admin' : '/dashboard';
+
+    logger.info(`Connexion reussie: ${user.email} [scope=${tokenPayload.scope}]`);
 
     res.json({
       success: true,
@@ -104,6 +236,7 @@ const login = async (req, res, next) => {
       data: {
         user,
         accessToken,
+        redirectTo,
       },
     });
   } catch (error) {
@@ -127,8 +260,8 @@ const refreshTokenHandler = async (req, res, next) => {
     // Verifier le refresh token
     const decoded = verifyRefreshToken(refreshToken);
 
-    // Trouver l'utilisateur
-    const user = await User.findById(decoded.id).select('+refreshToken');
+    // Trouver l'utilisateur (avec role pour roleName dans le payload)
+    const user = await User.findById(decoded.id).select('+refreshToken').populate('role');
 
     if (!user || user.refreshToken !== refreshToken) {
       return next(new AppError('Refresh token invalide.', 401));
@@ -138,8 +271,12 @@ const refreshTokenHandler = async (req, res, next) => {
       return next(new AppError('Votre compte a ete desactive.', 401));
     }
 
-    // Generer un nouveau access token
-    const newAccessToken = generateAccessToken(user._id);
+    // Regenerer l'access token en preservant scope + companyId (critiques pour platformGuard et tenantMiddleware)
+    const newAccessToken = generateAccessToken(user._id, {
+      scope: decoded.scope || user.scope || SCOPE.ENTREPRISE,
+      companyId: user.companyId ? user.companyId.toString() : null,
+      roleName: user.role?.name || null,
+    });
 
     res.json({
       success: true,
@@ -262,6 +399,7 @@ const resetPassword = async (req, res, next) => {
 
 module.exports = {
   register,
+  registerSaaS,
   login,
   refreshToken: refreshTokenHandler,
   logout,

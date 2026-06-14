@@ -2,10 +2,14 @@ const mongoose = require('mongoose');
 
 const paymentSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     // Numero assigned at validation
     numero: {
       type: String,
-      unique: true,
       sparse: true,
       trim: true,
     },
@@ -152,6 +156,7 @@ const paymentSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // numero already indexed via unique+sparse: true in schema definition
+paymentSchema.index({ companyId: 1, numero: 1 }, { unique: true, sparse: true });
 paymentSchema.index({ client: 1, statut: 1 });
 paymentSchema.index({ fournisseur: 1, statut: 1 });
 paymentSchema.index({ modePaiement: 1 });
@@ -165,9 +170,8 @@ paymentSchema.virtual('displayNumero').get(function () {
 
 // === PRE-SAVE ===
 paymentSchema.pre('save', async function (next) {
-  // Generate internal reference for new payments
-  if (!this.referenceInterne) {
-    const count = await mongoose.model('Payment').countDocuments();
+  if (!this.referenceInterne && this.companyId) {
+    const count = await mongoose.model('Payment').countDocuments({ companyId: this.companyId });
     this.referenceInterne = `TMP-PA-${String(count + 1).padStart(5, '0')}`;
   }
   next();

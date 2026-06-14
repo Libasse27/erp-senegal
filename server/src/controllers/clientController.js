@@ -1,6 +1,7 @@
 const Client = require('../models/Client');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
+const { tc, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all clients with pagination, filters, and search
@@ -12,6 +13,7 @@ const getClients = async (req, res, next) => {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
 
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.type) filter.type = req.query.type;
     if (req.query.segment) filter.segment = req.query.segment;
@@ -56,7 +58,7 @@ const getClients = async (req, res, next) => {
  */
 const getClient = async (req, res, next) => {
   try {
-    const client = await Client.findById(req.params.id);
+    const client = await findByTenant(Client, req.params.id, req);
 
     if (!client) {
       return next(new AppError('Client non trouve.', 404));
@@ -80,6 +82,7 @@ const createClient = async (req, res, next) => {
   try {
     const client = await Client.create({
       ...req.body,
+      companyId: tc(req),
       createdBy: req.user._id,
     });
 
@@ -100,15 +103,15 @@ const createClient = async (req, res, next) => {
  */
 const updateClient = async (req, res, next) => {
   try {
-    const client = await Client.findById(req.params.id);
+    const client = await findByTenant(Client, req.params.id, req);
     if (!client) {
       return next(new AppError('Client non trouve.', 404));
     }
 
     req._previousData = client.toObject();
 
-    const updatedClient = await Client.findByIdAndUpdate(
-      req.params.id,
+    const updatedClient = await Client.findOneAndUpdate(
+      { _id: req.params.id, companyId: tc(req) },
       { ...req.body, modifiedBy: req.user._id },
       { new: true, runValidators: true }
     );
@@ -130,7 +133,7 @@ const updateClient = async (req, res, next) => {
  */
 const deleteClient = async (req, res, next) => {
   try {
-    const client = await Client.findById(req.params.id);
+    const client = await findByTenant(Client, req.params.id, req);
     if (!client) {
       return next(new AppError('Client non trouve.', 404));
     }
@@ -163,7 +166,7 @@ const deleteClient = async (req, res, next) => {
  */
 const getClientStats = async (req, res, next) => {
   try {
-    const client = await Client.findById(req.params.id);
+    const client = await findByTenant(Client, req.params.id, req);
     if (!client) {
       return next(new AppError('Client non trouve.', 404));
     }
@@ -191,7 +194,7 @@ const getClientStats = async (req, res, next) => {
  */
 const updateSegmentation = async (req, res, next) => {
   try {
-    await Client.updateSegmentation();
+    await Client.updateSegmentation(req.companyId);
 
     res.json({
       success: true,

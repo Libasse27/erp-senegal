@@ -10,6 +10,8 @@ const {
   getReconciliation,
 } = require('../controllers/bankAccountController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
+const subscriptionGuard = require('../middlewares/subscriptionGuard');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const {
@@ -18,8 +20,9 @@ const {
 } = require('../validations/bankAccount.validation');
 const audit = require('../middlewares/audit');
 
-// All routes require authentication
 router.use(protect);
+router.use(tenantMiddleware);
+router.use(subscriptionGuard('COMPTABILITE'));
 
 // CRUD
 router.get('/', authorize('comptes_bancaires:read'), getBankAccounts);

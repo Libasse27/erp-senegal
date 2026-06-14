@@ -2,6 +2,7 @@ const Warehouse = require('../models/Warehouse');
 const Stock = require('../models/Stock');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
+const { tc, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all warehouses
@@ -13,6 +14,7 @@ const getWarehouses = async (req, res, next) => {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
 
     const filter = {};
+    filter.companyId = tc(req);
     if (req.query.type) filter.type = req.query.type;
     if (req.query.search) {
       filter.$or = [
@@ -49,7 +51,7 @@ const getWarehouses = async (req, res, next) => {
  */
 const getWarehouse = async (req, res, next) => {
   try {
-    const warehouse = await Warehouse.findById(req.params.id).populate(
+    const warehouse = await Warehouse.findOne({ _id: req.params.id, companyId: tc(req) }).populate(
       'responsable',
       'firstName lastName email'
     );
@@ -98,11 +100,12 @@ const createWarehouse = async (req, res, next) => {
   try {
     // If setting as default, unset previous default
     if (req.body.isDefault) {
-      await Warehouse.updateMany({ isDefault: true }, { isDefault: false });
+      await Warehouse.updateMany({ isDefault: true, companyId: tc(req) }, { isDefault: false });
     }
 
     const warehouse = await Warehouse.create({
       ...req.body,
+      companyId: tc(req),
       createdBy: req.user._id,
     });
 
@@ -123,7 +126,7 @@ const createWarehouse = async (req, res, next) => {
  */
 const updateWarehouse = async (req, res, next) => {
   try {
-    const warehouse = await Warehouse.findById(req.params.id);
+    const warehouse = await Warehouse.findOne({ _id: req.params.id, companyId: tc(req) });
     if (!warehouse) {
       return next(new AppError('Depot non trouve.', 404));
     }
@@ -133,13 +136,13 @@ const updateWarehouse = async (req, res, next) => {
     // If setting as default, unset previous default
     if (req.body.isDefault) {
       await Warehouse.updateMany(
-        { _id: { $ne: req.params.id }, isDefault: true },
+        { _id: { $ne: req.params.id }, isDefault: true, companyId: tc(req) },
         { isDefault: false }
       );
     }
 
-    const updatedWarehouse = await Warehouse.findByIdAndUpdate(
-      req.params.id,
+    const updatedWarehouse = await Warehouse.findOneAndUpdate(
+      { _id: req.params.id, companyId: tc(req) },
       { ...req.body, modifiedBy: req.user._id },
       { new: true, runValidators: true }
     ).populate('responsable', 'firstName lastName email');
@@ -161,7 +164,7 @@ const updateWarehouse = async (req, res, next) => {
  */
 const deleteWarehouse = async (req, res, next) => {
   try {
-    const warehouse = await Warehouse.findById(req.params.id);
+    const warehouse = await Warehouse.findOne({ _id: req.params.id, companyId: tc(req) });
     if (!warehouse) {
       return next(new AppError('Depot non trouve.', 404));
     }
@@ -169,6 +172,7 @@ const deleteWarehouse = async (req, res, next) => {
     // Check if warehouse has stock
     const stockCount = await Stock.countDocuments({
       warehouse: warehouse._id,
+      companyId: tc(req),
       quantite: { $gt: 0 },
       isActive: true,
     });

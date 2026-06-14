@@ -11,13 +11,16 @@ const {
   transferStock,
 } = require('../controllers/stockController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
+const subscriptionGuard = require('../middlewares/subscriptionGuard');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const { createStockMovement, stockTransfer } = require('../validations/stock.validation');
 const audit = require('../middlewares/audit');
 
-// All routes require authentication
 router.use(protect);
+router.use(tenantMiddleware);
+router.use(subscriptionGuard('STOCK'));
 
 // Stock overview
 router.get('/', authorize('stocks:read'), getStocks);

@@ -34,6 +34,17 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    scope: {
+      type: String,
+      enum: ['PLATFORM', 'ENTREPRISE'],
+      required: true,
+      default: 'ENTREPRISE',
+    },
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null,
+    },
     role: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Role',
@@ -79,6 +90,7 @@ const userSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // email already indexed via unique: true in schema definition
+userSchema.index({ companyId: 1, isActive: 1 });
 userSchema.index({ role: 1, isActive: 1 });
 userSchema.index({ createdAt: -1 });
 userSchema.index({ firstName: 'text', lastName: 'text', email: 'text' });

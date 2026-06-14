@@ -2,9 +2,13 @@ const mongoose = require('mongoose');
 
 const warehouseSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     code: {
       type: String,
-      unique: true,
       trim: true,
     },
     name: {
@@ -78,14 +82,15 @@ const warehouseSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
+warehouseSchema.index({ companyId: 1, code: 1 }, { unique: true, sparse: true });
 warehouseSchema.index({ isActive: 1 });
 warehouseSchema.index({ isDefault: 1 });
 warehouseSchema.index({ name: 'text' });
 
 // === PRE-SAVE ===
 warehouseSchema.pre('save', async function (next) {
-  if (!this.code) {
-    const count = await mongoose.model('Warehouse').countDocuments();
+  if (!this.code && this.companyId) {
+    const count = await mongoose.model('Warehouse').countDocuments({ companyId: this.companyId });
     this.code = `DEP-${String(count + 1).padStart(3, '0')}`;
   }
   next();

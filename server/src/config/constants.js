@@ -28,6 +28,7 @@ module.exports = {
 
   // Roles par defaut
   ROLES: {
+    SUPER_ADMIN: 'super_admin',
     ADMIN: 'admin',
     MANAGER: 'manager',
     ACCOUNTANT: 'comptable',
@@ -40,6 +41,8 @@ module.exports = {
   // Modules de l'application
   MODULES: [
     'users',
+    'roles',
+    'permissions',
     'company',
     'settings',
     'clients',
@@ -63,10 +66,17 @@ module.exports = {
     'rapports',
     'dashboard',
     'audit',
+    'system_monitoring',
+    'system_config',
+    'backups',
+    'system_logs',
   ],
 
   // Actions CRUD
-  ACTIONS: ['create', 'read', 'update', 'delete', 'export', 'validate'],
+  ACTIONS: ['create', 'read', 'update', 'delete', 'export', 'validate', 'purge', 'restore'],
+
+  // Roles proteges (ne peuvent pas etre supprimes)
+  PROTECTED_ROLES: ['super_admin', 'admin'],
 
   // Pagination par defaut
   DEFAULT_PAGE: 1,
@@ -193,4 +203,60 @@ module.exports = {
   MAX_LOGIN_ATTEMPTS: 5,
   LOCK_TIME: 30 * 60 * 1000, // 30 minutes
   PASSWORD_RESET_EXPIRE: 30 * 60 * 1000, // 30 minutes
+
+  // ── SaaS multi-tenant ────────────────────────────────────────────────────
+
+  // Perimetre utilisateur
+  SCOPE: {
+    PLATFORM: 'PLATFORM',
+    ENTREPRISE: 'ENTREPRISE',
+  },
+
+  // Codes de forfait
+  FORFAIT_CODE: {
+    STANDARD: 'STANDARD',
+    PROFESSIONNEL: 'PROFESSIONNEL',
+    COMPLET: 'COMPLET',
+  },
+
+  // Statuts abonnement
+  ABONNEMENT_STATUS: {
+    ACTIF: 'ACTIF',
+    EXPIRE: 'EXPIRE',
+    SUSPENDU: 'SUSPENDU',
+    EN_ATTENTE: 'EN_ATTENTE',
+  },
+
+  // Statuts paiement SaaS (Wave / Orange Money)
+  PAIEMENT_SAAS_STATUS: {
+    EN_ATTENTE: 'EN_ATTENTE',
+    REUSSI: 'REUSSI',
+    ECHOUE: 'ECHOUE',
+    REMBOURSE: 'REMBOURSE',
+  },
+
+  // Methodes de paiement SaaS
+  METHODE_PAIEMENT_SAAS: ['WAVE', 'ORANGE_MONEY', 'CARTE', 'VIREMENT', 'ESPECES'],
+
+  // Statuts entreprise (SaaS)
+  COMPANY_STATUS: {
+    ACTIVE: 'active',
+    SUSPENDED: 'suspended',
+    TRIAL: 'trial',
+    EXPIRED: 'expired',
+    PENDING_PAYMENT: 'pending_payment',
+  },
+
+  // Periodicite abonnement
+  PERIODICITE: {
+    MENSUEL: 'MENSUEL',
+    ANNUEL: 'ANNUEL',
+  },
+
+  // Modules par forfait
+  FORFAIT_MODULES: {
+    STANDARD: ['GESCOM', 'FACTURATION', 'STOCK'],
+    PROFESSIONNEL: ['GESCOM', 'FACTURATION', 'STOCK', 'COMPTABILITE', 'REPORTING'],
+    COMPLET: ['GESCOM', 'FACTURATION', 'STOCK', 'COMPTABILITE', 'REPORTING', 'PAIE', 'API'],
+  },
 };

@@ -4,13 +4,13 @@ const { AppError } = require('./errorHandler');
 const jwtConfig = require('../config/jwt');
 
 /**
- * Middleware de protection des routes - verifie le JWT et charge l'utilisateur
+ * Middleware de protection — verifie le JWT, charge l'utilisateur complet
+ * et expose req.companyId + req.scope pour les middlewares suivants.
  */
 const protect = async (req, _res, next) => {
   try {
     let token;
 
-    // Verifier le header Authorization
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
@@ -19,10 +19,8 @@ const protect = async (req, _res, next) => {
       return next(new AppError('Acces non autorise. Veuillez vous connecter.', 401));
     }
 
-    // Verifier le token
     const decoded = jwt.verify(token, jwtConfig.accessToken.secret);
 
-    // Charger l'utilisateur
     const user = await User.findById(decoded.id).populate({
       path: 'role',
       populate: { path: 'permissions' },
@@ -36,8 +34,11 @@ const protect = async (req, _res, next) => {
       return next(new AppError('Votre compte a ete desactive. Contactez un administrateur.', 401));
     }
 
-    // Ajouter l'utilisateur a la requete
     req.user = user;
+    // Raccourcis pratiques pour tenant.js et subscriptionGuard.js
+    req.scope = decoded.scope || user.scope || 'ENTREPRISE';
+    req.companyId = decoded.companyId || user.companyId || null;
+
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {

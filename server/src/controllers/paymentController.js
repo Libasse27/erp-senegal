@@ -12,6 +12,7 @@ const {
 } = require('../services/comptabiliteService');
 const logger = require('../config/logger');
 const { notifyPaymentReceived, notifyPaymentValidated, notifyInvoicePaid } = require('../services/notificationService');
+const { tc, tenantId, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all payments with pagination, filters, and search
@@ -22,6 +23,7 @@ const getPayments = async (req, res, next) => {
   try {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.typePaiement) filter.typePaiement = req.query.typePaiement;
     if (req.query.modePaiement) filter.modePaiement = req.query.modePaiement;
@@ -78,7 +80,7 @@ const getPayments = async (req, res, next) => {
  */
 const getPayment = async (req, res, next) => {
   try {
-    const payment = await Payment.findById(req.params.id)
+    const payment = await Payment.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('client')
       .populate('fournisseur')
       .populate('facture')
@@ -148,6 +150,7 @@ const createPayment = async (req, res, next) => {
 
     const payment = await Payment.create({
       ...req.body,
+      companyId: tc(req),
       tiersSnapshot,
       createdBy: req.user._id,
     });
@@ -177,7 +180,7 @@ const createPayment = async (req, res, next) => {
  */
 const updatePayment = async (req, res, next) => {
   try {
-    const payment = await Payment.findById(req.params.id);
+    const payment = await findByTenant(Payment, req.params.id, req);
     if (!payment) return next(new AppError('Paiement non trouve.', 404));
 
     if (payment.statut !== 'brouillon') {
@@ -213,7 +216,7 @@ const updatePayment = async (req, res, next) => {
  */
 const deletePayment = async (req, res, next) => {
   try {
-    const payment = await Payment.findById(req.params.id);
+    const payment = await findByTenant(Payment, req.params.id, req);
     if (!payment) return next(new AppError('Paiement non trouve.', 404));
 
     await payment.softDelete(req.user._id);
@@ -234,7 +237,7 @@ const deletePayment = async (req, res, next) => {
  */
 const validatePayment = async (req, res, next) => {
   try {
-    const payment = await Payment.findById(req.params.id)
+    const payment = await Payment.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('client')
       .populate('fournisseur');
 
@@ -244,8 +247,8 @@ const validatePayment = async (req, res, next) => {
       return next(new AppError('Seuls les paiements en brouillon peuvent etre valides.', 400));
     }
 
-    // 1. Assign sequential numero
-    const { numero } = await getNextSequence('payment');
+    // 1. Assign sequential numero — tenant-scoped via companyId
+    const { numero } = await getNextSequence('payment', tc(req));
     payment.numero = numero;
 
     // 2. Update associated facture(s)
@@ -352,7 +355,7 @@ const applyPaymentToFacture = async (factureId, montant) => {
  */
 const cancelPayment = async (req, res, next) => {
   try {
-    const payment = await Payment.findById(req.params.id);
+    const payment = await findByTenant(Payment, req.params.id, req);
     if (!payment) return next(new AppError('Paiement non trouve.', 404));
 
     if (payment.statut !== 'valide') {
@@ -442,6 +445,7 @@ const getPaymentSchedule = async (req, res, next) => {
   try {
     const filter = {
       statut: { $in: ['validee', 'envoyee', 'partiellement_payee'] },
+      companyId: tc(req),
       isActive: true,
     };
 
@@ -495,7 +499,7 @@ const getPaymentSchedule = async (req, res, next) => {
 const getTresorerie = async (req, res, next) => {
   try {
     // Bank accounts with balances
-    const bankAccounts = await BankAccount.find({ isActive: true })
+    const bankAccounts = await BankAccount.find({ companyId: tc(req), isActive: true })
       .sort('-isDefault nom');
 
     const totalBanque = bankAccounts.reduce((s, a) => s + a.soldeActuel, 0);
@@ -506,6 +510,7 @@ const getTresorerie = async (req, res, next) => {
         $match: {
           statut: { $in: ['validee', 'envoyee', 'partiellement_payee'] },
           typeDocument: 'facture',
+          companyId: tenantId(req),
           isActive: true,
         },
       },
@@ -529,6 +534,7 @@ const getTresorerie = async (req, res, next) => {
         $match: {
           statut: { $in: ['validee', 'envoyee', 'partiellement_payee'] },
           typeDocument: 'facture',
+          companyId: tenantId(req),
           isActive: true,
         },
       },
@@ -571,7 +577,7 @@ const getTresorerie = async (req, res, next) => {
     ]);
 
     // Recent payments
-    const recentPayments = await Payment.find({ statut: 'valide', isActive: true })
+    const recentPayments = await Payment.find({ companyId: tc(req), statut: 'valide', isActive: true })
       .sort('-datePaiement')
       .limit(10)
       .populate('client', 'raisonSociale firstName lastName')

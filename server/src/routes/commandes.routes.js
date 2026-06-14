@@ -12,6 +12,8 @@ const {
   getCommandePDF,
 } = require('../controllers/commandeController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
+const subscriptionGuard = require('../middlewares/subscriptionGuard');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const {
@@ -22,8 +24,9 @@ const {
 } = require('../validations/commande.validation');
 const audit = require('../middlewares/audit');
 
-// All routes require authentication
 router.use(protect);
+router.use(tenantMiddleware);
+router.use(subscriptionGuard('GESCOM'));
 
 // CRUD
 router.get('/', authorize('commandes:read'), getCommandes);

@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 const settingsSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
+
     // Numerotation des documents
     numbering: {
       invoice: {
@@ -108,5 +114,7 @@ settingsSchema.methods.softDelete = function (userId) {
   this.isActive = false;
   return this.save();
 };
+
+settingsSchema.index({ companyId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Settings', settingsSchema);

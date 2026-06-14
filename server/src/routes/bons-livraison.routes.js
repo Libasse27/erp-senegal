@@ -9,6 +9,8 @@ const {
   getBonLivraisonPDF,
 } = require('../controllers/bonLivraisonController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
+const subscriptionGuard = require('../middlewares/subscriptionGuard');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const {
@@ -17,8 +19,9 @@ const {
 } = require('../validations/bonLivraison.validation');
 const audit = require('../middlewares/audit');
 
-// All routes require authentication
 router.use(protect);
+router.use(tenantMiddleware);
+router.use(subscriptionGuard('GESCOM'));
 
 // CRUD
 router.get('/', authorize('bons_livraison:read'), getBonsLivraison);

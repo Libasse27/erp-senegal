@@ -11,13 +11,17 @@ const {
   updateSegmentation,
 } = require('../controllers/clientController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
+const subscriptionGuard = require('../middlewares/subscriptionGuard');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const { createClient: createClientSchema, updateClient: updateClientSchema } = require('../validations/client.validation');
 const audit = require('../middlewares/audit');
 
-// All routes require authentication
+// All routes require authentication + tenant isolation + active subscription
 router.use(protect);
+router.use(tenantMiddleware);
+router.use(subscriptionGuard('GESCOM'));
 
 // Segmentation update (admin/manager)
 router.post('/segmentation', authorize('clients:update'), audit('clients', 'update'), updateSegmentation);

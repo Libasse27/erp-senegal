@@ -4,23 +4,29 @@ const jwtConfig = require('../config/jwt');
 /**
  * Generer un access token JWT
  * @param {string} userId - ID de l'utilisateur
+ * @param {Object} extraPayload - Donnees supplementaires (scope, companyId, roleName)
  * @returns {string} Access token
  */
-const generateAccessToken = (userId) => {
-  return jwt.sign({ id: userId }, jwtConfig.accessToken.secret, {
-    expiresIn: jwtConfig.accessToken.expire,
-  });
+const generateAccessToken = (userId, extraPayload = {}) => {
+  return jwt.sign(
+    { id: userId, ...extraPayload },
+    jwtConfig.accessToken.secret,
+    { expiresIn: jwtConfig.accessToken.expire }
+  );
 };
 
 /**
  * Generer un refresh token JWT
  * @param {string} userId - ID de l'utilisateur
+ * @param {Object} extraPayload - Donnees supplementaires
  * @returns {string} Refresh token
  */
-const generateRefreshToken = (userId) => {
-  return jwt.sign({ id: userId }, jwtConfig.refreshToken.secret, {
-    expiresIn: jwtConfig.refreshToken.expire,
-  });
+const generateRefreshToken = (userId, extraPayload = {}) => {
+  return jwt.sign(
+    { id: userId, ...extraPayload },
+    jwtConfig.refreshToken.secret,
+    { expiresIn: jwtConfig.refreshToken.expire }
+  );
 };
 
 /**

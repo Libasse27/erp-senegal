@@ -42,9 +42,13 @@ const ligneBLSchema = new mongoose.Schema(
 
 const bonLivraisonSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     numero: {
       type: String,
-      unique: true,
       trim: true,
     },
 
@@ -151,6 +155,7 @@ const bonLivraisonSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // numero already indexed via unique: true
+bonLivraisonSchema.index({ companyId: 1, numero: 1 }, { unique: true, sparse: true });
 bonLivraisonSchema.index({ commande: 1 });
 bonLivraisonSchema.index({ client: 1 });
 bonLivraisonSchema.index({ statut: 1 });
@@ -158,8 +163,8 @@ bonLivraisonSchema.index({ isActive: 1, createdAt: -1 });
 
 // === PRE-SAVE ===
 bonLivraisonSchema.pre('save', async function (next) {
-  if (!this.numero) {
-    const { numero } = await getNextSequence('deliveryNote');
+  if (!this.numero && this.companyId) {
+    const { numero } = await getNextSequence('deliveryNote', this.companyId);
     this.numero = numero;
   }
   next();

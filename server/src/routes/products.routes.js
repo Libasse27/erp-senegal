@@ -9,13 +9,16 @@ const {
   deleteProduct,
 } = require('../controllers/productController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
+const subscriptionGuard = require('../middlewares/subscriptionGuard');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const { createProduct: createSchema, updateProduct: updateSchema } = require('../validations/product.validation');
 const audit = require('../middlewares/audit');
 
-// All routes require authentication
 router.use(protect);
+router.use(tenantMiddleware);
+router.use(subscriptionGuard('STOCK'));
 
 router.get('/', authorize('produits:read'), getProducts);
 router.get('/:id', authorize('produits:read'), getProduct);

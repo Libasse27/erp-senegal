@@ -17,6 +17,13 @@ export const authApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['User'],
     }),
+    registerSaaS: builder.mutation({
+      query: (data) => ({
+        url: '/auth/register-saas',
+        method: 'POST',
+        body: data,
+      }),
+    }),
     logout: builder.mutation({
       query: () => ({
         url: '/auth/logout',
@@ -62,6 +69,7 @@ export const authApi = apiSlice.injectEndpoints({
 export const {
   useLoginMutation,
   useRegisterMutation,
+  useRegisterSaaSMutation,
   useLogoutMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,

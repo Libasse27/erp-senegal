@@ -13,6 +13,8 @@ const {
   getTresorerie,
 } = require('../controllers/paymentController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
+const subscriptionGuard = require('../middlewares/subscriptionGuard');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const {
@@ -21,8 +23,9 @@ const {
 } = require('../validations/payment.validation');
 const audit = require('../middlewares/audit');
 
-// All routes require authentication
 router.use(protect);
+router.use(tenantMiddleware);
+router.use(subscriptionGuard('FACTURATION'));
 
 // Tresorerie overview
 router.get('/tresorerie', authorize('paiements:read'), getTresorerie);

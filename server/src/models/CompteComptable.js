@@ -2,10 +2,14 @@ const mongoose = require('mongoose');
 
 const compteComptableSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     numero: {
       type: String,
       required: [true, 'Le numero de compte est requis'],
-      unique: true,
       trim: true,
       match: [/^\d{1,10}$/, 'Le numero de compte doit etre compose de chiffres uniquement'],
     },
@@ -87,6 +91,7 @@ const compteComptableSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // numero already indexed via unique: true in schema definition
+compteComptableSchema.index({ companyId: 1, numero: 1 }, { unique: true });
 compteComptableSchema.index({ classe: 1 });
 compteComptableSchema.index({ parent: 1 });
 

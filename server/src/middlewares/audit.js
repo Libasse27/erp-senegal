@@ -16,6 +16,7 @@ const audit = (module, action) => {
       if (res.statusCode >= 200 && res.statusCode < 300 && req.user) {
         const logEntry = {
           user: req.user._id,
+          companyId: req.companyId || null,
           action,
           module,
           ipAddress: req.ip || req.connection?.remoteAddress,

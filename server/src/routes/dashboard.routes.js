@@ -8,9 +8,11 @@ const {
 } = require('../controllers/dashboardController');
 
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
 
-// Toutes les routes dashboard necessitent une authentification
+// Dashboard : isolation tenant uniquement (pas de guard module spécifique)
 router.use(protect);
+router.use(tenantMiddleware);
 
 router.get('/stats', getDashboardStats);
 router.get('/summary', getDashboardSummary);

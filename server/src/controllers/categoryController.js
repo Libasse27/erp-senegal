@@ -1,6 +1,7 @@
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const { AppError } = require('../middlewares/errorHandler');
+const { tc, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all categories as tree structure
@@ -11,6 +12,7 @@ const getCategories = async (req, res, next) => {
   try {
     // Flat list with optional parent filter
     const filter = {};
+    filter.companyId = tc(req);
     if (req.query.parent === 'null' || req.query.parent === '') {
       filter.parent = null;
     } else if (req.query.parent) {
@@ -38,7 +40,7 @@ const getCategories = async (req, res, next) => {
  */
 const getCategoryTree = async (req, res, next) => {
   try {
-    const categories = await Category.find()
+    const categories = await Category.find({ companyId: tc(req) })
       .populate('productCount')
       .sort('order name')
       .lean();
@@ -78,7 +80,7 @@ const getCategoryTree = async (req, res, next) => {
  */
 const getCategory = async (req, res, next) => {
   try {
-    const category = await Category.findById(req.params.id)
+    const category = await Category.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('parent', 'name slug')
       .populate('productCount');
 
@@ -87,7 +89,7 @@ const getCategory = async (req, res, next) => {
     }
 
     // Get children
-    const children = await Category.find({ parent: category._id })
+    const children = await Category.find({ parent: category._id, companyId: tc(req) })
       .populate('productCount')
       .sort('order name');
 
@@ -112,7 +114,7 @@ const createCategory = async (req, res, next) => {
   try {
     // Validate parent exists if provided
     if (req.body.parent) {
-      const parentExists = await Category.findById(req.body.parent);
+      const parentExists = await Category.findOne({ _id: req.body.parent, companyId: tc(req) });
       if (!parentExists) {
         return next(new AppError('Categorie parent non trouvee.', 404));
       }
@@ -120,6 +122,7 @@ const createCategory = async (req, res, next) => {
 
     const category = await Category.create({
       ...req.body,
+      companyId: tc(req),
       createdBy: req.user._id,
     });
 
@@ -140,7 +143,7 @@ const createCategory = async (req, res, next) => {
  */
 const updateCategory = async (req, res, next) => {
   try {
-    const category = await Category.findById(req.params.id);
+    const category = await Category.findOne({ _id: req.params.id, companyId: tc(req) });
     if (!category) {
       return next(new AppError('Categorie non trouvee.', 404));
     }
@@ -152,7 +155,7 @@ const updateCategory = async (req, res, next) => {
 
     // Validate parent if provided
     if (req.body.parent) {
-      const parentExists = await Category.findById(req.body.parent);
+      const parentExists = await Category.findOne({ _id: req.body.parent, companyId: tc(req) });
       if (!parentExists) {
         return next(new AppError('Categorie parent non trouvee.', 404));
       }
@@ -160,8 +163,8 @@ const updateCategory = async (req, res, next) => {
 
     req._previousData = category.toObject();
 
-    const updatedCategory = await Category.findByIdAndUpdate(
-      req.params.id,
+    const updatedCategory = await Category.findOneAndUpdate(
+      { _id: req.params.id, companyId: tc(req) },
       { ...req.body, modifiedBy: req.user._id },
       { new: true, runValidators: true }
     ).populate('parent', 'name slug');
@@ -183,13 +186,13 @@ const updateCategory = async (req, res, next) => {
  */
 const deleteCategory = async (req, res, next) => {
   try {
-    const category = await Category.findById(req.params.id);
+    const category = await Category.findOne({ _id: req.params.id, companyId: tc(req) });
     if (!category) {
       return next(new AppError('Categorie non trouvee.', 404));
     }
 
     // Check for child categories
-    const childCount = await Category.countDocuments({ parent: category._id });
+    const childCount = await Category.countDocuments({ parent: category._id, companyId: tc(req) });
     if (childCount > 0) {
       return next(
         new AppError(
@@ -200,7 +203,7 @@ const deleteCategory = async (req, res, next) => {
     }
 
     // Check for products in this category
-    const productCount = await Product.countDocuments({ category: category._id, isActive: true });
+    const productCount = await Product.countDocuments({ category: category._id, companyId: tc(req), isActive: true });
     if (productCount > 0) {
       return next(
         new AppError(

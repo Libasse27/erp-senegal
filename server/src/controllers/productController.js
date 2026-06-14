@@ -3,6 +3,7 @@ const Category = require('../models/Category');
 const Stock = require('../models/Stock');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
+const { tc, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all products with pagination, filters, and search
@@ -14,6 +15,7 @@ const getProducts = async (req, res, next) => {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
 
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.category) filter.category = req.query.category;
     if (req.query.type) filter.type = req.query.type;
@@ -67,14 +69,14 @@ const getProducts = async (req, res, next) => {
  */
 const getProduct = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id).populate('category', 'name slug');
+    const product = await Product.findOne({ _id: req.params.id, companyId: tc(req) }).populate('category', 'name slug');
 
     if (!product) {
       return next(new AppError('Produit non trouve.', 404));
     }
 
     // Get stock levels per warehouse
-    const stocks = await Stock.find({ product: product._id, isActive: true })
+    const stocks = await Stock.find({ product: product._id, companyId: tc(req), isActive: true })
       .populate('warehouse', 'name code type')
       .sort('warehouse');
 
@@ -110,13 +112,14 @@ const getProduct = async (req, res, next) => {
 const createProduct = async (req, res, next) => {
   try {
     // Validate category exists
-    const categoryExists = await Category.findById(req.body.category);
+    const categoryExists = await Category.findOne({ _id: req.body.category, companyId: tc(req) });
     if (!categoryExists) {
       return next(new AppError('Categorie non trouvee.', 404));
     }
 
     const product = await Product.create({
       ...req.body,
+      companyId: tc(req),
       createdBy: req.user._id,
     });
 
@@ -139,14 +142,14 @@ const createProduct = async (req, res, next) => {
  */
 const updateProduct = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findOne({ _id: req.params.id, companyId: tc(req) });
     if (!product) {
       return next(new AppError('Produit non trouve.', 404));
     }
 
     // Validate category if being changed
     if (req.body.category) {
-      const categoryExists = await Category.findById(req.body.category);
+      const categoryExists = await Category.findOne({ _id: req.body.category, companyId: tc(req) });
       if (!categoryExists) {
         return next(new AppError('Categorie non trouvee.', 404));
       }
@@ -154,8 +157,8 @@ const updateProduct = async (req, res, next) => {
 
     req._previousData = product.toObject();
 
-    const updatedProduct = await Product.findByIdAndUpdate(
-      req.params.id,
+    const updatedProduct = await Product.findOneAndUpdate(
+      { _id: req.params.id, companyId: tc(req) },
       { ...req.body, modifiedBy: req.user._id },
       { new: true, runValidators: true }
     ).populate('category', 'name slug');
@@ -177,14 +180,14 @@ const updateProduct = async (req, res, next) => {
  */
 const deleteProduct = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findOne({ _id: req.params.id, companyId: tc(req) });
     if (!product) {
       return next(new AppError('Produit non trouve.', 404));
     }
 
     // Check if product has stock
     const totalStock = await Stock.aggregate([
-      { $match: { product: product._id, isActive: true } },
+      { $match: { product: product._id, companyId: product.companyId, isActive: true } },
       { $group: { _id: null, total: { $sum: '$quantite' } } },
     ]);
 

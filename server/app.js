@@ -22,7 +22,11 @@ app.use(helmet());
 app.use(cors(corsOptions));
 
 // --- Body parsing ---
-app.use(express.json({ limit: '10mb' }));
+// verify capture le corps brut (Buffer) pour la vérification HMAC des webhooks PSP
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 

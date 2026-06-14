@@ -6,6 +6,7 @@ const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
 const logger = require('../config/logger');
 const { notifyStockAlert } = require('../services/notificationService');
+const { tc } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get global stock overview with filters
@@ -17,6 +18,7 @@ const getStocks = async (req, res, next) => {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
 
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.warehouse) filter.warehouse = req.query.warehouse;
     if (req.query.product) filter.product = req.query.product;
@@ -68,7 +70,7 @@ const getStocks = async (req, res, next) => {
  */
 const getStock = async (req, res, next) => {
   try {
-    const stock = await Stock.findById(req.params.id)
+    const stock = await Stock.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('product', 'name code prixVente prixAchat stockMinimum stockAlerte unite isStockable')
       .populate('warehouse', 'name code type');
 
@@ -92,7 +94,7 @@ const getStock = async (req, res, next) => {
  */
 const getMovement = async (req, res, next) => {
   try {
-    const movement = await StockMovement.findById(req.params.id)
+    const movement = await StockMovement.findOne({ _id: req.params.id, companyId: tc(req) })
       .populate('product', 'name code unite')
       .populate('warehouseSource', 'name code')
       .populate('warehouseDestination', 'name code')
@@ -118,7 +120,7 @@ const getMovement = async (req, res, next) => {
  */
 const getStockAlerts = async (req, res, next) => {
   try {
-    const stocks = await Stock.find({ isActive: true })
+    const stocks = await Stock.find({ companyId: tc(req), isActive: true })
       .populate('product', 'name code stockMinimum stockAlerte hasExpiry unite')
       .populate('warehouse', 'name code');
 
@@ -178,6 +180,7 @@ const getMovements = async (req, res, next) => {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
 
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.product) filter.product = req.query.product;
     if (req.query.type) filter.type = req.query.type;
@@ -253,11 +256,12 @@ const createMovement = async (req, res, next) => {
       }
 
       // Find or create stock entry
-      let stock = await Stock.findOne({ product, warehouse: warehouseDestination });
+      let stock = await Stock.findOne({ product, warehouse: warehouseDestination, companyId: tc(req) });
       if (!stock) {
         stock = new Stock({
           product,
           warehouse: warehouseDestination,
+          companyId: tc(req),
           quantite: 0,
           cump: coutUnitaire || productDoc.prixAchat,
           createdBy: req.user._id,
@@ -274,6 +278,7 @@ const createMovement = async (req, res, next) => {
         motif,
         product,
         warehouseDestination,
+        companyId: tc(req),
         quantite,
         coutUnitaire: coutUnitaire || productDoc.prixAchat,
         stockAvant: stockBefore,
@@ -298,7 +303,7 @@ const createMovement = async (req, res, next) => {
         return next(new AppError('Le depot source est requis pour une sortie.', 400));
       }
 
-      const stock = await Stock.findOne({ product, warehouse: warehouseSource });
+      const stock = await Stock.findOne({ product, warehouse: warehouseSource, companyId: tc(req) });
       if (!stock) {
         return next(new AppError('Aucun stock trouve pour ce produit dans ce depot.', 404));
       }
@@ -324,6 +329,7 @@ const createMovement = async (req, res, next) => {
         motif,
         product,
         warehouseSource,
+        companyId: tc(req),
         quantite,
         coutUnitaire: stock.cump,
         stockAvant: stockBefore,
@@ -360,11 +366,12 @@ const createMovement = async (req, res, next) => {
         return next(new AppError('Un depot est requis pour un ajustement.', 400));
       }
 
-      let stock = await Stock.findOne({ product, warehouse: warehouseId });
+      let stock = await Stock.findOne({ product, warehouse: warehouseId, companyId: tc(req) });
       if (!stock) {
         stock = new Stock({
           product,
           warehouse: warehouseId,
+          companyId: tc(req),
           quantite: 0,
           cump: productDoc.prixAchat,
           createdBy: req.user._id,
@@ -393,6 +400,7 @@ const createMovement = async (req, res, next) => {
         product,
         warehouseSource: motif === 'ajustement_negatif' || motif === 'perte' ? warehouseId : undefined,
         warehouseDestination: motif === 'ajustement_positif' ? warehouseId : undefined,
+        companyId: tc(req),
         quantite,
         coutUnitaire: stock.cump,
         stockAvant: stockBefore,
@@ -445,7 +453,7 @@ const transferStock = async (req, res, next) => {
     if (!destWarehouse) return next(new AppError('Depot destination non trouve.', 404));
 
     // Check source stock
-    const sourceStock = await Stock.findOne({ product, warehouse: warehouseSource });
+    const sourceStock = await Stock.findOne({ product, warehouse: warehouseSource, companyId: tc(req) });
     if (!sourceStock || sourceStock.quantiteDisponible < quantite) {
       return next(
         new AppError(
@@ -464,11 +472,12 @@ const transferStock = async (req, res, next) => {
     await sourceStock.save();
 
     // Increase destination
-    let destStock = await Stock.findOne({ product, warehouse: warehouseDestination });
+    let destStock = await Stock.findOne({ product, warehouse: warehouseDestination, companyId: tc(req) });
     if (!destStock) {
       destStock = new Stock({
         product,
         warehouse: warehouseDestination,
+        companyId: tc(req),
         quantite: 0,
         cump: sourceStock.cump,
         createdBy: req.user._id,
@@ -487,6 +496,7 @@ const transferStock = async (req, res, next) => {
       product,
       warehouseSource,
       warehouseDestination,
+      companyId: tc(req),
       quantite,
       coutUnitaire: sourceStock.cump,
       stockAvant: srcBefore,

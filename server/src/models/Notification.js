@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -47,6 +52,7 @@ const notificationSchema = new mongoose.Schema(
 );
 
 // Index pour les requetes frequentes : notifications d'un utilisateur, non lues, triees par date
+notificationSchema.index({ companyId: 1, user: 1, isRead: 1, createdAt: -1 });
 notificationSchema.index({ user: 1, isRead: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

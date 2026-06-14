@@ -46,9 +46,13 @@ const ligneEcritureSchema = new mongoose.Schema(
 
 const ecritureComptableSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     numero: {
       type: String,
-      unique: true,
       sparse: true,
       trim: true,
     },
@@ -148,6 +152,7 @@ const ecritureComptableSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // numero already indexed via unique+sparse: true in schema definition
+ecritureComptableSchema.index({ companyId: 1, numero: 1 }, { unique: true, sparse: true });
 ecritureComptableSchema.index({ journal: 1, dateEcriture: -1 });
 ecritureComptableSchema.index({ exercice: 1, statut: 1 });
 ecritureComptableSchema.index({ 'lignes.compte': 1 });

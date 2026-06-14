@@ -12,6 +12,7 @@ const {
   changePassword,
 } = require('../controllers/userController');
 const { protect } = require('../middlewares/auth');
+const tenantMiddleware = require('../middlewares/tenant');
 const { authorize } = require('../middlewares/rbac');
 const validate = require('../middlewares/validate');
 const {
@@ -22,13 +23,14 @@ const {
 } = require('../validations/user.validation');
 const audit = require('../middlewares/audit');
 
-// Toutes les routes sont protegees
 router.use(protect);
 
-// Routes profil personnel (avant /:id pour eviter conflit)
+// Routes profil personnel — pas de tenant isolation (req.user._id suffit)
 router.get('/me', getMe);
 router.put('/me', validate(updateMeSchema), audit('users', 'update'), updateMe);
 router.put('/me/password', validate(changePasswordSchema), changePassword);
+
+router.use(tenantMiddleware);
 
 // Routes admin
 router.get('/', authorize('users:read'), getUsers);

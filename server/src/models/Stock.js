@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const stockSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     product: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Product',
@@ -73,7 +78,7 @@ const stockSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
-// Compound unique index { product: 1, warehouse: 1 } already defined above
+stockSchema.index({ companyId: 1, product: 1, warehouse: 1 }, { unique: true });
 stockSchema.index({ warehouse: 1 });
 stockSchema.index({ quantite: 1 });
 

@@ -1,22 +1,27 @@
 const Settings = require('../models/Settings');
 
 /**
- * Generate next sequence number atomically using $inc
- * Eliminates race conditions vs countDocuments()
+ * Generate next sequence number atomically using $inc on the tenant's Settings document.
+ * Tenant-safe: each company maintains its own independent counters.
  * @param {string} type - Numbering type key in Settings.numbering (e.g. 'invoice', 'quote')
+ * @param {string|ObjectId} companyId - The tenant company ID (required)
  * @returns {Promise<{sequence: number, numero: string}>}
  */
-const getNextSequence = async (type) => {
+const getNextSequence = async (type, companyId) => {
+  if (!companyId) {
+    throw new Error('companyId requis pour generer un numero de sequence.');
+  }
+
   const field = `numbering.${type}.currentSequence`;
 
   const settings = await Settings.findOneAndUpdate(
-    { isActive: true },
+    { companyId, isActive: true },
     { $inc: { [field]: 1 } },
     { new: true }
   );
 
   if (!settings) {
-    throw new Error('Parametres non trouves. Veuillez initialiser les parametres.');
+    throw new Error('Parametres non trouves pour cette entreprise. Veuillez initialiser les parametres.');
   }
 
   const config = settings.numbering[type];

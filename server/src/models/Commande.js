@@ -54,9 +54,13 @@ const ligneCommandeSchema = new mongoose.Schema(
 
 const commandeSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     numero: {
       type: String,
-      unique: true,
       trim: true,
     },
 
@@ -175,6 +179,7 @@ const commandeSchema = new mongoose.Schema(
 
 // === INDEXES ===
 // numero already indexed via unique: true in schema definition
+commandeSchema.index({ companyId: 1, numero: 1 }, { unique: true, sparse: true });
 commandeSchema.index({ client: 1, statut: 1 });
 commandeSchema.index({ statut: 1, createdAt: -1 });
 commandeSchema.index({ devis: 1 });
@@ -214,8 +219,8 @@ const calculateTotals = (doc) => {
 
 // === PRE-SAVE ===
 commandeSchema.pre('save', async function (next) {
-  if (!this.numero) {
-    const { numero } = await getNextSequence('salesOrder');
+  if (!this.numero && this.companyId) {
+    const { numero } = await getNextSequence('salesOrder', this.companyId);
     this.numero = numero;
   }
 

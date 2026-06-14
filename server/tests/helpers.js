@@ -2,6 +2,10 @@ const jwt = require('jsonwebtoken');
 const User = require('../src/models/User');
 const Role = require('../src/models/Role');
 const Permission = require('../src/models/Permission');
+const Company    = require('../src/models/Company');
+const Forfait    = require('../src/models/Forfait');
+const Abonnement = require('../src/models/Abonnement');
+const Settings   = require('../src/models/Settings');
 const Client = require('../src/models/Client');
 const Product = require('../src/models/Product');
 const Category = require('../src/models/Category');
@@ -15,12 +19,139 @@ const BankAccount = require('../src/models/BankAccount');
 const Notification = require('../src/models/Notification');
 
 /**
- * Generate JWT access token for a user
+ * Generate JWT access token for a user (legacy — no companyId in payload)
  */
 const getAuthToken = (user) => {
   return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE,
+    expiresIn: process.env.JWT_EXPIRE || '15m',
   });
+};
+
+/**
+ * Generate JWT access token with SaaS scope (includes companyId + scope)
+ */
+const getSaasAuthToken = (user) => {
+  return jwt.sign(
+    {
+      id:        user._id,
+      scope:     user.scope     || 'ENTREPRISE',
+      companyId: user.companyId || null,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRE || '15m' }
+  );
+};
+
+/**
+ * Create a test Company
+ */
+const createTestCompany = async (data = {}) => {
+  return Company.create({
+    name:   data.name   || 'Entreprise Test SA',
+    email:  data.email  || 'contact@test-company.sn',
+    phone:  data.phone  || '+221 33 123 45 67',
+    status: data.status || 'active',
+    ...data,
+  });
+};
+
+/**
+ * Create a test Forfait
+ */
+const createTestForfait = async (data = {}) => {
+  return Forfait.create({
+    code:          data.code || 'STANDARD',
+    nom:           data.nom  || 'Standard Test',
+    prixMensuel:   data.prixMensuel  || 15000,
+    prixAnnuel:    data.prixAnnuel   || 150000,
+    modulesInclus: data.modulesInclus || ['GESCOM', 'FACTURATION'],
+    limites: {
+      maxUtilisateurs: data.maxUtilisateurs ?? 3,
+      maxFacturesMois: data.maxFacturesMois ?? 100,
+      stockageMo:      data.stockageMo ?? 1024,
+      supportPrioritaire: false,
+      ...data.limites,
+    },
+    actif:  true,
+    ordre:  data.ordre || 1,
+    ...data,
+  });
+};
+
+/**
+ * Create a test Abonnement
+ */
+const createTestAbonnement = async (entrepriseId, forfaitId, data = {}) => {
+  const dateDebut = data.dateDebut || new Date();
+  const dateFin   = data.dateFin   || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  return Abonnement.create({
+    entrepriseId,
+    forfaitId,
+    periodicite: data.periodicite || 'MENSUEL',
+    dateDebut,
+    dateFin,
+    montant:     data.montant || 15000,
+    statut:      data.statut  || 'EN_ATTENTE',
+    ...data,
+  });
+};
+
+/**
+ * Create Settings (séquences de numérotation) for a company
+ */
+const createTestSettings = async (companyId) => {
+  return Settings.create({
+    companyId,
+    isActive: true,
+    numbering: {
+      invoice:       { prefix: 'FA', currentSequence: 0 },
+      quote:         { prefix: 'DE', currentSequence: 0 },
+      purchaseOrder: { prefix: 'BC', currentSequence: 0 },
+      deliveryNote:  { prefix: 'BL', currentSequence: 0 },
+      creditNote:    { prefix: 'AV', currentSequence: 0 },
+      salesOrder:    { prefix: 'CM', currentSequence: 0 },
+      payment:       { prefix: 'PA', currentSequence: 0 },
+    },
+    general: { currency: 'XOF', language: 'fr', timezone: 'Africa/Dakar' },
+  });
+};
+
+/**
+ * Create a user belonging to a specific company (SaaS ENTREPRISE scope)
+ */
+const createSaasUser = async (companyId, roleName = 'admin', data = {}) => {
+  let role = await Role.findOne({ name: roleName });
+  if (!role) {
+    let perms = await Permission.find();
+    if (perms.length === 0) perms = await createTestPermissions();
+    role = await Role.create({
+      name:        roleName,
+      displayName: roleName,
+      description: `Role ${roleName}`,
+      permissions: perms.map((p) => p._id),
+      isSystem:    true,
+    });
+  }
+
+  const email = data.email || `${roleName}-${companyId}@test.sn`;
+  const user  = await User.create({
+    firstName: data.firstName || 'Test',
+    lastName:  data.lastName  || 'User',
+    email,
+    password:  data.password  || 'password123',
+    phone:     data.phone     || '+221771234567',
+    role:      role._id,
+    scope:     'ENTREPRISE',
+    companyId,
+    isActive:  true,
+    ...data,
+  });
+
+  await user.populate({ path: 'role', populate: { path: 'permissions' } });
+
+  const token = getSaasAuthToken(user);
+  return { user, token };
 };
 
 /**
@@ -284,9 +415,15 @@ const createTestNotification = async (userId, data = {}) => {
 
 module.exports = {
   getAuthToken,
+  getSaasAuthToken,
   createTestPermissions,
   createTestRole,
   createTestUser,
+  createSaasUser,
+  createTestCompany,
+  createTestForfait,
+  createTestAbonnement,
+  createTestSettings,
   createTestClient,
   createTestCategory,
   createTestProduct,

@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const auditLogSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -46,6 +51,7 @@ const auditLogSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
+auditLogSchema.index({ companyId: 1, createdAt: -1 });
 auditLogSchema.index({ user: 1, createdAt: -1 });
 auditLogSchema.index({ action: 1, module: 1 });
 auditLogSchema.index({ createdAt: -1 });

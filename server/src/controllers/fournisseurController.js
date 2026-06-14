@@ -1,6 +1,7 @@
 const Fournisseur = require('../models/Fournisseur');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
+const { tc, findByTenant } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all fournisseurs with pagination, filters, and search
@@ -12,6 +13,7 @@ const getFournisseurs = async (req, res, next) => {
     const { page, limit, skip, sort } = buildPaginationOptions(req.query);
 
     const filter = {};
+    filter.companyId = tc(req);
 
     if (req.query.category) filter.category = req.query.category;
 
@@ -51,7 +53,7 @@ const getFournisseurs = async (req, res, next) => {
  */
 const getFournisseur = async (req, res, next) => {
   try {
-    const fournisseur = await Fournisseur.findById(req.params.id);
+    const fournisseur = await findByTenant(Fournisseur, req.params.id, req);
 
     if (!fournisseur) {
       return next(new AppError('Fournisseur non trouve.', 404));
@@ -75,6 +77,7 @@ const createFournisseur = async (req, res, next) => {
   try {
     const fournisseur = await Fournisseur.create({
       ...req.body,
+      companyId: tc(req),
       createdBy: req.user._id,
     });
 
@@ -95,15 +98,15 @@ const createFournisseur = async (req, res, next) => {
  */
 const updateFournisseur = async (req, res, next) => {
   try {
-    const fournisseur = await Fournisseur.findById(req.params.id);
+    const fournisseur = await findByTenant(Fournisseur, req.params.id, req);
     if (!fournisseur) {
       return next(new AppError('Fournisseur non trouve.', 404));
     }
 
     req._previousData = fournisseur.toObject();
 
-    const updatedFournisseur = await Fournisseur.findByIdAndUpdate(
-      req.params.id,
+    const updatedFournisseur = await Fournisseur.findOneAndUpdate(
+      { _id: req.params.id, companyId: tc(req) },
       { ...req.body, modifiedBy: req.user._id },
       { new: true, runValidators: true }
     );
@@ -125,7 +128,7 @@ const updateFournisseur = async (req, res, next) => {
  */
 const deleteFournisseur = async (req, res, next) => {
   try {
-    const fournisseur = await Fournisseur.findById(req.params.id);
+    const fournisseur = await findByTenant(Fournisseur, req.params.id, req);
     if (!fournisseur) {
       return next(new AppError('Fournisseur non trouve.', 404));
     }

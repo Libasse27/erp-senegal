@@ -332,3 +332,8 @@ body {
     left: 0;
   }
 }
+
+/* Animation spinner pour les pages d'authentification */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

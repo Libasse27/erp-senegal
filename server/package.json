@@ -7,10 +7,18 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "seed": "node src/seeds/index.js",
+    "seed:saas": "node scripts/seed-saas.js",
+    "migrate:multitenant": "node scripts/migrate-to-multitenant.js",
+    "check:integrity": "node scripts/check-integrity.js",
+    "check:integrity:fix": "node scripts/check-integrity.js --fix",
+    "rollback:saas": "node scripts/rollback-saas.js",
+    "rollback:saas:full": "node scripts/rollback-saas.js --delete-company",
     "lint": "eslint src/ --ext .js",
     "lint:fix": "eslint src/ --ext .js --fix",
     "test": "jest --coverage",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:saas": "jest --testPathPattern=tests/saas --coverage",
+    "test:unit": "jest --testPathPattern=tests/services --coverage"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -2,10 +2,14 @@ const mongoose = require('mongoose');
 
 const exerciceComptableSchema = new mongoose.Schema(
   {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      index: true,
+    },
     code: {
       type: String,
       required: [true, "Le code de l'exercice est requis"],
-      unique: true,
       trim: true,
     },
     libelle: {
@@ -64,6 +68,7 @@ const exerciceComptableSchema = new mongoose.Schema(
 );
 
 // === INDEXES ===
+exerciceComptableSchema.index({ companyId: 1, code: 1 }, { unique: true });
 exerciceComptableSchema.index({ isActive: 1, createdAt: -1 });
 exerciceComptableSchema.index({ statut: 1 });
 exerciceComptableSchema.index({ isCurrent: 1 });

@@ -11,8 +11,9 @@ const authorize = (requiredPermission) => {
       return next(new AppError('Acces non autorise. Veuillez vous connecter.', 401));
     }
 
-    // L'admin a acces a tout
-    if (req.user.role && req.user.role.name === ROLES.ADMIN) {
+    // Super Admin et Admin ont acces a tout
+    const roleName = req.user.role?.name;
+    if (roleName === ROLES.SUPER_ADMIN || roleName === ROLES.ADMIN) {
       return next();
     }
 
@@ -45,6 +46,11 @@ const authorizeRoles = (...roles) => {
   return (req, _res, next) => {
     if (!req.user) {
       return next(new AppError('Acces non autorise. Veuillez vous connecter.', 401));
+    }
+
+    // Super Admin bypasse toutes les restrictions de role
+    if (req.user.role?.name === ROLES.SUPER_ADMIN) {
+      return next();
     }
 
     if (!req.user.role || !roles.includes(req.user.role.name)) {
