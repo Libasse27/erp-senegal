@@ -533,6 +533,181 @@ const getDashboardRecouvrement = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Flux de trésorerie mensuel : encaissements clients vs décaissements fournisseurs
+ * @route   GET /api/dashboard/cashflow?year=
+ * @access  Private
+ */
+const getDashboardCashflow = async (req, res, next) => {
+  try {
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+    const MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+    const agg = await Payment.aggregate([
+      {
+        $match: {
+          isActive: true,
+          companyId: tenantId(req),
+          statut: 'valide',
+          datePaiement: {
+            $gte: new Date(year, 0, 1),
+            $lte: new Date(year, 11, 31, 23, 59, 59),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { mois: { $month: '$datePaiement' }, type: '$typePaiement' },
+          total: { $sum: '$montant' },
+        },
+      },
+    ]);
+
+    const data = MONTHS.map((mois, i) => {
+      const entree = agg.find((r) => r._id.mois === i + 1 && r._id.type === 'client');
+      const sortie = agg.find((r) => r._id.mois === i + 1 && r._id.type === 'fournisseur');
+      return {
+        mois,
+        entrees: entree?.total || 0,
+        sorties: sortie?.total || 0,
+        net: (entree?.total || 0) - (sortie?.total || 0),
+      };
+    });
+
+    const totalEntrees = data.reduce((s, d) => s + d.entrees, 0);
+    const totalSorties = data.reduce((s, d) => s + d.sorties, 0);
+
+    res.json({
+      success: true,
+      data: { lignes: data, totalEntrees, totalSorties, soldeNet: totalEntrees - totalSorties },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Entonnoir de conversion : devis → commandes → factures → paiements
+ * @route   GET /api/dashboard/funnel?days=30
+ * @access  Private
+ */
+const getDashboardFunnel = async (req, res, next) => {
+  try {
+    const days = Math.min(parseInt(req.query.days) || 30, 365);
+    const dateFrom = new Date();
+    dateFrom.setDate(dateFrom.getDate() - days);
+
+    const [nbDevis, nbCommandes, nbFactures, nbPaiements] = await Promise.all([
+      Devis.countDocuments({ companyId: tc(req), isActive: true, createdAt: { $gte: dateFrom } }),
+      Commande.countDocuments({ companyId: tc(req), isActive: true, createdAt: { $gte: dateFrom } }),
+      Facture.countDocuments({
+        companyId: tc(req),
+        isActive: true,
+        statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] },
+        dateFacture: { $gte: dateFrom },
+      }),
+      Payment.countDocuments({
+        companyId: tc(req),
+        isActive: true,
+        statut: 'valide',
+        typePaiement: 'client',
+        datePaiement: { $gte: dateFrom },
+      }),
+    ]);
+
+    const maxVal = Math.max(nbDevis, nbCommandes, nbFactures, nbPaiements, 1);
+
+    res.json({
+      success: true,
+      data: {
+        days,
+        steps: [
+          { name: 'Devis',      value: nbDevis,      pct: Math.round((nbDevis / maxVal) * 100),      fill: '#1a56db' },
+          { name: 'Commandes',  value: nbCommandes,  pct: Math.round((nbCommandes / maxVal) * 100),  fill: '#059669' },
+          { name: 'Factures',   value: nbFactures,   pct: Math.round((nbFactures / maxVal) * 100),   fill: '#d97706' },
+          { name: 'Paiements',  value: nbPaiements,  pct: Math.round((nbPaiements / maxVal) * 100),  fill: '#7c3aed' },
+        ],
+        tauxConversionDevis:    nbDevis    > 0 ? Math.round((nbCommandes / nbDevis) * 100)    : 0,
+        tauxConversionFactures: nbFactures > 0 ? Math.round((nbPaiements / nbFactures) * 100) : 0,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    KPIs pour une période flexible (7j, 30j, 90j) avec comparaison période précédente
+ * @route   GET /api/dashboard/periode?days=30
+ * @access  Private
+ */
+const getDashboardPeriode = async (req, res, next) => {
+  try {
+    const days = Math.min(parseInt(req.query.days) || 30, 365);
+    const now   = new Date();
+    const from  = new Date(now); from.setDate(from.getDate() - days);
+    const prevFrom = new Date(from); prevFrom.setDate(prevFrom.getDate() - days);
+
+    const factMatch = (dateDebut, dateFin) => ({
+      isActive: true,
+      companyId: tenantId(req),
+      statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] },
+      dateFacture: { $gte: dateDebut, ...(dateFin && { $lt: dateFin }) },
+    });
+
+    const [caAgg, caPrevAgg, paiementsAgg, nbFactures, nbFacturesPrev, nbNouveauxClients] = await Promise.all([
+      Facture.aggregate([
+        { $match: factMatch(from) },
+        { $group: { _id: null, ca: { $sum: '$totalTTC' }, paye: { $sum: '$montantPaye' } } },
+      ]),
+      Facture.aggregate([
+        { $match: factMatch(prevFrom, from) },
+        { $group: { _id: null, ca: { $sum: '$totalTTC' } } },
+      ]),
+      Payment.aggregate([
+        {
+          $match: {
+            isActive: true,
+            companyId: tenantId(req),
+            statut: 'valide',
+            typePaiement: 'client',
+            datePaiement: { $gte: from },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$montant' } } },
+      ]),
+      Facture.countDocuments(factMatch(from)),
+      Facture.countDocuments(factMatch(prevFrom, from)),
+      Client.countDocuments({ companyId: tc(req), isActive: true, createdAt: { $gte: from } }),
+    ]);
+
+    const ca     = caAgg[0]?.ca    || 0;
+    const caPrev = caPrevAgg[0]?.ca || 0;
+    const trend  = caPrev > 0 ? Math.round(((ca - caPrev) / caPrev) * 100) : null;
+    const factTrend = nbFacturesPrev > 0
+      ? Math.round(((nbFactures - nbFacturesPrev) / nbFacturesPrev) * 100)
+      : null;
+
+    res.json({
+      success: true,
+      data: {
+        days,
+        ca,
+        caPrev,
+        trend,
+        nbFactures,
+        nbFacturesPrev,
+        factTrend,
+        paiements: paiementsAgg[0]?.total || 0,
+        montantEncaisse: caAgg[0]?.paye || 0,
+        nbNouveauxClients,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getDashboardSummary,
@@ -543,4 +718,7 @@ module.exports = {
   getDashboardTopProducts,
   getDashboardStockEvolution,
   getDashboardRecouvrement,
+  getDashboardCashflow,
+  getDashboardFunnel,
+  getDashboardPeriode,
 };

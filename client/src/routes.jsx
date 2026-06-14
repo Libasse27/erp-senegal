@@ -32,6 +32,12 @@ const ProductDetailPage = lazy(() => import('./pages/products/ProductDetailPage'
 
 // Stocks
 const StocksPage = lazy(() => import('./pages/stocks/StocksPage'));
+const InventairesListPage = lazy(() => import('./pages/stocks/InventairesListPage'));
+const InventaireDetailPage = lazy(() => import('./pages/stocks/InventaireDetailPage'));
+const TransfertsListPage = lazy(() => import('./pages/stocks/TransfertsListPage'));
+const TransfertFormPage = lazy(() => import('./pages/stocks/TransfertFormPage'));
+const TransfertDetailPage = lazy(() => import('./pages/stocks/TransfertDetailPage'));
+const StockAlertsPage = lazy(() => import('./pages/stocks/StockAlertsPage'));
 
 // Ventes - Devis
 const DevisListPage = lazy(() => import('./pages/ventes/devis/DevisListPage'));
@@ -51,6 +57,17 @@ const FacturesListPage = lazy(() => import('./pages/ventes/factures/FacturesList
 const FactureFormPage = lazy(() => import('./pages/ventes/factures/FactureFormPage'));
 const FactureDetailPage = lazy(() => import('./pages/ventes/factures/FactureDetailPage'));
 
+// Ventes - Facturation Récurrente
+const FacturesRecurrentesPage = lazy(() => import('./pages/ventes/FacturesRecurrentesPage'));
+
+// Ventes - Avoirs
+const AvoirsListPage = lazy(() => import('./pages/ventes/avoirs/AvoirsListPage'));
+const AvoirDetailPage = lazy(() => import('./pages/ventes/avoirs/AvoirDetailPage'));
+
+// Ventes - Relances / Recouvrement
+const RecouvrementPage = lazy(() => import('./pages/ventes/relances/RecouvrementPage'));
+const RelanceDetailPage = lazy(() => import('./pages/ventes/relances/RelanceDetailPage'));
+
 // Paiements
 const PaymentsListPage = lazy(() => import('./pages/payments/PaymentsListPage'));
 const PaymentFormPage = lazy(() => import('./pages/payments/PaymentFormPage'));
@@ -68,15 +85,18 @@ const BalancePage = lazy(() => import('./pages/comptabilite/BalancePage'));
 const BilanPage = lazy(() => import('./pages/comptabilite/BilanPage'));
 const CompteResultatPage = lazy(() => import('./pages/comptabilite/CompteResultatPage'));
 const ExercicesPage = lazy(() => import('./pages/comptabilite/ExercicesPage'));
+const DeclarationTVAPage = lazy(() => import('./pages/comptabilite/DeclarationTVAPage'));
 
 // Rapports
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
 const SalesReportPage = lazy(() => import('./pages/reports/SalesReportPage'));
 const CARapportPage = lazy(() => import('./pages/reports/CARapportPage'));
+const RapportRecouvrementPage = lazy(() => import('./pages/reports/RapportRecouvrementPage'));
 
 // Administration
 const UsersListPage = lazy(() => import('./pages/admin/UsersListPage'));
 const UserFormPage = lazy(() => import('./pages/admin/UserFormPage'));
+const RolesPage = lazy(() => import('./pages/admin/RolesPage'));
 const SettingsPage = lazy(() => import('./pages/admin/SettingsPage'));
 const CompanyPage = lazy(() => import('./pages/admin/CompanyPage'));
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
@@ -85,6 +105,9 @@ const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
 const CommandesAchatListPage = lazy(() => import('./pages/achats/CommandesAchatListPage'));
 const CommandeAchatFormPage = lazy(() => import('./pages/achats/CommandeAchatFormPage'));
 const CommandeAchatDetailPage = lazy(() => import('./pages/achats/CommandeAchatDetailPage'));
+const FacturesFournisseurListPage = lazy(() => import('./pages/achats/FacturesFournisseurListPage'));
+const FactureFournisseurFormPage = lazy(() => import('./pages/achats/FactureFournisseurFormPage'));
+const FactureFournisseurDetailPage = lazy(() => import('./pages/achats/FactureFournisseurDetailPage'));
 
 // Profil
 const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
@@ -159,6 +182,13 @@ const AppRoutes = () => {
 
           {/* Stocks */}
           <Route path="/stocks" element={<StocksPage />} />
+          <Route path="/stocks/inventaires" element={<InventairesListPage />} />
+          <Route path="/stocks/inventaires/:id" element={<InventaireDetailPage />} />
+          <Route path="/stocks/alertes" element={<StockAlertsPage />} />
+          <Route path="/stocks/transferts" element={<TransfertsListPage />} />
+          <Route path="/stocks/transferts/nouveau" element={<TransfertFormPage />} />
+          <Route path="/stocks/transferts/:id" element={<TransfertDetailPage />} />
+          <Route path="/stocks/transferts/:id/modifier" element={<TransfertFormPage />} />
 
           {/* Ventes - Devis */}
           <Route path="/ventes/devis" element={<DevisListPage />} />
@@ -181,11 +211,28 @@ const AppRoutes = () => {
           <Route path="/ventes/factures/:id" element={<FactureDetailPage />} />
           <Route path="/ventes/factures/:id/modifier" element={<FactureFormPage />} />
 
-          {/* Achats */}
+          {/* Ventes - Facturation Récurrente */}
+          <Route path="/ventes/factures-recurrentes" element={<FacturesRecurrentesPage />} />
+
+          {/* Ventes - Avoirs */}
+          <Route path="/ventes/avoirs" element={<AvoirsListPage />} />
+          <Route path="/ventes/avoirs/:id" element={<AvoirDetailPage />} />
+
+          {/* Ventes - Recouvrement */}
+          <Route path="/ventes/relances" element={<RecouvrementPage />} />
+          <Route path="/ventes/relances/:id" element={<RelanceDetailPage />} />
+
+          {/* Achats — Commandes */}
           <Route path="/achats/commandes" element={<CommandesAchatListPage />} />
           <Route path="/achats/commandes/nouveau" element={<CommandeAchatFormPage />} />
           <Route path="/achats/commandes/:id" element={<CommandeAchatDetailPage />} />
           <Route path="/achats/commandes/:id/modifier" element={<CommandeAchatFormPage />} />
+
+          {/* Achats — Factures fournisseurs */}
+          <Route path="/achats/factures-fournisseur" element={<FacturesFournisseurListPage />} />
+          <Route path="/achats/factures-fournisseur/nouveau" element={<FactureFournisseurFormPage />} />
+          <Route path="/achats/factures-fournisseur/:id" element={<FactureFournisseurDetailPage />} />
+          <Route path="/achats/factures-fournisseur/:id/modifier" element={<FactureFournisseurFormPage />} />
 
           {/* Paiements */}
           <Route path="/paiements" element={<PaymentsListPage />} />
@@ -205,11 +252,13 @@ const AppRoutes = () => {
           <Route path="/comptabilite/bilan" element={<BilanPage />} />
           <Route path="/comptabilite/resultat" element={<CompteResultatPage />} />
           <Route path="/comptabilite/exercices" element={<ExercicesPage />} />
+          <Route path="/comptabilite/tva" element={<DeclarationTVAPage />} />
 
           {/* Rapports */}
           <Route path="/rapports" element={<ReportsPage />} />
           <Route path="/rapports/ventes" element={<SalesReportPage />} />
           <Route path="/rapports/ca" element={<CARapportPage />} />
+          <Route path="/rapports/recouvrement" element={<RapportRecouvrementPage />} />
 
           {/* Profil */}
           <Route path="/profil" element={<ProfilePage />} />
@@ -222,6 +271,7 @@ const AppRoutes = () => {
           <Route path="/admin/utilisateurs" element={<UsersListPage />} />
           <Route path="/admin/utilisateurs/nouveau" element={<UserFormPage />} />
           <Route path="/admin/utilisateurs/:id/modifier" element={<UserFormPage />} />
+          <Route path="/admin/roles" element={<RolesPage />} />
           <Route path="/admin/parametres" element={<SettingsPage />} />
           <Route path="/admin/entreprise" element={<CompanyPage />} />
           <Route path="/admin/audit" element={<AuditLogPage />} />

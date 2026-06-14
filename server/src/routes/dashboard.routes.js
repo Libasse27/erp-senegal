@@ -11,6 +11,9 @@ const {
   getDashboardTopProducts,
   getDashboardStockEvolution,
   getDashboardRecouvrement,
+  getDashboardCashflow,
+  getDashboardFunnel,
+  getDashboardPeriode,
 } = require('../controllers/dashboardController');
 
 const { protect } = require('../middlewares/auth');
@@ -29,5 +32,8 @@ router.get('/stock-alerts', getDashboardStockAlerts);
 router.get('/stock-evolution', getDashboardStockEvolution);
 router.get('/kpis', getDashboardKpis);
 router.get('/recouvrement', getDashboardRecouvrement);
+router.get('/cashflow', getDashboardCashflow);
+router.get('/funnel', getDashboardFunnel);
+router.get('/periode', getDashboardPeriode);
 
 module.exports = router;

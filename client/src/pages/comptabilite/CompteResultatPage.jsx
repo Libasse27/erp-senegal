@@ -51,8 +51,10 @@ const CompteResultatPage = () => {
   };
 
   const handleDownloadPdf = () =>
-    downloadPdf(buildPdfPath('/rapports/resultat/pdf'), `compte-resultat-${Date.now()}.pdf`);
-  const handlePrint = () => printPdf(buildPdfPath('/rapports/resultat/pdf'));
+    downloadPdf(buildPdfPath('/comptabilite/compte-resultat/pdf'), `compte-resultat-${Date.now()}.pdf`);
+  const handlePrint = () => printPdf(buildPdfPath('/comptabilite/compte-resultat/pdf'));
+  const handleExportExcel = () =>
+    downloadPdf(buildPdfPath('/comptabilite/compte-resultat/export'), `compte-resultat-${Date.now()}.xlsx`);
 
   const getResultatVariant = (r) => (r > 0 ? 'success' : r < 0 ? 'danger' : 'secondary');
   const getResultatLabel = (r) => (r > 0 ? 'Benefice' : r < 0 ? 'Perte' : 'Equilibre');
@@ -87,6 +89,19 @@ const CompteResultatPage = () => {
               <FiDownload className="me-1" />
             )}
             Exporter PDF
+          </Button>
+          <Button
+            variant="outline-success"
+            size="sm"
+            onClick={handleExportExcel}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? (
+              <Spinner animation="border" size="sm" className="me-1" />
+            ) : (
+              <FiDownload className="me-1" />
+            )}
+            Exporter Excel
           </Button>
         </div>
       </div>

@@ -42,6 +42,17 @@ export const productsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Produit', id: 'LIST' }],
     }),
+    updateProductSeuils: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `/products/${id}/seuils`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Produit', id },
+        { type: 'Stock', id: 'ALERTS' },
+      ],
+    }),
     getCategories: builder.query({
       query: (params) => ({
         url: '/categories',
@@ -80,6 +91,7 @@ export const {
   useCreateProductMutation,
   useUpdateProductMutation,
   useDeleteProductMutation,
+  useUpdateProductSeuilsMutation,
   useGetCategoriesQuery,
   useCreateCategoryMutation,
   useUpdateCategoryMutation,

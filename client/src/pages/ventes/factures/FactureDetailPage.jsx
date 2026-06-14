@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Table from 'react-bootstrap/Table';
@@ -9,6 +9,7 @@ import Alert from 'react-bootstrap/Alert';
 import Modal from 'react-bootstrap/Modal';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Form from 'react-bootstrap/Form';
 import {
   FiEdit2,
   FiTrash2,
@@ -16,6 +17,7 @@ import {
   FiCheckCircle,
   FiArrowLeft,
   FiFileText,
+  FiRotateCcw,
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../../hooks/usePageTitle';
@@ -25,6 +27,7 @@ import {
   useDeleteFactureMutation,
   useValidateFactureMutation,
   useSendFactureMutation,
+  useCreateAvoirMutation,
 } from '../../../redux/api/facturesApi';
 import usePdfActions from '../../../hooks/usePdfActions';
 import { PrintToolbar, DocumentHeader, PdfPreviewModal } from '../../../components/print';
@@ -52,6 +55,10 @@ const FactureDetailPage = () => {
   const { id } = useParams();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [validateModalOpen, setValidateModalOpen] = useState(false);
+  const [avoirModalOpen, setAvoirModalOpen] = useState(false);
+  const [avoirType, setAvoirType] = useState('total'); // 'total' | 'partiel'
+  const [avoirMotif, setAvoirMotif] = useState('');
+  const [avoirLignes, setAvoirLignes] = useState([]);
 
   usePageTitle('Detail de la facture', [
     { label: 'Accueil', path: '/' },
@@ -64,6 +71,7 @@ const FactureDetailPage = () => {
   const [deleteFacture, { isLoading: isDeleting }] = useDeleteFactureMutation();
   const [validateFacture, { isLoading: isValidating }] = useValidateFactureMutation();
   const [sendFacture, { isLoading: isSending }] = useSendFactureMutation();
+  const [createAvoir, { isLoading: isCreatingAvoir }] = useCreateAvoirMutation();
 
   const { downloadPdf, printPdf, previewPdf, closePreview, previewUrl, isLoading: isPdfLoading } = usePdfActions();
 
@@ -93,6 +101,36 @@ const FactureDetailPage = () => {
       toast.success('Facture envoyee au client avec succes');
     } catch (err) {
       toast.error(err?.data?.message || "Erreur lors de l'envoi");
+    }
+  };
+
+  const openAvoirModal = (facture) => {
+    setAvoirType('total');
+    setAvoirMotif('');
+    setAvoirLignes(
+      (facture?.lignes || []).map((l) => ({ ligneFactureId: l._id, quantite: l.quantite, max: l.quantite, designation: l.designation }))
+    );
+    setAvoirModalOpen(true);
+  };
+
+  const handleCreateAvoir = async () => {
+    try {
+      const payload = { motif: avoirMotif };
+      if (avoirType === 'partiel') {
+        payload.lignes = avoirLignes
+          .filter((l) => l.quantite > 0)
+          .map((l) => ({ ligneFactureId: l.ligneFactureId, quantite: Number(l.quantite) }));
+        if (payload.lignes.length === 0) {
+          toast.error('Sélectionnez au moins une ligne avec quantité > 0');
+          return;
+        }
+      }
+      const res = await createAvoir({ id, ...payload }).unwrap();
+      toast.success('Avoir créé avec succès');
+      setAvoirModalOpen(false);
+      navigate(`/ventes/avoirs/${res.data._id}`);
+    } catch (err) {
+      toast.error(err?.data?.message || "Erreur lors de la création de l'avoir");
     }
   };
 
@@ -176,10 +214,21 @@ const FactureDetailPage = () => {
               {isSending ? 'Envoi...' : 'Envoyer'}
             </Button>
           )}
-          {facture.statut !== 'brouillon' && facture.statut !== 'annulee' && (
-            <Button variant="warning" onClick={() => toast.info('Fonctionnalite a venir')}>
-              <FiFileText className="me-2" />
-              Creer avoir
+          {facture.statut !== 'brouillon' && facture.statut !== 'annulee' && facture.typeDocument !== 'avoir' && (
+            <Button variant="outline-warning" onClick={() => openAvoirModal(facture)}>
+              <FiRotateCcw className="me-2" />
+              Créer avoir
+            </Button>
+          )}
+          {facture.typeDocument === 'avoir' && facture.factureOrigine && (
+            <Button
+              as={Link}
+              to={`/ventes/factures/${facture.factureOrigine._id || facture.factureOrigine}`}
+              variant="outline-secondary"
+              size="sm"
+            >
+              <FiFileText className="me-1" />
+              Facture d'origine
             </Button>
           )}
           <PrintToolbar
@@ -342,6 +391,94 @@ const FactureDetailPage = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Modal création d'avoir */}
+      <Modal show={avoirModalOpen} onHide={() => setAvoirModalOpen(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Créer un avoir — {facture.numero}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Alert variant="info" className="small">
+            Un avoir annule partiellement ou totalement la facture. Il génère une écriture comptable de contrepassation.
+          </Alert>
+          <Form.Group className="mb-3">
+            <Form.Label>Type d'avoir</Form.Label>
+            <div className="d-flex gap-3">
+              <Form.Check
+                type="radio"
+                label="Avoir total (annulation complète)"
+                checked={avoirType === 'total'}
+                onChange={() => setAvoirType('total')}
+                id="avoir-total"
+              />
+              <Form.Check
+                type="radio"
+                label="Avoir partiel (sélectionner les lignes)"
+                checked={avoirType === 'partiel'}
+                onChange={() => setAvoirType('partiel')}
+                id="avoir-partiel"
+              />
+            </div>
+          </Form.Group>
+
+          {avoirType === 'partiel' && (
+            <Table size="sm" bordered className="mb-3">
+              <thead className="table-light">
+                <tr>
+                  <th>Désignation</th>
+                  <th className="text-center" style={{ width: 80 }}>Qté max</th>
+                  <th className="text-center" style={{ width: 100 }}>Qté avoir</th>
+                </tr>
+              </thead>
+              <tbody>
+                {avoirLignes.map((ligne, idx) => (
+                  <tr key={idx}>
+                    <td className="small">{ligne.designation}</td>
+                    <td className="text-center small">{ligne.max}</td>
+                    <td>
+                      <Form.Control
+                        type="number"
+                        size="sm"
+                        min={0}
+                        max={ligne.max}
+                        step={0.01}
+                        value={ligne.quantite}
+                        onChange={(e) => {
+                          const updated = [...avoirLignes];
+                          updated[idx] = { ...ligne, quantite: Math.min(Number(e.target.value), ligne.max) };
+                          setAvoirLignes(updated);
+                        }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+
+          <Form.Group>
+            <Form.Label>Motif de l'avoir</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={2}
+              value={avoirMotif}
+              onChange={(e) => setAvoirMotif(e.target.value)}
+              placeholder="Ex: Retour marchandise, erreur de facturation, remise commerciale..."
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setAvoirModalOpen(false)}>
+            Annuler
+          </Button>
+          <Button variant="warning" onClick={handleCreateAvoir} disabled={isCreatingAvoir}>
+            {isCreatingAvoir
+              ? <Spinner animation="border" size="sm" className="me-1" />
+              : <FiRotateCcw className="me-1" />}
+            Créer l'avoir
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       <Modal show={deleteModalOpen} onHide={() => setDeleteModalOpen(false)}>
         <Modal.Header closeButton>

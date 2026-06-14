@@ -72,6 +72,19 @@ const settingsSchema = new mongoose.Schema(
       onLowStock: { type: Boolean, default: true },
     },
 
+    // Alertes automatiques (crons)
+    alertes: {
+      stockBas: {
+        enabled: { type: Boolean, default: true },
+        email: { type: Boolean, default: true },
+      },
+      facturesEnRetard: {
+        enabled: { type: Boolean, default: true },
+        email: { type: Boolean, default: true },
+        seuilJours: { type: Number, default: 30, min: 1, max: 365 },
+      },
+    },
+
     isActive: {
       type: Boolean,
       default: true,

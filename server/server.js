@@ -46,9 +46,12 @@ const { initNotificationService } = require('./src/services/notificationService'
 initNotificationService(io);
 
 // Jobs planifiés SaaS
-const subscriptionExpiry = require('./src/jobs/subscriptionExpiry');
-const renewalReminder    = require('./src/jobs/renewalReminder');
-const echeanceRappel     = require('./src/jobs/echeanceRappel');
+const subscriptionExpiry      = require('./src/jobs/subscriptionExpiry');
+const renewalReminder         = require('./src/jobs/renewalReminder');
+const echeanceRappel          = require('./src/jobs/echeanceRappel');
+const factureRecurrente       = require('./src/jobs/factureRecurrente');
+const alerteStockBas          = require('./src/jobs/alerteStockBas');
+const alerteFacturesEnRetard  = require('./src/jobs/alerteFacturesEnRetard');
 
 // Middleware d'authentification Socket.io
 const jwt = require('jsonwebtoken');
@@ -125,6 +128,9 @@ const startServer = async () => {
       subscriptionExpiry.demarrer();
       renewalReminder.demarrer();
       echeanceRappel.demarrer();
+      factureRecurrente.demarrer();
+      alerteStockBas.demarrer();
+      alerteFacturesEnRetard.demarrer();
     });
   } catch (error) {
     logger.error(`Erreur au demarrage: ${error.message}`);

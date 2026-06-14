@@ -57,6 +57,23 @@ export const usersApi = apiSlice.injectEndpoints({
         body,
       }),
     }),
+    toggleUserStatus: builder.mutation({
+      query: (id) => ({
+        url: `/users/${id}/toggle-status`,
+        method: 'PATCH',
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: 'User', id },
+        { type: 'User', id: 'LIST' },
+      ],
+    }),
+    adminResetPassword: builder.mutation({
+      query: ({ id, newPassword }) => ({
+        url: `/users/${id}/reset-password`,
+        method: 'POST',
+        body: { newPassword },
+      }),
+    }),
   }),
 });
 
@@ -68,4 +85,6 @@ export const {
   useDeleteUserMutation,
   useUpdateUserProfileMutation,
   useChangePasswordMutation,
+  useToggleUserStatusMutation,
+  useAdminResetPasswordMutation,
 } = usersApi;

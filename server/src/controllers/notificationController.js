@@ -139,10 +139,30 @@ const deleteNotification = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Supprimer toutes les notifications lues de l'utilisateur
+ * @route   DELETE /api/notifications/delete-read
+ * @access  Private
+ */
+const deleteReadNotifications = async (req, res, next) => {
+  try {
+    const result = await Notification.deleteMany({ user: req.user._id, isRead: true });
+
+    res.json({
+      success: true,
+      message: `${result.deletedCount} notification(s) supprimée(s)`,
+      data: { deletedCount: result.deletedCount },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getMyNotifications,
   markAsRead,
   markAllAsRead,
   getUnreadCount,
   deleteNotification,
+  deleteReadNotifications,
 };

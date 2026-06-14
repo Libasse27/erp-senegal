@@ -26,6 +26,11 @@ import {
   FiStar,
   FiTrendingUp,
   FiUploadCloud,
+  FiRepeat,
+  FiPercent,
+  FiRotateCcw,
+  FiArrowRight,
+  FiAlertCircle,
 } from 'react-icons/fi';
 import {
   selectSidebarCollapsed,
@@ -102,15 +107,22 @@ const navItems = [
   { path: '/clients',       label: 'Clients',       icon: FiUsers,       permission: PERM.CLIENTS_READ },
   { path: '/fournisseurs',  label: 'Fournisseurs',  icon: FiTruck,       permission: PERM.FOURNISSEURS_READ },
   { path: '/produits',      label: 'Produits',      icon: FiPackage,     permission: PERM.PRODUITS_READ },
-  { path: '/stocks',        label: 'Stocks',        icon: FiBox,         permission: PERM.STOCKS_READ },
+  { path: '/stocks',              label: 'Stocks',      icon: FiBox,      permission: PERM.STOCKS_READ },
+  { path: '/stocks/alertes',     label: 'Alertes stock', icon: FiAlertTriangle, permission: PERM.STOCKS_READ },
+  { path: '/stocks/inventaires', label: 'Inventaires',  icon: FiClipboard,    permission: PERM.STOCKS_READ },
+  { path: '/stocks/transferts',  label: 'Transferts',   icon: FiArrowRight,   permission: PERM.STOCKS_READ },
 
   { section: 'VENTES' },
   { path: '/ventes/devis',      label: 'Devis',      icon: FiFileText,   permission: PERM.DEVIS_READ },
   { path: '/ventes/commandes',  label: 'Commandes',  icon: FiShoppingCart, permission: PERM.COMMANDES_READ },
-  { path: '/ventes/factures',   label: 'Factures',   icon: FiClipboard,  permission: PERM.FACTURES_READ },
+  { path: '/ventes/factures',             label: 'Factures',             icon: FiClipboard,  permission: PERM.FACTURES_READ },
+  { path: '/ventes/avoirs',              label: 'Avoirs',               icon: FiRotateCcw,  permission: PERM.FACTURES_READ },
+  { path: '/ventes/factures-recurrentes', label: 'Factures récurrentes', icon: FiRepeat,        permission: PERM.FACTURES_READ },
+  { path: '/ventes/relances',            label: 'Recouvrement',         icon: FiAlertCircle,   permission: PERM.FACTURES_READ },
 
   { section: 'ACHATS' },
   { path: '/achats/commandes', label: 'Commandes fournisseurs', icon: FiShoppingCart, permission: PERM.CMD_FOURNISSEURS_READ },
+  { path: '/achats/factures-fournisseur', label: 'Factures fournisseurs', icon: FiFileText, permission: PERM.FACTURES_FOURN_READ },
 
   { section: 'FINANCE' },
   { path: '/paiements',                    label: 'Paiements',        icon: FiDollarSign, permission: PERM.PAIEMENTS_READ },
@@ -124,6 +136,7 @@ const navItems = [
   { path: '/comptabilite/balance',    label: 'Balance',             icon: FiBarChart2,permission: PERM.COMPTABILITE_READ },
   { path: '/comptabilite/resultat',   label: 'Compte de Resultat',  icon: FiBarChart2,permission: PERM.COMPTABILITE_READ },
   { path: '/comptabilite/bilan',      label: 'Bilan',               icon: FiBarChart2,permission: PERM.COMPTABILITE_READ },
+  { path: '/comptabilite/tva',        label: 'Déclaration TVA',     icon: FiPercent,  permission: PERM.COMPTABILITE_READ },
   { path: '/comptabilite/exercices',  label: 'Exercices',           icon: FiSettings, permission: PERM.COMPTABILITE_READ },
 
   { section: 'ANALYSE' },
@@ -132,10 +145,11 @@ const navItems = [
   { path: '/imports',     label: 'Import / Export',    icon: FiUploadCloud,  permission: PERM.PRODUITS_READ },
 
   { section: 'SYSTEME' },
-  { path: '/admin/utilisateurs', label: 'Utilisateurs',    icon: FiUsers,    roles: ['admin', 'super_admin'] },
-  { path: '/admin/entreprise',   label: 'Entreprise',      icon: FiHome,     roles: ['admin', 'super_admin'] },
-  { path: '/admin/parametres',   label: 'Parametres',      icon: FiSettings, roles: ['admin', 'super_admin'] },
-  { path: '/admin/audit',        label: "Journal d'Audit", icon: FiFileText, roles: ['admin', 'super_admin'] },
+  { path: '/admin/utilisateurs', label: 'Utilisateurs',        icon: FiUsers,    roles: ['admin', 'super_admin'] },
+  { path: '/admin/roles',        label: 'Rôles & Permissions', icon: FiShield,   roles: ['admin', 'super_admin'] },
+  { path: '/admin/entreprise',   label: 'Entreprise',          icon: FiHome,     roles: ['admin', 'super_admin'] },
+  { path: '/admin/parametres',   label: 'Parametres',          icon: FiSettings, roles: ['admin', 'super_admin'] },
+  { path: '/admin/audit',        label: "Journal d'Audit",     icon: FiFileText, roles: ['admin', 'super_admin'] },
 
   { section: 'ABONNEMENT', enterpriseOnly: true },
   { path: '/abonnement', label: 'Mon Abonnement', icon: FiStar,      roles: ['admin'], enterpriseOnly: true },

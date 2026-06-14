@@ -7,6 +7,7 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  updateSeuils,
 } = require('../controllers/productController');
 const { protect } = require('../middlewares/auth');
 const tenantMiddleware = require('../middlewares/tenant');
@@ -37,5 +38,6 @@ router.put(
   updateProduct
 );
 router.delete('/:id', authorize('produits:delete'), audit('produits', 'delete'), deleteProduct);
+router.patch('/:id/seuils', authorize('produits:update'), updateSeuils);
 
 module.exports = router;

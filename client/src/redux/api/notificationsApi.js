@@ -50,6 +50,16 @@ export const notificationsApi = apiSlice.injectEndpoints({
         { type: 'Notification', id: 'UNREAD_COUNT' },
       ],
     }),
+    deleteReadNotifications: builder.mutation({
+      query: () => ({
+        url: '/notifications/delete-read',
+        method: 'DELETE',
+      }),
+      invalidatesTags: [
+        { type: 'Notification', id: 'LIST' },
+        { type: 'Notification', id: 'UNREAD_COUNT' },
+      ],
+    }),
   }),
 });
 
@@ -59,4 +69,5 @@ export const {
   useMarkAsReadMutation,
   useMarkAllAsReadMutation,
   useDeleteNotificationMutation,
+  useDeleteReadNotificationsMutation,
 } = notificationsApi;

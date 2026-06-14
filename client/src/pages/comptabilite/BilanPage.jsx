@@ -72,8 +72,10 @@ const BilanPage = () => {
   };
 
   const handleDownloadPdf = () =>
-    downloadPdf(buildPdfPath('/rapports/bilan/pdf'), `bilan-${Date.now()}.pdf`);
-  const handlePrint = () => printPdf(buildPdfPath('/rapports/bilan/pdf'));
+    downloadPdf(buildPdfPath('/comptabilite/bilan/pdf'), `bilan-${Date.now()}.pdf`);
+  const handlePrint = () => printPdf(buildPdfPath('/comptabilite/bilan/pdf'));
+  const handleExportExcel = () =>
+    downloadPdf(buildPdfPath('/comptabilite/bilan/export'), `bilan-${Date.now()}.xlsx`);
 
   const isBalanced = Math.abs(actif.totalActif - passif.totalPassif) < 1;
 
@@ -107,6 +109,19 @@ const BilanPage = () => {
               <FiDownload className="me-1" />
             )}
             Exporter PDF
+          </Button>
+          <Button
+            variant="outline-success"
+            size="sm"
+            onClick={handleExportExcel}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? (
+              <Spinner animation="border" size="sm" className="me-1" />
+            ) : (
+              <FiDownload className="me-1" />
+            )}
+            Exporter Excel
           </Button>
         </div>
       </div>

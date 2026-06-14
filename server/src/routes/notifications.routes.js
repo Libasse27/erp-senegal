@@ -7,6 +7,7 @@ const {
   markAllAsRead,
   getUnreadCount,
   deleteNotification,
+  deleteReadNotifications,
 } = require('../controllers/notificationController');
 const { protect } = require('../middlewares/auth');
 const tenantMiddleware = require('../middlewares/tenant');
@@ -17,6 +18,7 @@ router.use(tenantMiddleware);
 // Routes specifiques avant les routes parametrees
 router.get('/unread-count', getUnreadCount);
 router.put('/read-all', markAllAsRead);
+router.delete('/delete-read', deleteReadNotifications);
 
 // CRUD
 router.get('/', getMyNotifications);

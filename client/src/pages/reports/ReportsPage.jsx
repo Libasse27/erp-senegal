@@ -5,6 +5,7 @@ import Col from 'react-bootstrap/Col';
 import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import Spinner from 'react-bootstrap/Spinner';
 import {
   FiTrendingUp,
   FiShoppingCart,
@@ -14,9 +15,12 @@ import {
   FiFileText,
   FiPieChart,
   FiActivity,
+  FiDownload,
+  FiAlertTriangle,
 } from 'react-icons/fi';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatDate } from '../../utils/formatters';
+import usePdfActions from '../../hooks/usePdfActions';
 
 const ReportCard = ({ icon: Icon, title, description, link, color }) => (
   <Card className="h-100 shadow-sm">
@@ -51,6 +55,7 @@ const ReportsPage = () => {
 
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const { downloadPdf, isLoading: pdfLoading } = usePdfActions();
 
   const reports = [
     {
@@ -182,6 +187,108 @@ const ReportsPage = () => {
           </Col>
         ))}
       </Row>
+
+      {/* ── Téléchargements PDF rapides ── */}
+      <Card className="shadow-sm mt-4">
+        <Card.Header className="bg-white">
+          <h6 className="mb-0 d-flex align-items-center gap-2">
+            <FiDownload size={16} />
+            Téléchargements PDF rapides
+          </h6>
+        </Card.Header>
+        <Card.Body>
+          <Row className="g-3">
+            <Col sm={6} md={4}>
+              <div className="border rounded p-3 h-100">
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                    style={{ width: 36, height: 36, background: '#b71c1c18', color: '#b71c1c' }}
+                  >
+                    <FiAlertTriangle size={16} />
+                  </div>
+                  <strong className="small">Rapport de Recouvrement</strong>
+                </div>
+                <p className="text-muted small mb-3">
+                  Créances impayées classées par âge (0–30j, 31–60j, 61–90j, +90j)
+                </p>
+                <div className="d-flex gap-2">
+                  <Button
+                    as={Link}
+                    to="/rapports/recouvrement"
+                    variant="outline-danger"
+                    size="sm"
+                    className="flex-grow-1"
+                  >
+                    Voir le rapport
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    disabled={pdfLoading}
+                    onClick={() => downloadPdf('/rapports/recouvrement/pdf', 'rapport-recouvrement.pdf')}
+                    title="Télécharger PDF"
+                  >
+                    {pdfLoading ? <Spinner size="sm" /> : <FiDownload size={14} />}
+                  </Button>
+                </div>
+              </div>
+            </Col>
+            <Col sm={6} md={4}>
+              <div className="border rounded p-3 h-100">
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                    style={{ width: 36, height: 36, background: '#1b5e2018', color: '#1b5e20' }}
+                  >
+                    <FiPackage size={16} />
+                  </div>
+                  <strong className="small">Rapport d'Inventaire Stock</strong>
+                </div>
+                <p className="text-muted small mb-3">
+                  État du stock valorisé au CUMP — toutes références avec alertes
+                </p>
+                <Button
+                  variant="outline-success"
+                  size="sm"
+                  className="w-100"
+                  disabled={pdfLoading}
+                  onClick={() => downloadPdf('/rapports/stock/pdf', 'rapport-stock.pdf')}
+                >
+                  {pdfLoading ? <Spinner size="sm" className="me-1" /> : <FiDownload className="me-1" />}
+                  Télécharger PDF
+                </Button>
+              </div>
+            </Col>
+            <Col sm={6} md={4}>
+              <div className="border rounded p-3 h-100">
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                    style={{ width: 36, height: 36, background: '#0d47a118', color: '#0d47a1' }}
+                  >
+                    <FiFileText size={16} />
+                  </div>
+                  <strong className="small">Relevé de Compte Client</strong>
+                </div>
+                <p className="text-muted small mb-3">
+                  Accédez à la fiche d'un client et cliquez sur <strong>"Relevé PDF"</strong> pour
+                  télécharger son relevé de compte (factures + paiements + solde).
+                </p>
+                <Button
+                  as={Link}
+                  to="/clients"
+                  variant="outline-primary"
+                  size="sm"
+                  className="w-100"
+                >
+                  Aller aux Clients
+                </Button>
+              </div>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
     </>
   );
 };

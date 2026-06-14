@@ -44,6 +44,18 @@ export const dashboardApi = apiSlice.injectEndpoints({
       query: (params) => ({ url: '/dashboard/recouvrement', params }),
       providesTags: [{ type: 'Dashboard', id: 'RECOUVREMENT' }, { type: 'Facture', id: 'LIST' }, { type: 'Paiement', id: 'LIST' }],
     }),
+    getDashboardCashflow: builder.query({
+      query: (params) => ({ url: '/dashboard/cashflow', params }),
+      providesTags: [{ type: 'Dashboard', id: 'CASHFLOW' }, { type: 'Paiement', id: 'LIST' }],
+    }),
+    getDashboardFunnel: builder.query({
+      query: (params) => ({ url: '/dashboard/funnel', params }),
+      providesTags: [{ type: 'Dashboard', id: 'FUNNEL' }],
+    }),
+    getDashboardPeriode: builder.query({
+      query: (params) => ({ url: '/dashboard/periode', params }),
+      providesTags: [{ type: 'Dashboard', id: 'PERIODE' }],
+    }),
   }),
 });
 
@@ -57,4 +69,7 @@ export const {
   useGetDashboardTopProductsQuery,
   useGetDashboardStockEvolutionQuery,
   useGetDashboardRecouvrementQuery,
+  useGetDashboardCashflowQuery,
+  useGetDashboardFunnelQuery,
+  useGetDashboardPeriodeQuery,
 } = dashboardApi;

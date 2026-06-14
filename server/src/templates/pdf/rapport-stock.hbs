@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rapport de Stock</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #1a1a1a; background: #fff; }
+
+    .header { background: #1b5e20; color: #fff; padding: 18px 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .header-left .company-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .header-left .company-details { font-size: 9px; opacity: 0.85; line-height: 1.6; }
+    .header-right { text-align: right; }
+    .header-right .doc-title { font-size: 15px; font-weight: 700; }
+    .header-right .doc-meta { font-size: 9px; opacity: 0.85; margin-top: 6px; line-height: 1.6; }
+
+    .meta-band { background: #e8f5e9; border-bottom: 2px solid #1b5e20; padding: 8px 24px; display: flex; gap: 24px; flex-wrap: wrap; font-size: 9px; color: #1b5e20; font-weight: 600; }
+
+    .kpi-row { display: flex; gap: 12px; padding: 14px 24px; background: #f5f7fa; border-bottom: 1px solid #e8eaf6; }
+    .kpi-card { flex: 1; background: #fff; border: 1px solid #e8eaf6; border-radius: 4px; padding: 10px 14px; text-align: center; border-top: 3px solid #1b5e20; }
+    .kpi-card .kpi-label { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #666; margin-bottom: 5px; }
+    .kpi-card .kpi-value { font-size: 14px; font-weight: 700; color: #1b5e20; }
+    .kpi-card.alert { border-top-color: #c62828; }
+    .kpi-card.alert .kpi-value { color: #c62828; }
+
+    .content { padding: 0 24px 16px; }
+    .table-section { margin-top: 14px; }
+    .table-header { background: #1b5e20; color: #fff; padding: 6px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { background: #2e7d32; color: #fff; padding: 6px 10px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+    thead th.right { text-align: right; }
+    thead th.center { text-align: center; }
+    tbody tr:nth-child(even) { background: #f5f7fa; }
+    tbody tr.alerte { background: #fff8e1; }
+    tbody td { padding: 5px 10px; font-size: 9.5px; border-bottom: 1px solid #e8eaf6; }
+    tbody td.right { text-align: right; font-weight: 600; }
+    tbody td.center { text-align: center; }
+    tbody tr.empty td { color: #aaa; font-style: italic; text-align: center; padding: 14px; }
+
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 8px; font-weight: 700; }
+    .badge-danger { background: #ffebee; color: #c62828; }
+    .badge-success { background: #e8f5e9; color: #2e7d32; }
+
+    .totals-row td { background: #1b5e20; color: #fff; font-weight: 700; font-size: 10px; padding: 7px 10px; border: none; }
+    .totals-row td.right { text-align: right; }
+
+    .doc-footer { padding: 8px 24px; font-size: 8px; color: #666; display: flex; justify-content: space-between; border-top: 1px solid #e8eaf6; margin-top: 12px; }
+
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-left">
+      <div class="company-name">{{company.name}}</div>
+      <div class="company-details">
+        {{#if company.address.street}}{{company.address.street}}, {{/if}}{{company.address.city}}<br />
+        {{#if company.phone}}Tél : {{company.phone}} &nbsp;|&nbsp; {{/if}}{{#if company.email}}{{company.email}}{{/if}}
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="doc-title">RAPPORT D'INVENTAIRE STOCK</div>
+      <div class="doc-meta">
+        Date d'état : {{formatDate generatedAt}}<br />
+        Généré le {{formatDate generatedAt}}
+      </div>
+    </div>
+  </div>
+
+  <div class="meta-band">
+    <span>Date d'inventaire : {{formatDate generatedAt}}</span>
+    <span>Valorisation : CUMP (Coût Unitaire Moyen Pondéré)</span>
+    <span>Unité : FCFA (XOF)</span>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Nb Références</div>
+      <div class="kpi-value">{{nbProduits}}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Valeur Stock Total</div>
+      <div class="kpi-value">{{formatMontant valeurTotale}} FCFA</div>
+    </div>
+    <div class="kpi-card alert">
+      <div class="kpi-label">Alertes Stock Bas</div>
+      <div class="kpi-value">{{nbAlertes}}</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="table-section">
+      <div class="table-header">Détail des Stocks par Produit</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:90px;">Référence</th>
+            <th>Produit</th>
+            <th style="width:90px;">Entrepôt</th>
+            <th class="right" style="width:70px;">Qté</th>
+            <th class="right" style="width:70px;">Qté Min</th>
+            <th class="right" style="width:90px;">CUMP (FCFA)</th>
+            <th class="right" style="width:100px;">Valeur (FCFA)</th>
+            <th class="center" style="width:65px;">Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#if lignes.length}}
+            {{#each lignes}}
+            <tr class="{{#if alerte}}alerte{{/if}}">
+              <td style="font-weight:600; color:#2e7d32; font-size:9px;">{{reference}}</td>
+              <td>{{nom}}</td>
+              <td style="font-size:9px; color:#555;">{{warehouse}}</td>
+              <td class="right">{{quantite}}</td>
+              <td class="right" style="color:#888;">{{stockMin}}</td>
+              <td class="right">{{formatMontant prixAchat}}</td>
+              <td class="right" style="font-weight:700;">{{formatMontant valeurTotale}}</td>
+              <td class="center">
+                {{#if alerte}}
+                  <span class="badge badge-danger">Bas</span>
+                {{else}}
+                  <span class="badge badge-success">OK</span>
+                {{/if}}
+              </td>
+            </tr>
+            {{/each}}
+            <tr class="totals-row">
+              <td colspan="6"><strong>VALEUR TOTALE DU STOCK</strong></td>
+              <td class="right">{{formatMontant valeurTotale}}</td>
+              <td></td>
+            </tr>
+          {{else}}
+            <tr class="empty"><td colspan="8">Aucun stock enregistré</td></tr>
+          {{/if}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    <span>Rapport d'inventaire — Généré le {{formatDate generatedAt}} — {{company.name}}</span>
+    <span>Valorisation CUMP — FCFA (XOF)</span>
+  </div>
+
+</body>
+</html>

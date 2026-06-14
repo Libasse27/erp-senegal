@@ -296,6 +296,49 @@ const generateCAPDF = async (rapport, company, options = {}) => {
   });
 };
 
+/**
+ * Generate relevé de compte client PDF
+ * @param {Object} data - { client, factures, paiements, totalFacture, totalPaye, solde, nbFactures }
+ * @param {Object} company
+ * @param {Object} options - { dateFrom, dateTo }
+ */
+const generateReleveClientPDF = async (data, company, options = {}) => {
+  return generatePDF('rapport-releve-client', {
+    ...data,
+    company: company.toObject ? company.toObject() : company,
+    dateFrom: options.dateFrom || null,
+    dateTo: options.dateTo || null,
+    generatedAt: new Date(),
+    soldeDu: data.solde > 0,
+  });
+};
+
+/**
+ * Generate rapport de stock (inventaire) PDF
+ * @param {Object} data - { lignes, valeurTotale, nbProduits, nbAlertes }
+ * @param {Object} company
+ */
+const generateRapportStockPDF = async (data, company) => {
+  return generatePDF('rapport-stock', {
+    ...data,
+    company: company.toObject ? company.toObject() : company,
+    generatedAt: new Date(),
+  });
+};
+
+/**
+ * Generate rapport de recouvrement (créances) PDF
+ * @param {Object} data - { lines, buckets, totalDu, nbCreances, total30, totalRetard, totalCurrent, total1_30, total31_60, total61_90, totalPlus90 }
+ * @param {Object} company
+ */
+const generateRecouvrementPDF = async (data, company) => {
+  return generatePDF('rapport-recouvrement', {
+    ...data,
+    company: company.toObject ? company.toObject() : company,
+    generatedAt: new Date(),
+  });
+};
+
 module.exports = {
   generatePDF,
   generateFacturePDF,
@@ -306,4 +349,7 @@ module.exports = {
   generateResultatPDF,
   generateCAPDF,
   generateBalancePDF,
+  generateReleveClientPDF,
+  generateRapportStockPDF,
+  generateRecouvrementPDF,
 };

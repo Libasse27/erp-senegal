@@ -72,7 +72,7 @@ const paymentSchema = new mongoose.Schema(
     },
     factureFournisseur: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'PurchaseInvoice',
+      ref: 'FactureFournisseur',
     },
 
     // Multi-facture payment allocation

@@ -14,6 +14,18 @@ export const rapportsApi = apiSlice.injectEndpoints({
       query: (params) => ({ url: '/rapports/ca', params }),
       providesTags: [{ type: 'Facture', id: 'RAPPORT_CA' }],
     }),
+    getRapportTopClients: builder.query({
+      query: (params) => ({ url: '/rapports/top-clients', params }),
+      providesTags: [{ type: 'Facture', id: 'RAPPORT_TOP_CLIENTS' }],
+    }),
+    getRapportTopProduits: builder.query({
+      query: (params) => ({ url: '/rapports/top-produits', params }),
+      providesTags: [{ type: 'Facture', id: 'RAPPORT_TOP_PRODUITS' }],
+    }),
+    getRapportRecouvrement: builder.query({
+      query: (params) => ({ url: '/rapports/recouvrement', params }),
+      providesTags: [{ type: 'Facture', id: 'RAPPORT_RECOUVREMENT' }],
+    }),
   }),
 });
 
@@ -21,4 +33,7 @@ export const {
   useGetRapportBilanQuery,
   useGetRapportResultatQuery,
   useGetRapportCAQuery,
+  useGetRapportTopClientsQuery,
+  useGetRapportTopProduitsQuery,
+  useGetRapportRecouvrementQuery,
 } = rapportsApi;

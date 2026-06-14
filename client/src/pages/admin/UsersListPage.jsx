@@ -11,12 +11,17 @@ import Spinner from 'react-bootstrap/Spinner';
 import Alert from 'react-bootstrap/Alert';
 import Modal from 'react-bootstrap/Modal';
 import BsPagination from 'react-bootstrap/Pagination';
-import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiUsers } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiUsers, FiLock, FiUnlock, FiKey } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatDateTime } from '../../utils/formatters';
 import { ROLES } from '../../utils/constants';
-import { useGetUsersQuery, useDeleteUserMutation } from '../../redux/api/usersApi';
+import {
+  useGetUsersQuery,
+  useDeleteUserMutation,
+  useToggleUserStatusMutation,
+  useAdminResetPasswordMutation,
+} from '../../redux/api/usersApi';
 
 const ROLE_VARIANTS = {
   admin: 'danger',
@@ -48,6 +53,11 @@ export default function UsersListPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
 
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [userToReset, setUserToReset] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
   const { data, isLoading, isError, error } = useGetUsersQuery({
     page,
     limit,
@@ -57,6 +67,8 @@ export default function UsersListPage() {
   });
 
   const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
+  const [toggleUserStatus, { isLoading: isToggling }] = useToggleUserStatusMutation();
+  const [adminResetPassword, { isLoading: isResetting }] = useAdminResetPasswordMutation();
 
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
@@ -76,6 +88,41 @@ export default function UsersListPage() {
       setUserToDelete(null);
     } catch (err) {
       toast.error(err?.data?.message || 'Erreur lors de la suppression');
+    }
+  };
+
+  const handleToggleStatus = async (user) => {
+    try {
+      const res = await toggleUserStatus(user._id).unwrap();
+      toast.success(res.message);
+    } catch (err) {
+      toast.error(err?.data?.message || 'Erreur lors du changement de statut');
+    }
+  };
+
+  const handleResetClick = (user) => {
+    setUserToReset(user);
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setShowResetModal(true);
+  };
+
+  const handleResetConfirm = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast.error('Les mots de passe ne correspondent pas');
+      return;
+    }
+    try {
+      await adminResetPassword({ id: userToReset._id, newPassword }).unwrap();
+      toast.success('Mot de passe réinitialisé avec succès');
+      setShowResetModal(false);
+      setUserToReset(null);
+    } catch (err) {
+      toast.error(err?.data?.message || 'Erreur lors de la réinitialisation');
     }
   };
 
@@ -214,6 +261,25 @@ export default function UsersListPage() {
                           <Button
                             variant="link"
                             size="sm"
+                            className={`p-1 ${user.isActive ? 'text-warning' : 'text-success'}`}
+                            onClick={() => handleToggleStatus(user)}
+                            disabled={isToggling}
+                            title={user.isActive ? 'Bloquer le compte' : 'Activer le compte'}
+                          >
+                            {user.isActive ? <FiLock /> : <FiUnlock />}
+                          </Button>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="text-secondary p-1"
+                            onClick={() => handleResetClick(user)}
+                            title="Réinitialiser le mot de passe"
+                          >
+                            <FiKey />
+                          </Button>
+                          <Button
+                            variant="link"
+                            size="sm"
                             className="text-danger p-1"
                             onClick={() => handleDeleteClick(user)}
                             title="Supprimer"
@@ -284,6 +350,52 @@ export default function UsersListPage() {
           </Button>
           <Button variant="danger" onClick={handleDeleteConfirm} disabled={isDeleting}>
             {isDeleting ? 'Suppression...' : 'Supprimer'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal show={showResetModal} onHide={() => setShowResetModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            <FiKey className="me-2" />
+            Réinitialiser le mot de passe
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="text-muted mb-3">
+            Définir un nouveau mot de passe pour{' '}
+            <strong>
+              {userToReset?.firstName} {userToReset?.lastName}
+            </strong>
+            .
+          </p>
+          <Form.Group className="mb-3">
+            <Form.Label>Nouveau mot de passe <span className="text-danger">*</span></Form.Label>
+            <Form.Control
+              type="password"
+              placeholder="Minimum 6 caractères"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+            />
+          </Form.Group>
+          <Form.Group>
+            <Form.Label>Confirmer le mot de passe <span className="text-danger">*</span></Form.Label>
+            <Form.Control
+              type="password"
+              placeholder="Confirmer le nouveau mot de passe"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              autoComplete="new-password"
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowResetModal(false)}>
+            Annuler
+          </Button>
+          <Button variant="primary" onClick={handleResetConfirm} disabled={isResetting}>
+            {isResetting ? 'Réinitialisation...' : 'Réinitialiser'}
           </Button>
         </Modal.Footer>
       </Modal>

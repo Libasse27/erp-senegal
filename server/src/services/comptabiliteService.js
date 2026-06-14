@@ -504,11 +504,13 @@ const getGrandLivre = async (compteNumero, options = {}) => {
           date: ecriture.dateEcriture,
           journal: ecriture.journal,
           numero: ecriture.numero,
+          numeroPiece: ecriture.reference || ecriture.numero || '',
           libelle: ligne.libelle,
           reference: ecriture.reference,
           debit: ligne.debit || 0,
           credit: ligne.credit || 0,
           solde: soldeProgressif,
+          soldeProgressif,
           lettrage: ligne.lettrage,
         });
       }
@@ -569,6 +571,10 @@ const getBalance = async (options = {}) => {
             0,
           ],
         },
+        // Aliases attendus par le frontend et le pdfService
+        numero: '$_id',
+        libelle: '$compteLibelle',
+        classe: { $toInt: { $substr: ['$_id', 0, 1] } },
       },
     },
     { $sort: { _id: 1 } },

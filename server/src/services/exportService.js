@@ -48,7 +48,7 @@ const buildWorkbookWithWidth = (sheetName, rows) => {
  * @returns {Buffer} xlsx
  */
 const exportBalanceExcel = async (companyId, options = {}) => {
-  const lignes = await comptabiliteService.getBalance(options);
+  const { comptes: lignes, totaux } = await comptabiliteService.getBalance(options);
 
   const header = [
     'N° Compte',
@@ -63,9 +63,9 @@ const exportBalanceExcel = async (companyId, options = {}) => {
   const rows = [
     header,
     ...lignes.map((l) => [
-      l.compteNumero,
-      l.compteLibelle,
-      l.classe,
+      l.numero || l._id,
+      l.libelle || l.compteLibelle,
+      l.classe || '',
       fmt(l.totalDebit),
       fmt(l.totalCredit),
       fmt(l.soldeDebiteur),
@@ -73,12 +73,15 @@ const exportBalanceExcel = async (companyId, options = {}) => {
     ]),
   ];
 
-  // Ligne de totalisation
-  const totalD  = lignes.reduce((s, l) => s + (l.totalDebit  || 0), 0);
-  const totalC  = lignes.reduce((s, l) => s + (l.totalCredit || 0), 0);
-  const totalSD = lignes.reduce((s, l) => s + (l.soldeDebiteur  || 0), 0);
-  const totalSC = lignes.reduce((s, l) => s + (l.soldeCrediteur || 0), 0);
-  rows.push(['', 'TOTAUX', '', fmt(totalD), fmt(totalC), fmt(totalSD), fmt(totalSC)]);
+  rows.push([
+    '',
+    'TOTAUX',
+    '',
+    fmt(totaux.totalDebit),
+    fmt(totaux.totalCredit),
+    fmt(totaux.totalSoldeDebiteur),
+    fmt(totaux.totalSoldeCrediteur),
+  ]);
 
   return buildWorkbookWithWidth('Balance', rows);
 };
@@ -149,8 +152,8 @@ const exportCompteResultatExcel = async (companyId, options = {}) => {
     ['CHARGES', 'Montant', '', 'PRODUITS', 'Montant'],
   ];
 
-  const charges = cr.charges?.lignes || [];
-  const produits = cr.produits?.lignes || [];
+  const charges = cr.charges || [];
+  const produits = cr.produits || [];
   const maxLen = Math.max(charges.length, produits.length);
 
   for (let i = 0; i < maxLen; i++) {
@@ -177,6 +180,61 @@ const exportCompteResultatExcel = async (companyId, options = {}) => {
   }
 
   return buildWorkbookWithWidth('Compte de Resultat', rows);
+};
+
+// ─── Bilan ────────────────────────────────────────────────────────────────────
+
+/**
+ * @param {string} companyId
+ * @param {Object} options - exercice, dateFrom, dateTo
+ * @returns {Buffer} xlsx
+ */
+const exportBilanExcel = async (companyId, options = {}) => {
+  const bilan = await comptabiliteService.getBilan(options);
+
+  const rows = [
+    ['BILAN SYSCOHADA'],
+    ['(en FCFA)'],
+    [],
+    ['ACTIF', 'Montant (FCFA)', '', 'PASSIF', 'Montant (FCFA)'],
+  ];
+
+  const flatActif = [
+    ...((bilan.actif?.immobilisations || []).map((i) => ({ ...i, section: 'Actif Immobilisé (Cl. 2)' }))),
+    ...((bilan.actif?.stocks || []).map((i) => ({ ...i, section: 'Stocks (Cl. 3)' }))),
+    ...((bilan.actif?.creances || []).map((i) => ({ ...i, section: 'Créances (Cl. 4)' }))),
+    ...((bilan.actif?.tresorerie || []).map((i) => ({ ...i, section: 'Trésorerie (Cl. 5)' }))),
+  ];
+  const flatPassif = [
+    ...((bilan.passif?.capitaux || []).map((i) => ({ ...i, section: 'Capitaux Propres (Cl. 1)' }))),
+    ...((bilan.passif?.dettes || []).map((i) => ({ ...i, section: 'Dettes (Cl. 4)' }))),
+    ...((bilan.passif?.tresorerie || []).map((i) => ({ ...i, section: 'Passif Trésorerie (Cl. 5)' }))),
+  ];
+  const maxLen = Math.max(flatActif.length, flatPassif.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    const a = flatActif[i];
+    const p = flatPassif[i];
+    rows.push([
+      a ? a.compteLibelle || a._id || '' : '',
+      a ? fmt(a.solde) : '',
+      '',
+      p ? p.compteLibelle || p._id || '' : '',
+      p ? fmt(p.solde) : '',
+    ]);
+  }
+
+  rows.push([]);
+  rows.push(['TOTAL ACTIF', fmt(bilan.totalActif), '', 'TOTAL PASSIF', fmt(bilan.totalPassif)]);
+
+  if (bilan.isEquilibre) {
+    rows.push(['', '', '', 'Bilan équilibré', '']);
+  } else {
+    const ecart = Math.abs((bilan.totalActif || 0) - (bilan.totalPassif || 0));
+    rows.push(['', '', '', `Écart : ${fmt(ecart)} FCFA`, '']);
+  }
+
+  return buildWorkbookWithWidth('Bilan', rows);
 };
 
 // ─── Liste des Factures ───────────────────────────────────────────────────────
@@ -420,6 +478,7 @@ module.exports = {
   exportBalanceExcel,
   exportGrandLivreExcel,
   exportCompteResultatExcel,
+  exportBilanExcel,
   exportFacturesExcel,
   exportClientsExcel,
   exportFournisseursExcel,

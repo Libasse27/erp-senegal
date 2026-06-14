@@ -6,7 +6,7 @@ const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
 const comptabiliteService = require('../services/comptabiliteService');
 const exportService = require('../services/exportService');
-const { generateBalancePDF } = require('../services/pdfService');
+const { generateBalancePDF, generateBilanPDF, generateResultatPDF } = require('../services/pdfService');
 const logger = require('../config/logger');
 
 // =====================================================
@@ -798,6 +798,74 @@ const exportFEC = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Get Bilan as PDF download
+ * @route   GET /api/comptabilite/bilan/pdf
+ * @access  Private
+ */
+const getBilanPDF = async (req, res, next) => {
+  try {
+    const options = {
+      exercice: req.query.exercice,
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+    };
+
+    const [bilan, company] = await Promise.all([
+      comptabiliteService.getBilan(options),
+      Company.findById(req.companyId).lean(),
+    ]);
+
+    if (!company) return next(new AppError('Entreprise introuvable.', 404));
+
+    const pdfBuffer = await generateBilanPDF(bilan, company, options);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="bilan-${Date.now()}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+    res.end(pdfBuffer);
+  } catch (error) {
+    logger.error(`Erreur generation PDF bilan: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * @desc    Get Compte de Resultat as PDF download
+ * @route   GET /api/comptabilite/compte-resultat/pdf
+ * @access  Private
+ */
+const getCompteResultatPDF = async (req, res, next) => {
+  try {
+    const options = {
+      exercice: req.query.exercice,
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+    };
+
+    const [resultat, company] = await Promise.all([
+      comptabiliteService.getCompteResultat(options),
+      Company.findById(req.companyId).lean(),
+    ]);
+
+    if (!company) return next(new AppError('Entreprise introuvable.', 404));
+
+    const pdfBuffer = await generateResultatPDF(resultat, company, options);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="compte-resultat-${Date.now()}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+    res.end(pdfBuffer);
+  } catch (error) {
+    logger.error(`Erreur generation PDF compte de resultat: ${error.message}`);
+    next(error);
+  }
+};
+
 // ─── Exports Excel ────────────────────────────────────────────────────────────
 
 const exportBalanceExcelHandler = async (req, res, next) => {
@@ -849,6 +917,22 @@ const exportCompteResultatExcelHandler = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const exportBilanExcelHandler = async (req, res, next) => {
+  try {
+    const buffer = await exportService.exportBilanExcel(req.companyId, {
+      exercice: req.query.exercice,
+      dateFrom: req.query.dateFrom,
+      dateTo:   req.query.dateTo,
+    });
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="bilan-${Date.now()}.xlsx"`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   // Plan comptable
   getPlanComptable,
@@ -880,4 +964,7 @@ module.exports = {
   exportBalanceExcelHandler,
   exportGrandLivreExcelHandler,
   exportCompteResultatExcelHandler,
+  exportBilanExcelHandler,
+  getBilanPDF,
+  getCompteResultatPDF,
 };

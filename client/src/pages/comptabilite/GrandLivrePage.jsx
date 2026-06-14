@@ -7,10 +7,11 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
 import Alert from 'react-bootstrap/Alert';
-import { FiPrinter, FiDownload } from 'react-icons/fi';
+import { FiDownload } from 'react-icons/fi';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatMoney, formatDate } from '../../utils/formatters';
 import { useGetPlanComptableQuery, useGetGrandLivreQuery } from '../../redux/api/comptabiliteApi';
+import usePdfActions from '../../hooks/usePdfActions';
 
 const GrandLivrePage = () => {
   usePageTitle('Grand Livre', [
@@ -20,25 +21,42 @@ const GrandLivrePage = () => {
   ]);
 
   const [filters, setFilters] = useState({
-    compteId: '',
+    compteNumero: '',
     dateDebut: '',
     dateFin: '',
   });
 
+  const { downloadPdf, isLoading: pdfLoading } = usePdfActions();
+
   const { data: planData } = useGetPlanComptableQuery();
-  const { data: grandLivreData, isLoading, error } = useGetGrandLivreQuery(filters, {
-    skip: !filters.compteId,
-  });
+  const { data: grandLivreData, isLoading, error } = useGetGrandLivreQuery(
+    {
+      compteNumero: filters.compteNumero,
+      dateFrom: filters.dateDebut,
+      dateTo: filters.dateFin,
+    },
+    { skip: !filters.compteNumero }
+  );
 
   const comptes = planData?.data || [];
   const mouvements = grandLivreData?.data?.mouvements || [];
   const selectedCompte = grandLivreData?.data?.compte;
-  const totaux = grandLivreData?.data?.totaux || { debit: 0, credit: 0, solde: 0 };
+  const totaux = grandLivreData?.data || { totalDebit: 0, totalCredit: 0, solde: 0 };
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
+
+  const buildExportPath = () => {
+    const params = new URLSearchParams({ compteNumero: filters.compteNumero });
+    if (filters.dateDebut) params.set('dateFrom', filters.dateDebut);
+    if (filters.dateFin) params.set('dateTo', filters.dateFin);
+    return `/comptabilite/grand-livre/export?${params.toString()}`;
+  };
+
+  const handleExportExcel = () =>
+    downloadPdf(buildExportPath(), `grand-livre-${filters.compteNumero}-${Date.now()}.xlsx`);
 
   const getSoldeColor = (solde) => {
     if (solde > 0) return 'text-success';
@@ -46,24 +64,27 @@ const GrandLivrePage = () => {
     return 'text-muted';
   };
 
-  const handleExport = () => {
-    alert('Fonction d\'export en cours de developpement');
-  };
+  const selectedCompteLabel = comptes.find((c) => c.numero === filters.compteNumero);
 
   return (
     <>
       <div className="page-header">
         <h1>Grand Livre</h1>
-        <div className="d-flex gap-2">
-          <Button variant="outline-secondary" size="sm" onClick={handleExport}>
-            <FiPrinter className="me-1" />
-            Imprimer
+        {filters.compteNumero && (
+          <Button
+            variant="outline-success"
+            size="sm"
+            onClick={handleExportExcel}
+            disabled={pdfLoading || mouvements.length === 0}
+          >
+            {pdfLoading ? (
+              <Spinner animation="border" size="sm" className="me-1" />
+            ) : (
+              <FiDownload className="me-1" />
+            )}
+            Exporter Excel
           </Button>
-          <Button variant="outline-primary" size="sm" onClick={handleExport}>
-            <FiDownload className="me-1" />
-            Exporter PDF
-          </Button>
-        </div>
+        )}
       </div>
 
       <Card className="shadow-sm mb-3">
@@ -75,14 +96,13 @@ const GrandLivrePage = () => {
                   Compte <span className="text-danger">*</span>
                 </Form.Label>
                 <Form.Select
-                  name="compteId"
-                  value={filters.compteId}
+                  name="compteNumero"
+                  value={filters.compteNumero}
                   onChange={handleFilterChange}
-                  required
                 >
                   <option value="">Selectionnez un compte...</option>
                   {comptes.map((compte) => (
-                    <option key={compte._id} value={compte._id}>
+                    <option key={compte._id} value={compte.numero}>
                       {compte.numero} - {compte.libelle}
                     </option>
                   ))}
@@ -115,7 +135,7 @@ const GrandLivrePage = () => {
         </Card.Body>
       </Card>
 
-      {!filters.compteId ? (
+      {!filters.compteNumero ? (
         <Alert variant="info">
           Veuillez selectionner un compte pour afficher le grand livre.
         </Alert>
@@ -123,7 +143,11 @@ const GrandLivrePage = () => {
         <Card className="shadow-sm">
           <Card.Header className="bg-white">
             <h6 className="mb-0">
-              {selectedCompte && `${selectedCompte.numero} - ${selectedCompte.libelle}`}
+              {selectedCompteLabel
+                ? `${selectedCompteLabel.numero} - ${selectedCompteLabel.libelle}`
+                : selectedCompte
+                  ? `${selectedCompte.numero} - ${selectedCompte.libelle}`
+                  : filters.compteNumero}
             </h6>
           </Card.Header>
           <Card.Body>
@@ -134,61 +158,57 @@ const GrandLivrePage = () => {
               </div>
             ) : error ? (
               <Alert variant="danger">
-                Erreur lors du chargement: {error.data?.message || error.message}
+                Erreur lors du chargement : {error.data?.message || error.message}
               </Alert>
             ) : mouvements.length === 0 ? (
               <Alert variant="info">
                 Aucun mouvement trouve pour ce compte et cette periode.
               </Alert>
             ) : (
-              <>
-                <div className="table-responsive">
-                  <Table hover className="mb-0">
-                    <thead className="table-light">
-                      <tr>
-                        <th>Date</th>
-                        <th>Piece</th>
-                        <th>Journal</th>
-                        <th>Libelle</th>
-                        <th className="text-end">Debit</th>
-                        <th className="text-end">Credit</th>
-                        <th className="text-end">Solde Progressif</th>
+              <div className="table-responsive">
+                <Table hover className="mb-0">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Date</th>
+                      <th>Piece</th>
+                      <th>Journal</th>
+                      <th>Libelle</th>
+                      <th className="text-end">Debit</th>
+                      <th className="text-end">Credit</th>
+                      <th className="text-end">Solde Progressif</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mouvements.map((mouvement, index) => (
+                      <tr key={index}>
+                        <td>{formatDate(mouvement.date)}</td>
+                        <td>{mouvement.numeroPiece || mouvement.reference || '-'}</td>
+                        <td>{mouvement.journal || '-'}</td>
+                        <td>{mouvement.libelle}</td>
+                        <td className="text-end">
+                          {mouvement.debit > 0 ? formatMoney(mouvement.debit) : '-'}
+                        </td>
+                        <td className="text-end">
+                          {mouvement.credit > 0 ? formatMoney(mouvement.credit) : '-'}
+                        </td>
+                        <td className={`text-end fw-bold ${getSoldeColor(mouvement.soldeProgressif ?? mouvement.solde)}`}>
+                          {formatMoney(mouvement.soldeProgressif ?? mouvement.solde)}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {mouvements.map((mouvement, index) => (
-                        <tr key={index}>
-                          <td>{formatDate(mouvement.date)}</td>
-                          <td>{mouvement.numeroPiece || '-'}</td>
-                          <td>{mouvement.journal || '-'}</td>
-                          <td>{mouvement.libelle}</td>
-                          <td className="text-end">
-                            {mouvement.debit > 0 ? formatMoney(mouvement.debit) : '-'}
-                          </td>
-                          <td className="text-end">
-                            {mouvement.credit > 0 ? formatMoney(mouvement.credit) : '-'}
-                          </td>
-                          <td className={`text-end fw-bold ${getSoldeColor(mouvement.soldeProgressif)}`}>
-                            {formatMoney(mouvement.soldeProgressif)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="table-light">
-                      <tr>
-                        <th colSpan="4" className="text-end">
-                          Totaux:
-                        </th>
-                        <th className="text-end">{formatMoney(totaux.debit)}</th>
-                        <th className="text-end">{formatMoney(totaux.credit)}</th>
-                        <th className={`text-end ${getSoldeColor(totaux.solde)}`}>
-                          {formatMoney(totaux.solde)}
-                        </th>
-                      </tr>
-                    </tfoot>
-                  </Table>
-                </div>
-              </>
+                    ))}
+                  </tbody>
+                  <tfoot className="table-light">
+                    <tr>
+                      <th colSpan="4" className="text-end">Totaux :</th>
+                      <th className="text-end">{formatMoney(totaux.totalDebit)}</th>
+                      <th className="text-end">{formatMoney(totaux.totalCredit)}</th>
+                      <th className={`text-end ${getSoldeColor(totaux.solde)}`}>
+                        {formatMoney(totaux.solde)}
+                      </th>
+                    </tr>
+                  </tfoot>
+                </Table>
+              </div>
             )}
           </Card.Body>
         </Card>

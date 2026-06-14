@@ -25,6 +25,16 @@ const facturesRoutes = require('./factures.routes');
 
 // Phase 3b routes — Cycle d'Achat
 const commandesAchatRoutes = require('./commandes-achat.routes');
+const facturesFournisseurRoutes = require('./factures-fournisseur.routes');
+
+// Phase 3c — Inventaire physique
+const inventairesRoutes = require('./inventaires.routes');
+
+// Phase 3d — Transferts inter-dépôts
+const transfertsRoutes = require('./transferts.routes');
+
+// Phase 3e — Relances clients
+const relancesRoutes = require('./relances.routes');
 
 // Phase 4 routes — Paiements & Comptabilite
 const paymentsRoutes = require('./payments.routes');
@@ -40,6 +50,9 @@ const notificationsRoutes = require('./notifications.routes');
 
 // Import / Export
 const importsRoutes = require('./imports.routes');
+
+// Facturation récurrente
+const facturesRecurrentesRoutes = require('./factures-recurrentes.routes');
 
 // SaaS — Forfaits publics
 const forfaitsRoutes = require('./forfaits.routes');
@@ -76,6 +89,16 @@ router.use('/factures', facturesRoutes);
 
 // === Phase 3b — Cycle d'Achat ===
 router.use('/commandes-achat', commandesAchatRoutes);
+router.use('/factures-fournisseur', facturesFournisseurRoutes);
+
+// === Phase 3c — Inventaire physique ===
+router.use('/inventaires', inventairesRoutes);
+
+// === Phase 3d — Transferts inter-dépôts ===
+router.use('/transferts', transfertsRoutes);
+
+// === Phase 3e — Relances clients ===
+router.use('/relances', relancesRoutes);
 
 // === Phase 4 — Paiements & Comptabilite ===
 router.use('/payments', paymentsRoutes);
@@ -91,6 +114,9 @@ router.use('/notifications', notificationsRoutes);
 
 // === Import / Export ===
 router.use('/imports', importsRoutes);
+
+// === Facturation récurrente ===
+router.use('/factures-recurrentes', facturesRecurrentesRoutes);
 
 // === SaaS — Forfaits (public) ===
 router.use('/forfaits', forfaitsRoutes);

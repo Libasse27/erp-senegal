@@ -211,10 +211,29 @@ const deleteProduct = async (req, res, next) => {
   }
 };
 
+const updateSeuils = async (req, res, next) => {
+  try {
+    const { stockMinimum, stockAlerte, stockMaximum } = req.body;
+    const product = await Product.findOne({ _id: req.params.id, companyId: tc(req) });
+    if (!product) return next(new AppError('Produit introuvable', 404));
+
+    if (stockMinimum !== undefined) product.stockMinimum = Math.max(0, Number(stockMinimum));
+    if (stockAlerte !== undefined)  product.stockAlerte  = Math.max(0, Number(stockAlerte));
+    if (stockMaximum !== undefined) product.stockMaximum = Math.max(0, Number(stockMaximum));
+    product.modifiedBy = req.user._id;
+
+    await product.save();
+    res.json({ success: true, data: product, message: 'Seuils mis à jour' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getProducts,
   getProduct,
   createProduct,
   updateProduct,
   deleteProduct,
+  updateSeuils,
 };

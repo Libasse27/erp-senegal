@@ -36,6 +36,7 @@ import {
   useGetClientStatsQuery,
   useGetClientFacturesQuery,
 } from '../../redux/api/clientsApi';
+import usePdfActions from '../../hooks/usePdfActions';
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
 const getDisplayName = (client) =>
@@ -101,6 +102,7 @@ const ClientDetailPage = () => {
   const { data: statsData }    = useGetClientStatsQuery(id);
   const { data: facturesData } = useGetClientFacturesQuery({ id, limit: 10 });
   const [deleteClient, { isLoading: isDeleting }] = useDeleteClientMutation();
+  const { downloadPdf, isLoading: pdfLoading } = usePdfActions();
 
   const client   = clientData?.data;
   const stats    = statsData?.data;
@@ -257,6 +259,22 @@ const ClientDetailPage = () => {
 
             {/* Actions */}
             <Col xs={12} md="auto" className="d-flex gap-2 flex-wrap">
+              <Button
+                variant="outline-light"
+                size="sm"
+                disabled={pdfLoading}
+                onClick={() =>
+                  downloadPdf(
+                    `/rapports/releve-client/${id}/pdf`,
+                    `releve-client-${id}.pdf`
+                  )
+                }
+                className="d-flex align-items-center gap-2"
+                title="Télécharger le relevé de compte"
+              >
+                <FiFileText size={15} />
+                {pdfLoading ? 'Génération...' : 'Relevé PDF'}
+              </Button>
               {hasPermission(PERM.CLIENTS_UPDATE) && (
                 <Button
                   variant="warning"

@@ -257,6 +257,66 @@ const changePassword = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Activer / bloquer un utilisateur (toggle)
+ * @route   PATCH /api/users/:id/toggle-status
+ * @access  Private/Admin
+ */
+const toggleUserStatus = async (req, res, next) => {
+  try {
+    const user = await User.findOne({ _id: req.params.id, companyId: tc(req) });
+    if (!user) {
+      return next(new AppError('Utilisateur non trouvé.', 404));
+    }
+    if (user._id.toString() === req.user._id.toString()) {
+      return next(new AppError('Vous ne pouvez pas bloquer votre propre compte.', 400));
+    }
+
+    user.isActive = !user.isActive;
+    user.modifiedBy = req.user._id;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: user.isActive ? 'Compte activé avec succès' : 'Compte bloqué avec succès',
+      data: { isActive: user.isActive },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Réinitialiser le mot de passe d'un utilisateur (admin)
+ * @route   POST /api/users/:id/reset-password
+ * @access  Private/Admin
+ */
+const adminResetPassword = async (req, res, next) => {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return next(new AppError('Le mot de passe doit contenir au moins 6 caractères.', 400));
+    }
+
+    const user = await User.findOne({ _id: req.params.id, companyId: tc(req) }).select('+password');
+    if (!user) {
+      return next(new AppError('Utilisateur non trouvé.', 404));
+    }
+
+    user.password = newPassword;
+    user.modifiedBy = req.user._id;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Mot de passe réinitialisé avec succès',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getUsers,
   getUser,
@@ -266,4 +326,6 @@ module.exports = {
   getMe,
   updateMe,
   changePassword,
+  toggleUserStatus,
+  adminResetPassword,
 };

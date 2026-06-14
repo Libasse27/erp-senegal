@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
@@ -8,17 +8,95 @@ import Col from 'react-bootstrap/Col';
 import Badge from 'react-bootstrap/Badge';
 import Spinner from 'react-bootstrap/Spinner';
 import { FiInfo, FiCheckCircle, FiAlertTriangle, FiXCircle, FiTrash2, FiCheck, FiBell } from 'react-icons/fi';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isToday, isThisWeek, startOfToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import usePageTitle from '../../hooks/usePageTitle';
 import useNotificationsHook from '../../hooks/useNotifications';
-import { useDeleteNotificationMutation } from '../../redux/api/notificationsApi';
+import {
+  useDeleteNotificationMutation,
+  useDeleteReadNotificationsMutation,
+} from '../../redux/api/notificationsApi';
 
 const ICON_MAP = {
-  info: { Icon: FiInfo, colorClass: 'text-info' },
-  success: { Icon: FiCheckCircle, colorClass: 'text-success' },
+  info:    { Icon: FiInfo,          colorClass: 'text-info'    },
+  success: { Icon: FiCheckCircle,   colorClass: 'text-success' },
   warning: { Icon: FiAlertTriangle, colorClass: 'text-warning' },
-  error: { Icon: FiXCircle, colorClass: 'text-danger' },
+  error:   { Icon: FiXCircle,       colorClass: 'text-danger'  },
+};
+
+const groupByDate = (items) => {
+  const today = [];
+  const week = [];
+  const older = [];
+  const todayStart = startOfToday();
+
+  for (const n of items) {
+    const d = new Date(n.createdAt);
+    if (isToday(d)) today.push(n);
+    else if (isThisWeek(d, { weekStartsOn: 1 })) week.push(n);
+    else older.push(n);
+  }
+
+  return [
+    { label: "Aujourd'hui",    items: today },
+    { label: 'Cette semaine',  items: week  },
+    { label: 'Plus ancien',    items: older },
+  ].filter((g) => g.items.length > 0);
+};
+
+const NotificationCard = ({ notification, onRead, onDelete }) => {
+  const { Icon, colorClass } = ICON_MAP[notification.type] || ICON_MAP.info;
+  const isUnread = !notification.isRead;
+
+  return (
+    <Card
+      className={`border-0 shadow-sm ${isUnread ? 'bg-light' : ''}`}
+      style={notification.link ? { cursor: 'pointer' } : {}}
+      onClick={() => notification.link && onRead(notification)}
+    >
+      <Card.Body className="py-3">
+        <div className="d-flex align-items-start gap-3">
+          <div className={`flex-shrink-0 mt-1 ${colorClass}`}>
+            <Icon size={20} />
+          </div>
+          <div className="flex-grow-1 min-w-0">
+            <div className="d-flex justify-content-between align-items-start">
+              <p className={`mb-1 ${isUnread ? 'fw-semibold' : ''}`}>
+                {notification.title}
+              </p>
+              <small className="text-muted ms-2 flex-shrink-0">
+                {formatDistanceToNow(new Date(notification.createdAt), {
+                  addSuffix: true,
+                  locale: fr,
+                })}
+              </small>
+            </div>
+            <p className="mb-0 text-muted small">{notification.message}</p>
+          </div>
+          <div className="flex-shrink-0 d-flex gap-1">
+            {isUnread && (
+              <Button
+                variant="outline-success"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); onRead(notification, true); }}
+                title="Marquer comme lu"
+              >
+                <FiCheck size={14} />
+              </Button>
+            )}
+            <Button
+              variant="outline-danger"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); onDelete(notification._id); }}
+              title="Supprimer"
+            >
+              <FiTrash2 size={14} />
+            </Button>
+          </div>
+        </div>
+      </Card.Body>
+    </Card>
+  );
 };
 
 const NotificationsListPage = () => {
@@ -45,24 +123,21 @@ const NotificationsListPage = () => {
     useNotificationsHook(queryParams);
 
   const [deleteNotification] = useDeleteNotificationMutation();
+  const [deleteReadNotifications, { isLoading: isDeletingRead }] =
+    useDeleteReadNotificationsMutation();
 
-  const handleNotificationClick = async (notification) => {
-    if (!notification.isRead) {
-      await markAsRead(notification._id);
-    }
-    if (notification.link) {
-      navigate(notification.link);
-    }
-  };
+  const todayCount = useMemo(
+    () => notifications.filter((n) => isToday(new Date(n.createdAt))).length,
+    [notifications]
+  );
 
-  const handleDelete = async (e, id) => {
-    e.stopPropagation();
-    await deleteNotification(id);
-  };
+  const hasRead = notifications.some((n) => n.isRead);
 
-  const handleMarkRead = async (e, id) => {
-    e.stopPropagation();
-    await markAsRead(id);
+  const groups = useMemo(() => groupByDate(notifications), [notifications]);
+
+  const handleNotificationClick = async (notification, markOnly = false) => {
+    if (!notification.isRead) await markAsRead(notification._id);
+    if (!markOnly && notification.link) navigate(notification.link);
   };
 
   const handleFilterChange = (setter) => (e) => {
@@ -75,23 +150,58 @@ const NotificationsListPage = () => {
   return (
     <div>
       {/* En-tête */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-3">
         <div className="d-flex align-items-center gap-2">
           <FiBell size={24} className="text-primary" />
           <h4 className="mb-0 fw-bold">Notifications</h4>
           {unreadCount > 0 && (
-            <Badge bg="danger" pill>
-              {unreadCount}
-            </Badge>
+            <Badge bg="danger" pill>{unreadCount}</Badge>
           )}
         </div>
-        {unreadCount > 0 && (
-          <Button variant="outline-primary" size="sm" onClick={markAllAsRead}>
-            <FiCheck className="me-1" />
-            Tout marquer comme lu
-          </Button>
-        )}
+        <div className="d-flex gap-2">
+          {hasRead && (
+            <Button
+              variant="outline-danger"
+              size="sm"
+              disabled={isDeletingRead}
+              onClick={() => deleteReadNotifications()}
+            >
+              <FiTrash2 className="me-1" />
+              Supprimer les lues
+            </Button>
+          )}
+          {unreadCount > 0 && (
+            <Button variant="outline-primary" size="sm" onClick={markAllAsRead}>
+              <FiCheck className="me-1" />
+              Tout marquer comme lu
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Barre de stats */}
+      {!isLoading && (meta?.total > 0 || unreadCount > 0) && (
+        <div className="d-flex gap-3 mb-3 p-3 bg-white rounded shadow-sm border-0" style={{ fontSize: '0.875rem' }}>
+          <span>
+            <span className="fw-semibold text-danger">{unreadCount}</span>
+            <span className="text-muted ms-1">non lue{unreadCount !== 1 ? 's' : ''}</span>
+          </span>
+          <span className="text-muted">·</span>
+          <span>
+            <span className="fw-semibold text-primary">{todayCount}</span>
+            <span className="text-muted ms-1">aujourd'hui</span>
+          </span>
+          {meta?.total != null && (
+            <>
+              <span className="text-muted">·</span>
+              <span>
+                <span className="fw-semibold">{meta.total}</span>
+                <span className="text-muted ms-1">au total</span>
+              </span>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Filtres */}
       <Card className="mb-3 border-0 shadow-sm">
@@ -136,62 +246,24 @@ const NotificationsListPage = () => {
           <p className="mb-0">Aucune notification</p>
         </div>
       ) : (
-        <div className="d-flex flex-column gap-2">
-          {notifications.map((notification) => {
-            const { Icon, colorClass } = ICON_MAP[notification.type] || ICON_MAP.info;
-            const isUnread = !notification.isRead;
-
-            return (
-              <Card
-                key={notification._id}
-                className={`border-0 shadow-sm ${isUnread ? 'bg-light' : ''} ${notification.link ? 'cursor-pointer' : ''}`}
-                onClick={() => notification.link && handleNotificationClick(notification)}
-                style={notification.link ? { cursor: 'pointer' } : {}}
-              >
-                <Card.Body className="py-3">
-                  <div className="d-flex align-items-start gap-3">
-                    <div className={`flex-shrink-0 mt-1 ${colorClass}`}>
-                      <Icon size={20} />
-                    </div>
-                    <div className="flex-grow-1 min-w-0">
-                      <div className="d-flex justify-content-between align-items-start">
-                        <p className={`mb-1 ${isUnread ? 'fw-semibold' : ''}`}>
-                          {notification.title}
-                        </p>
-                        <small className="text-muted ms-2 flex-shrink-0">
-                          {formatDistanceToNow(new Date(notification.createdAt), {
-                            addSuffix: true,
-                            locale: fr,
-                          })}
-                        </small>
-                      </div>
-                      <p className="mb-0 text-muted small">{notification.message}</p>
-                    </div>
-                    <div className="flex-shrink-0 d-flex gap-1">
-                      {isUnread && (
-                        <Button
-                          variant="outline-success"
-                          size="sm"
-                          onClick={(e) => handleMarkRead(e, notification._id)}
-                          title="Marquer comme lu"
-                        >
-                          <FiCheck size={14} />
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        onClick={(e) => handleDelete(e, notification._id)}
-                        title="Supprimer"
-                      >
-                        <FiTrash2 size={14} />
-                      </Button>
-                    </div>
-                  </div>
-                </Card.Body>
-              </Card>
-            );
-          })}
+        <div className="d-flex flex-column gap-4">
+          {groups.map((group) => (
+            <div key={group.label}>
+              <p className="text-muted small fw-semibold text-uppercase mb-2" style={{ letterSpacing: '0.05em' }}>
+                {group.label}
+              </p>
+              <div className="d-flex flex-column gap-2">
+                {group.items.map((notification) => (
+                  <NotificationCard
+                    key={notification._id}
+                    notification={notification}
+                    onRead={handleNotificationClick}
+                    onDelete={(id) => deleteNotification(id)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

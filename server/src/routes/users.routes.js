@@ -10,6 +10,8 @@ const {
   getMe,
   updateMe,
   changePassword,
+  toggleUserStatus,
+  adminResetPassword,
 } = require('../controllers/userController');
 const { protect } = require('../middlewares/auth');
 const tenantMiddleware = require('../middlewares/tenant');
@@ -50,5 +52,7 @@ router.put(
   updateUser
 );
 router.delete('/:id', authorize('users:delete'), audit('users', 'delete'), deleteUser);
+router.patch('/:id/toggle-status', authorize('users:update'), audit('users', 'update'), toggleUserStatus);
+router.post('/:id/reset-password', authorize('users:update'), audit('users', 'update'), adminResetPassword);
 
 module.exports = router;

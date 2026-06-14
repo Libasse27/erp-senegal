@@ -45,11 +45,22 @@ import {
   useGetDashboardTopProductsQuery,
   useGetDashboardStockEvolutionQuery,
   useGetDashboardRecouvrementQuery,
+  useGetDashboardCashflowQuery,
+  useGetDashboardFunnelQuery,
+  useGetDashboardPeriodeQuery,
 } from '../../redux/api/dashboardApi';
 import { useGetUsageSaasQuery } from '../../redux/api/saasApi';
 import useNotificationsHook from '../../hooks/useNotifications';
 import StatCard from '../../components/ui/StatCard';
-import { SalesEvolutionChart, TopProductsChart, HorizontalBarChart, StockEvolutionChart } from '../../components/charts';
+import {
+  SalesEvolutionChart,
+  TopProductsChart,
+  HorizontalBarChart,
+  StockEvolutionChart,
+  CashFlowChart,
+  FunnelChart,
+  RecouvrementGauge,
+} from '../../components/charts';
 import { useAuth } from '../../contexts/AuthContext';
 import { PERM } from '../../config/permissions';
 
@@ -95,6 +106,7 @@ const DashboardPage = () => {
   usePageTitle('Tableau de bord', [{ label: 'Accueil', path: '/' }]);
 
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [selectedPeriod, setSelectedPeriod] = useState(30);
 
   const { user, hasPermission, hasRole } = useAuth();
   const { data: statsData, isLoading } = useGetDashboardStatsQuery();
@@ -129,6 +141,18 @@ const DashboardPage = () => {
     { year: selectedYear },
     { skip: !canViewFactures }
   );
+  const { data: cashflowData, isLoading: isLoadingCashflow } = useGetDashboardCashflowQuery(
+    { year: selectedYear },
+    { skip: !canViewFactures }
+  );
+  const { data: funnelData, isLoading: isLoadingFunnel } = useGetDashboardFunnelQuery(
+    { days: selectedPeriod },
+    { skip: !canViewFactures }
+  );
+  const { data: periodeData } = useGetDashboardPeriodeQuery(
+    { days: selectedPeriod },
+    { skip: !canViewFactures }
+  );
 
   const topClients     = topClientsData?.data     || [];
   const stockAlerts    = stockAlertsData?.data    || [];
@@ -136,6 +160,9 @@ const DashboardPage = () => {
   const topProducts    = topProductsData?.data    || [];
   const stockEvolution = stockEvolutionData?.data || [];
   const recouvrement   = recouvrementData?.data   || {};
+  const cashflow       = cashflowData?.data       || { lignes: [], totalEntrees: 0, totalSorties: 0, soldeNet: 0 };
+  const funnel         = funnelData?.data         || { steps: [], tauxConversionDevis: 0, tauxConversionFactures: 0 };
+  const periode        = periodeData?.data        || {};
 
   const isAdmin = hasRole('admin');
   const { data: usageData } = useGetUsageSaasQuery(undefined, { skip: !isAdmin });
@@ -345,6 +372,23 @@ const DashboardPage = () => {
           )}
         </div>
         <div className="d-flex gap-2 flex-wrap align-items-center">
+          {/* Filtre période rapide */}
+          <div className="btn-group btn-group-sm" role="group" aria-label="Période">
+            {[
+              { label: '7 j', days: 7 },
+              { label: '30 j', days: 30 },
+              { label: '90 j', days: 90 },
+            ].map(({ label, days }) => (
+              <button
+                key={days}
+                type="button"
+                className={`btn ${selectedPeriod === days ? 'btn-primary' : 'btn-outline-secondary'}`}
+                onClick={() => setSelectedPeriod(days)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <Form.Select
             size="sm"
             value={selectedYear}
@@ -427,6 +471,67 @@ const DashboardPage = () => {
         <Alert variant="info" className="mb-4">
           Bienvenue dans votre espace de travail.
         </Alert>
+      )}
+
+      {/* ── KPIs Période rapide ─────────────────────────────────────── */}
+      {canViewFactures && periode.ca !== undefined && (
+        <Row className="g-3 mb-4">
+          {[
+            {
+              label: `CA (${selectedPeriod}j)`,
+              value: formatMoney(periode.ca || 0),
+              prev: periode.trend !== null && periode.trend !== undefined
+                ? { value: `${periode.trend > 0 ? '+' : ''}${periode.trend}% vs période préc.`, isUp: periode.trend >= 0 }
+                : null,
+              color: '#059669',
+              icon: FiDollarSign,
+            },
+            {
+              label: `Paiements (${selectedPeriod}j)`,
+              value: formatMoney(periode.paiements || 0),
+              color: '#1a56db',
+              icon: FiCreditCard,
+            },
+            {
+              label: `Factures (${selectedPeriod}j)`,
+              value: periode.nbFactures ?? '—',
+              prev: periode.factTrend !== null && periode.factTrend !== undefined
+                ? { value: `${periode.factTrend > 0 ? '+' : ''}${periode.factTrend}% vs période préc.`, isUp: periode.factTrend >= 0 }
+                : null,
+              color: '#d97706',
+              icon: FiFileText,
+            },
+            {
+              label: `Nvx clients (${selectedPeriod}j)`,
+              value: periode.nbNouveauxClients ?? 0,
+              color: '#7c3aed',
+              icon: FiUsers,
+            },
+          ].map((kpi) => (
+            <Col key={kpi.label} xs={6} lg={3}>
+              <Card className="h-100 shadow-sm border-0">
+                <Card.Body className="d-flex align-items-center gap-3 py-3">
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                    style={{ width: 42, height: 42, background: `${kpi.color}18`, color: kpi.color }}
+                  >
+                    <kpi.icon size={18} />
+                  </div>
+                  <div>
+                    <div className="text-muted" style={{ fontSize: '0.78rem' }}>{kpi.label}</div>
+                    <div className="fw-bold" style={{ fontSize: '1.25rem', color: kpi.color }}>{kpi.value}</div>
+                    {kpi.prev && (
+                      <div className={`d-flex align-items-center small ${kpi.prev.isUp ? 'text-success' : 'text-danger'}`}>
+                        {kpi.prev.isUp ? <FiTrendingUp size={12} className="me-1" /> : <FiTrendingDown size={12} className="me-1" />}
+                        {kpi.prev.value}
+                      </div>
+                    )}
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
       )}
 
       {/* ── Graphiques ──────────────────────────────────────────────── */}
@@ -570,22 +675,8 @@ const DashboardPage = () => {
               <Card.Body>
                 {recouvrement.totalCA > 0 ? (
                   <>
-                    <div className="text-center mb-3">
-                      <div
-                        className="fw-bold"
-                        style={{ fontSize: '2.5rem', color: recouvrement.tauxRecouvrement >= 80 ? '#059669' : recouvrement.tauxRecouvrement >= 50 ? '#d97706' : '#dc2626' }}
-                      >
-                        {recouvrement.tauxRecouvrement}%
-                      </div>
-                      <div className="text-muted small">de recouvrement</div>
-                    </div>
-                    <ProgressBar
-                      now={recouvrement.tauxRecouvrement}
-                      variant={recouvrement.tauxRecouvrement >= 80 ? 'success' : recouvrement.tauxRecouvrement >= 50 ? 'warning' : 'danger'}
-                      className="mb-3"
-                      style={{ height: 10 }}
-                    />
-                    <div className="d-flex flex-column gap-2" style={{ fontSize: '0.82rem' }}>
+                    <RecouvrementGauge value={recouvrement.tauxRecouvrement || 0} height={160} />
+                    <div className="d-flex flex-column gap-2 mt-2" style={{ fontSize: '0.82rem' }}>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">CA total facturé</span>
                         <span className="fw-semibold">{formatMoney(recouvrement.totalCA)}</span>
@@ -602,6 +693,71 @@ const DashboardPage = () => {
                   </>
                 ) : (
                   <p className="text-muted text-center py-4 mb-0">Aucune facture cette année</p>
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* ── Flux de trésorerie ──────────────────────────────────────── */}
+      {canViewFactures && (
+        <Row className="g-3 mb-4">
+          <Col lg={8}>
+            <Card className="shadow-sm">
+              <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                <h6 className="mb-0">
+                  <FiCreditCard size={16} className="me-2 text-info" />
+                  Flux de trésorerie — encaissements / décaissements {selectedYear}
+                </h6>
+                {isLoadingCashflow && <Spinner animation="border" size="sm" />}
+              </Card.Header>
+              <Card.Body>
+                {cashflow.lignes.every((l) => l.entrees === 0 && l.sorties === 0) && !isLoadingCashflow ? (
+                  <p className="text-muted text-center py-4 mb-0">Aucun mouvement de trésorerie cette année</p>
+                ) : (
+                  <CashFlowChart data={cashflow.lignes} labelKey="mois" height={260} />
+                )}
+              </Card.Body>
+              {(cashflow.totalEntrees > 0 || cashflow.totalSorties > 0) && (
+                <Card.Footer className="bg-white d-flex justify-content-around small text-muted py-2">
+                  <span className="text-success fw-semibold">↑ Encaissés : {formatMoney(cashflow.totalEntrees)}</span>
+                  <span className="text-danger fw-semibold">↓ Décaissés : {formatMoney(cashflow.totalSorties)}</span>
+                  <span className={cashflow.soldeNet >= 0 ? 'text-success' : 'text-danger'} style={{ fontWeight: 700 }}>
+                    Solde net : {formatMoney(cashflow.soldeNet)}
+                  </span>
+                </Card.Footer>
+              )}
+            </Card>
+          </Col>
+
+          {/* ── Entonnoir de conversion ───────────────────────────── */}
+          <Col lg={4}>
+            <Card className="shadow-sm h-100">
+              <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                <h6 className="mb-0">
+                  <FiTarget size={16} className="me-2 text-primary" />
+                  Pipeline ({selectedPeriod}j)
+                </h6>
+                {isLoadingFunnel && <Spinner animation="border" size="sm" />}
+              </Card.Header>
+              <Card.Body>
+                {funnel.steps.length === 0 || funnel.steps.every((s) => s.value === 0) ? (
+                  <p className="text-muted text-center py-4 mb-0">Aucune donnée sur cette période</p>
+                ) : (
+                  <>
+                    <FunnelChart data={funnel.steps} height={220} />
+                    <div className="d-flex justify-content-around mt-2 border-top pt-2" style={{ fontSize: '0.78rem' }}>
+                      <div className="text-center">
+                        <div className="text-muted">Devis → Cmd</div>
+                        <div className="fw-bold text-primary">{funnel.tauxConversionDevis}%</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-muted">Fact. → Pmt</div>
+                        <div className="fw-bold text-success">{funnel.tauxConversionFactures}%</div>
+                      </div>
+                    </div>
+                  </>
                 )}
               </Card.Body>
             </Card>
