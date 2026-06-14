@@ -14,6 +14,24 @@ const { errorHandler } = require('./src/middlewares/errorHandler');
 
 const app = express();
 
+// --- Swagger UI (désactivé en production sauf si SWAGGER_ENABLED=true) ---
+if (process.env.NODE_ENV !== 'production' || process.env.SWAGGER_ENABLED === 'true') {
+  try {
+    const swaggerUi = require('swagger-ui-express');
+    const swaggerSpec = require('./src/config/swagger');
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+      customSiteTitle: 'ERP Sénégal — API Docs',
+      swaggerOptions: { persistAuthorization: true },
+    }));
+    app.get('/api-docs.json', (_req, res) => {
+      res.setHeader('Content-Type', 'application/json');
+      res.send(swaggerSpec);
+    });
+  } catch (_) {
+    // swagger-ui-express non installé — ignoré
+  }
+}
+
 // --- Trust proxy (needed for rate-limiter behind reverse proxy / webpack dev server) ---
 app.set('trust proxy', 1);
 

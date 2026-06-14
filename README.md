@@ -1,113 +1,199 @@
-# ERP Commercial & Comptable - Senegal
+# ERP GesCom-Compta Sénégal
 
-ERP web complet destine aux PME/TPE au Senegal et en Afrique de l'Ouest, couvrant la gestion commerciale, comptable, financiere et operationnelle.
+ERP web **SaaS multi-tenant** complet destiné aux PME/TPE au Sénégal et en Afrique de l'Ouest.  
+Couvre la gestion commerciale, comptable, financière et opérationnelle — conforme **SYSCOHADA**, **FCFA**, **TVA 18 %**, **DGI Sénégal**.
 
-## Fonctionnalites Principales
+---
 
-- **Gestion Commerciale** : Clients, Fournisseurs, Produits, Categories hierarchiques
-- **Cycle de Vente** : Devis → Commandes → Bons de livraison → Factures (avec PDF)
-- **Gestion des Stocks** : Multi-depots, Mouvements, Transferts, Inventaires, Alertes seuils, Valorisation CUMP
-- **Comptabilite SYSCOHADA** : Plan comptable OHADA (130+ comptes), Ecritures automatiques, Grand Livre, Balance, Bilan, Compte de Resultat, Export FEC
-- **Gestion Financiere** : Paiements multi-modes, Tresorerie, Echeanciers, Rapprochement bancaire
-- **Mobile Money** : Integration Orange Money et Wave
-- **Conformite DGI Senegal** : Facturation conforme, TVA 18%, NINEA, numeration sequentielle
-- **Tableaux de bord** : KPIs commerciaux, financiers et stocks en temps reel
-- **Notifications temps reel** : Alertes via Socket.io (factures, paiements, stocks, echeances)
-- **RBAC** : 7 roles avec permissions granulaires (Admin, Manager, Comptable, Commercial, Vendeur, Caissier, Gestionnaire Stock)
-- **PWA** : Application installable avec mode hors ligne
-- **Cache Redis** : Optimisation des performances avec cache configurable
-- **Audit Trail** : Tracabilite complete de toutes les operations
+## Fonctionnalités
+
+### Gestion Commerciale (module GESCOM)
+- Clients & Fournisseurs avec historique et scoring
+- Catalogue produits, catégories hiérarchiques, codes-barres
+- Stocks multi-dépôts, mouvements, inventaires, valorisation CUMP, alertes seuils
+- Cycle complet : Devis → Commandes → Bons de livraison → Factures (PDF via Puppeteer)
+- Achats fournisseurs avec suivi réception
+
+### Comptabilité SYSCOHADA
+- Plan comptable OHADA (130+ comptes)
+- Écritures automatiques sur chaque transaction commerciale
+- Grand Livre, Balance des comptes, Bilan, Compte de Résultat
+- Export FEC (Fichier des Écritures Comptables)
+- Gestion des exercices comptables
+
+### Finance
+- Paiements multi-modes (espèces, chèque, virement, Wave, Orange Money)
+- Trésorerie avec rapprochement bancaire
+- Comptes bancaires multiples
+- Tableau de bord KPIs temps réel (Socket.io)
+
+### Architecture SaaS Multi-Tenant
+- **3 forfaits** : Standard · Professionnel · Complet (tarifs FCFA)
+- Inscription libre avec sélection du forfait
+- Paiement d'activation Wave / Orange Money
+- Guard d'abonnement par module (`subscriptionGuard`)
+- Isolation complète des données par `companyId`
+- Jobs automatiques : expiration abonnement + rappels de renouvellement
+
+### Sécurité & Compliance
+- RBAC à 8 rôles avec permissions granulaires
+- JWT access (7 j) + refresh (30 j), bcrypt 12 rounds
+- Audit trail complet (toutes les opérations)
+- Rate-limiting, CORS whitelist, helmet, HPP, mongo-sanitize
+- Chiffrement sensible, NINEA Sénégal, mentions légales DGI
+
+---
 
 ## Stack Technologique
 
-| Backend | Frontend |
-|---------|----------|
-| Node.js 20+ LTS | React 18+ |
-| Express.js 4.x | Redux Toolkit + RTK Query |
-| MongoDB 7+ / Mongoose 8+ | React Router v6 |
-| JWT + bcrypt | Bootstrap 5 + React-Bootstrap |
-| Joi (validation) | Chart.js / Recharts |
-| Socket.io (temps reel) | Formik + Yup |
-| Redis (cache) | React-Toastify |
-| Puppeteer (PDF) | date-fns |
-| Winston (logging) | PWA (Service Worker) |
+| Backend | Frontend | Infrastructure |
+|---------|----------|----------------|
+| Node.js 20+ | React 18+ | Docker + Docker Compose |
+| Express.js 4 | Redux Toolkit + RTK Query | Nginx (reverse proxy) |
+| MongoDB 7 / Mongoose 8 | React Router v6 | Railway (backend) |
+| JWT + bcrypt 12 | Bootstrap 5 + React-Bootstrap | Vercel (frontend) |
+| Joi (validation) | Chart.js / Recharts | GitHub Actions CI/CD |
+| Socket.io (temps réel) | React Hook Form | Redis (cache) |
+| Puppeteer (PDF) | React-Toastify | Winston (logs) |
+| Swagger/OpenAPI 3 | PWA (Service Worker) | PM2 (process manager) |
 
-## Prerequis
+---
+
+## Prérequis
 
 - **Node.js** 20+ LTS
 - **MongoDB** 7+ (local ou Docker)
 - **npm** 10+
-- **Docker** et **Docker Compose** (optionnel, recommande)
-- **Redis** 7+ (optionnel, pour le cache)
+- **Docker** + **Docker Compose** (recommandé pour la production)
+- **Redis** 7+ (optionnel — cache)
 
-## Installation Rapide
+---
+
+## Installation rapide
 
 ### 1. Cloner le projet
 
 ```bash
-git clone <url-du-repo>
+git clone https://github.com/libasse27/erp-commercial-comptable-senegal.git
 cd erp-commercial-comptable-senegal
 ```
 
-### 2. Configurer les variables d'environnement
+### 2. Variables d'environnement
 
 ```bash
 cp .env.example .env
-# Editer .env avec vos valeurs (MONGO_URI, JWT_SECRET, JWT_REFRESH_SECRET)
+# Éditer .env avec vos valeurs
 ```
 
-### 3. Installer les dependances
+Variables minimales requises :
+
+```env
+NODE_ENV=development
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/erp-gescom
+JWT_SECRET=votre-secret-jwt-tres-long-ici
+JWT_REFRESH_SECRET=votre-refresh-secret-jwt
+CLIENT_URL=http://localhost:3000
+
+# Mobile Money (simulation en dev)
+WAVE_SECRET_KEY=wave_test_xxx
+ORANGE_MONEY_API_KEY=om_test_xxx
+PAYMENT_MODE=simulation
+```
+
+### 3. Installer les dépendances
 
 ```bash
 npm run install:all
 ```
 
-### 4. Alimenter la base de donnees
+### 4. Initialiser la base de données
 
 ```bash
+# Données de base (rôles, permissions, plan comptable SYSCOHADA...)
 npm run seed
+
+# Forfaits SaaS + compte Super Admin
+cd server && npm run seed:saas
+
+# Entreprise de démonstration (Ndakaru SARL, abonnement PROFESSIONNEL actif)
+npm run seed:demo
 ```
 
-### 5. Demarrer en developpement
+### 5. Démarrer en développement
 
 ```bash
-# Demarrer MongoDB, backend et frontend simultanement
 npm run dev
 ```
 
-Le backend sera accessible sur `http://localhost:5000/api`
-Le frontend sera accessible sur `http://localhost:3000`
+- Backend : `http://localhost:5000/api`
+- Frontend : `http://localhost:3000`
+- **Swagger UI** : `http://localhost:5000/api-docs`
 
-### Alternative : Docker Compose
+---
+
+## Docker (recommandé en production)
 
 ```bash
-# Demarrer tous les services (backend, frontend, MongoDB, Redis, Nginx)
+# Démarrer tous les services (backend, frontend, MongoDB, Redis, Nginx)
 docker compose up -d --build
 
-# Alimenter la base
-docker compose exec backend node src/seeds/index.js
+# Initialiser la base
+docker compose exec backend npm run seed
+docker compose exec backend npm run seed:saas
+
+# Arrêter
+docker compose down
 ```
 
-L'application sera accessible sur `http://localhost` (via Nginx).
+Application accessible sur `http://localhost` via Nginx.
 
-## Scripts Disponibles
+---
+
+## Scripts disponibles
+
+### Racine du projet
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Demarrer backend + frontend en mode developpement |
-| `npm run server` | Demarrer uniquement le backend |
-| `npm run client` | Demarrer uniquement le frontend |
-| `npm run install:all` | Installer toutes les dependances (server + client) |
-| `npm run seed` | Alimenter la base avec des donnees de demonstration |
-| `npm run docker:up` | Demarrer les conteneurs Docker |
-| `npm run docker:down` | Arreter les conteneurs Docker |
-| `npm run docker:reset` | Reset complet (supprime les donnees) |
-| `cd server && npm test` | Executer les tests backend |
-| `cd client && npm test` | Executer les tests frontend |
+| `npm run dev` | Backend + Frontend en mode développement |
+| `npm run install:all` | Installer les dépendances server + client |
+| `npm run seed` | Seed complet (rôles, permissions, plan comptable, données démo) |
+| `npm run docker:up` | Démarrer les conteneurs Docker |
+| `npm run docker:down` | Arrêter les conteneurs |
 
-## Comptes de Demonstration
+### Server (`cd server`)
 
-| Role | Email | Mot de passe |
+| Script | Description |
+|--------|-------------|
+| `npm start` | Démarrer en production |
+| `npm run dev` | Démarrer avec nodemon |
+| `npm test` | Tous les tests (Jest + coverage) |
+| `npm run test:saas` | Tests isolation multi-tenant SaaS |
+| `npm run test:unit` | Tests unitaires services |
+| `npm run seed:saas` | Seed forfaits + super admin |
+| `npm run seed:demo` | Seed entreprise de démo |
+| `npm run lint` | ESLint |
+
+---
+
+## Comptes de démonstration
+
+### Super Admin (scope plateforme)
+
+| Email | Mot de passe | Rôle |
+|-------|-------------|------|
+| superadmin@erp-senegal.com | SuperAdmin@2026! | Super Admin (scope PLATFORM) |
+
+### Entreprise Ndakaru SARL (après `npm run seed:demo`)
+
+| Email | Mot de passe | Rôle |
+|-------|-------------|------|
+| admin@ndakaru.sn | Admin@Demo2026! | Admin entreprise |
+
+### Comptes ERP classiques (après `npm run seed`)
+
+| Rôle | Email | Mot de passe |
 |------|-------|-------------|
 | Admin | admin@erp-senegal.com | Admin@2026 |
 | Manager | manager@erp-senegal.com | Manager@2026 |
@@ -117,85 +203,178 @@ L'application sera accessible sur `http://localhost` (via Nginx).
 | Caissier | caissier@erp-senegal.com | Caissier@2026 |
 | Gest. Stock | stock@erp-senegal.com | Stock@2026 |
 
-## Structure du Projet
+---
+
+## Documentation API (Swagger)
+
+La documentation Swagger/OpenAPI 3.0 est disponible à l'exécution :
 
 ```
-erp-commercial-comptable-senegal/
-├── server/                  # Backend API REST (Express.js)
-│   ├── src/
-│   │   ├── config/          # Configuration (DB, JWT, CORS, Logger, Redis)
-│   │   ├── models/          # Schemas Mongoose (20+ modeles)
-│   │   ├── controllers/     # Logique des endpoints
-│   │   ├── routes/          # Definition des routes API (19 modules)
-│   │   ├── middlewares/     # Auth, RBAC, Validation, Audit, Cache, Upload
-│   │   ├── services/        # Logique metier (Comptabilite, Notifications)
-│   │   ├── utils/           # Formatters, Helpers, Calculs
-│   │   ├── validations/     # Schemas Joi par module
-│   │   ├── seeds/           # Donnees de demonstration
-│   │   └── templates/       # Templates PDF et emails
-│   ├── tests/               # Tests Jest + Supertest
-│   ├── uploads/             # Fichiers uploades
-│   └── logs/                # Logs applicatifs (Winston)
-│
-├── client/                  # Frontend React SPA
-│   ├── src/
-│   │   ├── components/      # Composants reutilisables (UI, Forms, Tables)
-│   │   ├── pages/           # Pages par module
-│   │   ├── redux/           # Store, Slices, API (RTK Query)
-│   │   ├── hooks/           # Hooks personnalises
-│   │   ├── contexts/        # Contextes React (Auth, Socket, Notification)
-│   │   ├── guards/          # Protection de routes (PrivateRoute, RoleGuard)
-│   │   ├── config/          # Configuration application
-│   │   ├── utils/           # Utilitaires frontend
-│   │   └── services/        # Client API
-│   └── public/
-│       ├── manifest.json    # PWA manifest
-│       ├── icons/           # Icones PWA
-│       └── offline.html     # Page hors ligne
-│
-├── docs/                    # Documentation
-│   ├── API.md               # Reference API complete (19 modules)
-│   ├── INSTALLATION.md      # Guide d'installation + production
-│   └── USER_MANUAL.md       # Manuel utilisateur en francais
-│
-├── nginx/                   # Configuration Nginx (reverse proxy)
-├── docker-compose.yml       # Orchestration Docker (5 services)
-└── .env.example             # Template variables d'environnement
+http://localhost:5000/api-docs
 ```
 
-## Documentation
+JSON brut : `http://localhost:5000/api-docs.json`
 
-| Document | Description |
-|----------|-------------|
-| [API.md](docs/API.md) | Reference complete de l'API REST (19 modules, 100+ endpoints) |
-| [INSTALLATION.md](docs/INSTALLATION.md) | Guide d'installation (dev, Docker, production, SSL, sauvegardes) |
-| [USER_MANUAL.md](docs/USER_MANUAL.md) | Manuel utilisateur complet en francais |
+> En production, activez avec `SWAGGER_ENABLED=true` dans les variables d'environnement.
 
-## Normes et Conformite
+Les routes documentées :
+- `POST /auth/login` — Authentification JWT
+- `POST /auth/register-saas` — Inscription SaaS (entreprise + admin + forfait)
+- `GET /forfaits` — Liste des forfaits (public)
+- `GET /paiements-saas/usage` — Métriques d'usage et abonnement actif
+- `POST /paiements-saas/initier` — Initier un paiement Wave/Orange Money
+- Et 100+ autres endpoints documentés par module
 
-- **SYSCOHADA / OHADA** : Plan comptable conforme, ecritures automatiques
-- **DGI Senegal** : Facturation conforme, mentions legales obligatoires
-- **TVA** : 18% (taux normal) ou 0% (exonere)
-- **Devise** : FCFA (XOF) - valeurs entieres uniquement
-- **FEC** : Export Fichier des Ecritures Comptables conforme
+---
 
 ## Architecture
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Frontend  │────▶│   Nginx     │────▶│   Backend   │
-│   React SPA │     │   Reverse   │     │   Express   │
-│   (PWA)     │◀────│   Proxy     │◀────│   API REST  │
-└─────────────┘     └─────────────┘     └──────┬──────┘
-                                               │
-                          ┌────────────────────┼────────────────────┐
-                          │                    │                    │
-                    ┌─────▼─────┐      ┌──────▼──────┐    ┌──────▼──────┐
-                    │  MongoDB  │      │   Redis     │    │  Socket.io  │
-                    │  (donnees)│      │   (cache)   │    │  (temps reel)│
-                    └───────────┘      └─────────────┘    └─────────────┘
+erp-commercial-comptable-senegal/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml          # Tests + Build sur chaque push/PR
+│       └── deploy.yml      # Deploy Railway (backend) + Vercel (frontend)
+│
+├── server/                 # Backend API REST (Node.js/Express)
+│   ├── src/
+│   │   ├── config/         # DB, JWT, CORS, Logger, Redis, Swagger
+│   │   ├── models/         # Schemas Mongoose (25+ modèles)
+│   │   ├── controllers/    # Logique des endpoints
+│   │   ├── routes/         # Routes API (21 modules) avec annotations Swagger
+│   │   ├── middlewares/    # Auth, RBAC, Validation, Audit, SubscriptionGuard
+│   │   ├── services/       # Comptabilité, Notifications, Usage SaaS, PSP
+│   │   ├── jobs/           # Crons : expiration abonnements, rappels
+│   │   ├── validations/    # Schemas Joi par module
+│   │   └── seeds/          # Données de base (rôles, plan comptable, forfaits)
+│   ├── scripts/            # Scripts opérationnels (seed-saas, seed-demo, migration)
+│   └── tests/
+│       ├── saas/           # Tests isolation multi-tenant, paiements SaaS
+│       └── services/       # Tests unitaires services
+│
+├── client/                 # Frontend React (SPA + PWA)
+│   └── src/
+│       ├── pages/
+│       │   ├── auth/       # Login, Register, ResetPassword
+│       │   ├── abonnement/ # AbonnementPage, PricingPage, PaiementSaasPage
+│       │   ├── super-admin/# 8 pages Super Admin (PLATFORM scope)
+│       │   └── ...         # 40+ pages métier
+│       ├── redux/api/      # RTK Query (apiSlice, saasApi, et 15+ slices)
+│       ├── contexts/       # AuthContext, SocketContext, NotificationContext
+│       └── guards/         # PrivateRoute, SuperAdminGuard
+│
+├── docs/
+│   ├── API.md              # Référence API complète (21 modules)
+│   ├── ARCHITECTURE.md     # Architecture technique détaillée
+│   ├── INSTALLATION.md     # Guide d'installation (dev, Docker, prod, SSL)
+│   └── USER_MANUAL.md      # Manuel utilisateur complet en français
+│
+├── nginx/                  # Configuration Nginx (prod + dev)
+├── docker-compose.yml      # Orchestration Docker (5 services)
+├── docker-compose.dev.yml  # Docker dev (hot reload)
+└── .env.example            # Template variables d'environnement
 ```
+
+### Architecture SaaS multi-tenant
+
+```
+┌─────────────────────────────────────────────────┐
+│                 PLATEFORME SAAS                  │
+│  Super Admin (scope PLATFORM) — /super-admin     │
+│  Gestion forfaits · entreprises · monitoring     │
+└─────────────────────────────────────────────────┘
+           │                    │
+    ┌──────▼──────┐      ┌──────▼──────┐
+    │ Entreprise A│      │ Entreprise B│
+    │ PROFESSIONNEL│     │   STANDARD  │
+    │ companyId:xxx│     │ companyId:yyy│
+    └──────┬──────┘      └─────────────┘
+           │
+    ┌──────▼──────────────────────────────┐
+    │  subscriptionGuard(moduleCode)      │
+    │  → vérifie forfait.modulesInclus    │
+    │  → 403 si module non inclus         │
+    └──────┬──────────────────────────────┘
+           │
+    ┌──────▼──────────────────────────────┐
+    │  Controllers — cloisonnés par        │
+    │  companyId (injecté depuis JWT)     │
+    └─────────────────────────────────────┘
+```
+
+---
+
+## CI/CD (GitHub Actions)
+
+### Workflow CI (`ci.yml`)
+Déclenché sur chaque push et PR :
+- Tests backend (Jest — suites SaaS + unitaires)
+- Build frontend (React — vérifie l'absence d'erreurs de compilation)
+- Lint ESLint
+
+### Workflow CD (`deploy.yml`)
+Déclenché sur merge vers `main` :
+1. Gate CI obligatoire (les tests doivent passer)
+2. Build React de production
+3. Deploy backend → **Railway**
+4. Deploy frontend → **Vercel**
+5. Health-check automatique après déploiement
+
+Secrets GitHub nécessaires :
+
+| Secret | Description |
+|--------|-------------|
+| `RAILWAY_TOKEN` | Token Railway CLI |
+| `VERCEL_TOKEN` | Token Vercel |
+| `VERCEL_ORG_ID` | ID organisation Vercel |
+| `VERCEL_PROJECT_ID` | ID projet Vercel |
+| `REACT_APP_API_URL` | URL backend en production |
+
+---
+
+## Tests
+
+```bash
+cd server
+
+# Tous les tests (avec coverage)
+npm test
+
+# Tests SaaS (isolation multi-tenant, paiements)
+npm run test:saas
+
+# Tests unitaires (services comptabilité, usage)
+npm run test:unit
+```
+
+Résultats actuels : **81 tests** passent (SaaS + services).
+
+---
+
+## Normes et Conformité
+
+| Norme | Détail |
+|-------|--------|
+| **SYSCOHADA / OHADA** | Plan comptable conforme, écritures automatiques |
+| **DGI Sénégal** | Facturation conforme, mentions légales obligatoires |
+| **TVA** | 18 % (taux normal) ou 0 % (exonéré) |
+| **Devise** | FCFA (XOF) — valeurs entières uniquement |
+| **FEC** | Export Fichier des Écritures Comptables |
+| **RGPD** | Audit trail, pseudonymisation, accès par rôle |
+
+---
+
+## Production (Railway + Vercel)
+
+| Service | URL |
+|---------|-----|
+| Backend API | `https://erp-commercial-comptable-senegal-production.up.railway.app/api` |
+| Frontend | `https://erp-gescom-senegal.vercel.app` |
+| Swagger | `https://erp-commercial-comptable-senegal-production.up.railway.app/api-docs` (si `SWAGGER_ENABLED=true`) |
+
+---
 
 ## Licence
 
-Projet prive - Tous droits reserves.
+Projet privé — Fin d'études GoMyCode Sénégal · 2026  
+Tous droits réservés.
