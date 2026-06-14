@@ -72,6 +72,7 @@ const ExercicesPage = lazy(() => import('./pages/comptabilite/ExercicesPage'));
 // Rapports
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
 const SalesReportPage = lazy(() => import('./pages/reports/SalesReportPage'));
+const CARapportPage = lazy(() => import('./pages/reports/CARapportPage'));
 
 // Administration
 const UsersListPage = lazy(() => import('./pages/admin/UsersListPage'));
@@ -205,6 +206,7 @@ const AppRoutes = () => {
           {/* Rapports */}
           <Route path="/rapports" element={<ReportsPage />} />
           <Route path="/rapports/ventes" element={<SalesReportPage />} />
+          <Route path="/rapports/ca" element={<CARapportPage />} />
 
           {/* Profil */}
           <Route path="/profil" element={<ProfilePage />} />

@@ -11,6 +11,7 @@ import { FiPrinter, FiDownload, FiAlertCircle } from 'react-icons/fi';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatMoney } from '../../utils/formatters';
 import { useGetExercicesQuery, useGetBilanQuery } from '../../redux/api/comptabiliteApi';
+import usePdfActions from '../../hooks/usePdfActions';
 
 const BilanPage = () => {
   usePageTitle('Bilan', [
@@ -19,10 +20,8 @@ const BilanPage = () => {
     { label: 'Bilan' },
   ]);
 
-  const [filters, setFilters] = useState({
-    date: '',
-    exerciceId: '',
-  });
+  const [filters, setFilters] = useState({ date: '', exerciceId: '' });
+  const { downloadPdf, printPdf, isLoading: pdfLoading } = usePdfActions();
 
   const { data: exercicesData } = useGetExercicesQuery();
   const { data: bilanData, isLoading, error } = useGetBilanQuery(filters);
@@ -40,14 +39,22 @@ const BilanPage = () => {
       ...(actifData.tresorerie || []),
     ],
     totalActifImmobilise: (actifData.immobilisations || []).reduce((s, r) => s + (r.solde || 0), 0),
-    totalActifCirculant: [...(actifData.stocks || []), ...(actifData.creances || []), ...(actifData.tresorerie || [])].reduce((s, r) => s + (r.solde || 0), 0),
+    totalActifCirculant: [
+      ...(actifData.stocks || []),
+      ...(actifData.creances || []),
+      ...(actifData.tresorerie || []),
+    ].reduce((s, r) => s + (r.solde || 0), 0),
     totalActif: bilanResult.totalActif || 0,
   };
+
   const passif = {
     capitauxPropres: passifData.capitaux || [],
     dettes: [...(passifData.dettes || []), ...(passifData.tresorerie || [])],
     totalCapitauxPropres: (passifData.capitaux || []).reduce((s, r) => s + (r.solde || 0), 0),
-    totalDettes: [...(passifData.dettes || []), ...(passifData.tresorerie || [])].reduce((s, r) => s + (r.solde || 0), 0),
+    totalDettes: [...(passifData.dettes || []), ...(passifData.tresorerie || [])].reduce(
+      (s, r) => s + (r.solde || 0),
+      0
+    ),
     totalPassif: bilanResult.totalPassif || 0,
   };
 
@@ -56,23 +63,49 @@ const BilanPage = () => {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleExport = () => {
-    alert('Fonction d\'export en cours de developpement');
+  const buildPdfPath = (base) => {
+    const params = new URLSearchParams();
+    if (filters.exerciceId) params.set('exercice', filters.exerciceId);
+    if (filters.date) params.set('dateTo', filters.date);
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
   };
+
+  const handleDownloadPdf = () =>
+    downloadPdf(buildPdfPath('/rapports/bilan/pdf'), `bilan-${Date.now()}.pdf`);
+  const handlePrint = () => printPdf(buildPdfPath('/rapports/bilan/pdf'));
 
   const isBalanced = Math.abs(actif.totalActif - passif.totalPassif) < 1;
 
   return (
     <>
       <div className="page-header">
-        <h1>Bilan</h1>
+        <h1>Bilan SYSCOHADA</h1>
         <div className="d-flex gap-2">
-          <Button variant="outline-secondary" size="sm" onClick={handleExport}>
-            <FiPrinter className="me-1" />
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            onClick={handlePrint}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? (
+              <Spinner animation="border" size="sm" className="me-1" />
+            ) : (
+              <FiPrinter className="me-1" />
+            )}
             Imprimer
           </Button>
-          <Button variant="outline-primary" size="sm" onClick={handleExport}>
-            <FiDownload className="me-1" />
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={handleDownloadPdf}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? (
+              <Spinner animation="border" size="sm" className="me-1" />
+            ) : (
+              <FiDownload className="me-1" />
+            )}
             Exporter PDF
           </Button>
         </div>
@@ -117,8 +150,8 @@ const BilanPage = () => {
         <Alert variant="warning" className="d-flex align-items-center">
           <FiAlertCircle className="me-2" size={20} />
           <div>
-            <strong>Attention:</strong> Le bilan n'est pas equilibre. Total Actif:{' '}
-            {formatMoney(actif.totalActif)}, Total Passif: {formatMoney(passif.totalPassif)}
+            <strong>Attention :</strong> Le bilan n&apos;est pas equilibre. Total Actif :{' '}
+            {formatMoney(actif.totalActif)}, Total Passif : {formatMoney(passif.totalPassif)}
           </div>
         </Alert>
       )}
@@ -130,10 +163,11 @@ const BilanPage = () => {
         </div>
       ) : error ? (
         <Alert variant="danger">
-          Erreur lors du chargement: {error.data?.message || error.message}
+          Erreur lors du chargement : {error.data?.message || error.message}
         </Alert>
       ) : (
         <Row className="g-3">
+          {/* ACTIF */}
           <Col lg={6}>
             <Card className="shadow-sm h-100">
               <Card.Header className="bg-primary text-white">
@@ -168,12 +202,8 @@ const BilanPage = () => {
                       ))
                     )}
                     <tr className="table-light">
-                      <td>
-                        <strong>Total Actif Immobilise</strong>
-                      </td>
-                      <td className="text-end">
-                        <strong>{formatMoney(actif.totalActifImmobilise)}</strong>
-                      </td>
+                      <td><strong>Total Actif Immobilise</strong></td>
+                      <td className="text-end"><strong>{formatMoney(actif.totalActifImmobilise)}</strong></td>
                     </tr>
                     <tr className="table-secondary">
                       <td colSpan="2">
@@ -195,12 +225,8 @@ const BilanPage = () => {
                       ))
                     )}
                     <tr className="table-light">
-                      <td>
-                        <strong>Total Actif Circulant</strong>
-                      </td>
-                      <td className="text-end">
-                        <strong>{formatMoney(actif.totalActifCirculant)}</strong>
-                      </td>
+                      <td><strong>Total Actif Circulant</strong></td>
+                      <td className="text-end"><strong>{formatMoney(actif.totalActifCirculant)}</strong></td>
                     </tr>
                   </tbody>
                   <tfoot className="table-primary text-white">
@@ -214,6 +240,7 @@ const BilanPage = () => {
             </Card>
           </Col>
 
+          {/* PASSIF */}
           <Col lg={6}>
             <Card className="shadow-sm h-100">
               <Card.Header className="bg-success text-white">
@@ -248,12 +275,8 @@ const BilanPage = () => {
                       ))
                     )}
                     <tr className="table-light">
-                      <td>
-                        <strong>Total Capitaux Propres</strong>
-                      </td>
-                      <td className="text-end">
-                        <strong>{formatMoney(passif.totalCapitauxPropres)}</strong>
-                      </td>
+                      <td><strong>Total Capitaux Propres</strong></td>
+                      <td className="text-end"><strong>{formatMoney(passif.totalCapitauxPropres)}</strong></td>
                     </tr>
                     <tr className="table-secondary">
                       <td colSpan="2">
@@ -275,12 +298,8 @@ const BilanPage = () => {
                       ))
                     )}
                     <tr className="table-light">
-                      <td>
-                        <strong>Total Dettes</strong>
-                      </td>
-                      <td className="text-end">
-                        <strong>{formatMoney(passif.totalDettes)}</strong>
-                      </td>
+                      <td><strong>Total Dettes</strong></td>
+                      <td className="text-end"><strong>{formatMoney(passif.totalDettes)}</strong></td>
                     </tr>
                   </tbody>
                   <tfoot className="table-success text-white">
@@ -293,6 +312,19 @@ const BilanPage = () => {
               </Card.Body>
             </Card>
           </Col>
+
+          {/* Equilibre check */}
+          {actif.totalActif > 0 && (
+            <Col xs={12}>
+              <Alert variant={isBalanced ? 'success' : 'warning'} className="text-center mb-0">
+                <strong>
+                  {isBalanced
+                    ? `Bilan equilibre — Total : ${formatMoney(actif.totalActif)}`
+                    : `Ecart : ${formatMoney(Math.abs(actif.totalActif - passif.totalPassif))}`}
+                </strong>
+              </Alert>
+            </Col>
+          )}
         </Row>
       )}
     </>

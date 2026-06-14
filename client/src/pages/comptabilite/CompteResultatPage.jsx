@@ -12,6 +12,7 @@ import { FiPrinter, FiDownload } from 'react-icons/fi';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatMoney } from '../../utils/formatters';
 import { useGetExercicesQuery, useGetCompteResultatQuery } from '../../redux/api/comptabiliteApi';
+import usePdfActions from '../../hooks/usePdfActions';
 
 const CompteResultatPage = () => {
   usePageTitle('Compte de Resultat', [
@@ -20,11 +21,8 @@ const CompteResultatPage = () => {
     { label: 'Compte de Resultat' },
   ]);
 
-  const [filters, setFilters] = useState({
-    exerciceId: '',
-    dateDebut: '',
-    dateFin: '',
-  });
+  const [filters, setFilters] = useState({ exerciceId: '', dateDebut: '', dateFin: '' });
+  const { downloadPdf, printPdf, isLoading: pdfLoading } = usePdfActions();
 
   const { data: exercicesData } = useGetExercicesQuery();
   const { data: resultatData, isLoading, error } = useGetCompteResultatQuery(filters);
@@ -43,33 +41,51 @@ const CompteResultatPage = () => {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleExport = () => {
-    alert('Fonction d\'export en cours de developpement');
+  const buildPdfPath = (base) => {
+    const params = new URLSearchParams();
+    if (filters.exerciceId) params.set('exercice', filters.exerciceId);
+    if (filters.dateDebut) params.set('dateFrom', filters.dateDebut);
+    if (filters.dateFin) params.set('dateTo', filters.dateFin);
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
   };
 
-  const getResultatVariant = (resultat) => {
-    if (resultat > 0) return 'success';
-    if (resultat < 0) return 'danger';
-    return 'secondary';
-  };
+  const handleDownloadPdf = () =>
+    downloadPdf(buildPdfPath('/rapports/resultat/pdf'), `compte-resultat-${Date.now()}.pdf`);
+  const handlePrint = () => printPdf(buildPdfPath('/rapports/resultat/pdf'));
 
-  const getResultatLabel = (resultat) => {
-    if (resultat > 0) return 'Benefice';
-    if (resultat < 0) return 'Perte';
-    return 'Equilibre';
-  };
+  const getResultatVariant = (r) => (r > 0 ? 'success' : r < 0 ? 'danger' : 'secondary');
+  const getResultatLabel = (r) => (r > 0 ? 'Benefice' : r < 0 ? 'Perte' : 'Equilibre');
 
   return (
     <>
       <div className="page-header">
         <h1>Compte de Resultat</h1>
         <div className="d-flex gap-2">
-          <Button variant="outline-secondary" size="sm" onClick={handleExport}>
-            <FiPrinter className="me-1" />
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            onClick={handlePrint}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? (
+              <Spinner animation="border" size="sm" className="me-1" />
+            ) : (
+              <FiPrinter className="me-1" />
+            )}
             Imprimer
           </Button>
-          <Button variant="outline-primary" size="sm" onClick={handleExport}>
-            <FiDownload className="me-1" />
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={handleDownloadPdf}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? (
+              <Spinner animation="border" size="sm" className="me-1" />
+            ) : (
+              <FiDownload className="me-1" />
+            )}
             Exporter PDF
           </Button>
         </div>
@@ -128,11 +144,12 @@ const CompteResultatPage = () => {
         </div>
       ) : error ? (
         <Alert variant="danger">
-          Erreur lors du chargement: {error.data?.message || error.message}
+          Erreur lors du chargement : {error.data?.message || error.message}
         </Alert>
       ) : (
         <>
           <Row className="g-3 mb-3">
+            {/* CHARGES */}
             <Col lg={6}>
               <Card className="shadow-sm h-100">
                 <Card.Header className="bg-danger text-white">
@@ -166,12 +183,8 @@ const CompteResultatPage = () => {
                     </tbody>
                     <tfoot className="table-light">
                       <tr>
-                        <th colSpan="2" className="text-end">
-                          Total Charges:
-                        </th>
-                        <th className="text-end text-danger">
-                          {formatMoney(totaux.totalCharges)}
-                        </th>
+                        <th colSpan="2" className="text-end">Total Charges :</th>
+                        <th className="text-end text-danger">{formatMoney(totaux.totalCharges)}</th>
                       </tr>
                     </tfoot>
                   </Table>
@@ -179,6 +192,7 @@ const CompteResultatPage = () => {
               </Card>
             </Col>
 
+            {/* PRODUITS */}
             <Col lg={6}>
               <Card className="shadow-sm h-100">
                 <Card.Header className="bg-success text-white">
@@ -212,12 +226,8 @@ const CompteResultatPage = () => {
                     </tbody>
                     <tfoot className="table-light">
                       <tr>
-                        <th colSpan="2" className="text-end">
-                          Total Produits:
-                        </th>
-                        <th className="text-end text-success">
-                          {formatMoney(totaux.totalProduits)}
-                        </th>
+                        <th colSpan="2" className="text-end">Total Produits :</th>
+                        <th className="text-end text-success">{formatMoney(totaux.totalProduits)}</th>
                       </tr>
                     </tfoot>
                   </Table>
@@ -226,23 +236,20 @@ const CompteResultatPage = () => {
             </Col>
           </Row>
 
+          {/* Resultat net */}
           <Card className="shadow-sm">
             <Card.Body>
               <Row className="g-3">
                 <Col md={4}>
                   <div className="p-3 border rounded">
                     <div className="text-muted small mb-1">Total Charges</div>
-                    <div className="fs-5 fw-bold text-danger">
-                      {formatMoney(totaux.totalCharges)}
-                    </div>
+                    <div className="fs-5 fw-bold text-danger">{formatMoney(totaux.totalCharges)}</div>
                   </div>
                 </Col>
                 <Col md={4}>
                   <div className="p-3 border rounded">
                     <div className="text-muted small mb-1">Total Produits</div>
-                    <div className="fs-5 fw-bold text-success">
-                      {formatMoney(totaux.totalProduits)}
-                    </div>
+                    <div className="fs-5 fw-bold text-success">{formatMoney(totaux.totalProduits)}</div>
                   </div>
                 </Col>
                 <Col md={4}>
@@ -255,7 +262,7 @@ const CompteResultatPage = () => {
                     </div>
                     <div
                       className={`fs-4 fw-bold ${
-                        totaux.resultatNet > 0 ? 'text-success' : 'text-danger'
+                        totaux.resultatNet >= 0 ? 'text-success' : 'text-danger'
                       }`}
                     >
                       {formatMoney(Math.abs(totaux.resultatNet))}

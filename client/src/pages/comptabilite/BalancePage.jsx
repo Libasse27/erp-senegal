@@ -11,6 +11,18 @@ import { FiPrinter, FiDownload, FiAlertCircle } from 'react-icons/fi';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatMoney } from '../../utils/formatters';
 import { useGetBalanceQuery } from '../../redux/api/comptabiliteApi';
+import usePdfActions from '../../hooks/usePdfActions';
+
+const CLASSE_LABELS = {
+  1: 'Classe 1 - Comptes de capitaux',
+  2: "Classe 2 - Comptes d'immobilisations",
+  3: 'Classe 3 - Comptes de stocks',
+  4: 'Classe 4 - Comptes de tiers',
+  5: 'Classe 5 - Comptes de tresorerie',
+  6: 'Classe 6 - Comptes de charges',
+  7: 'Classe 7 - Comptes de produits',
+  8: 'Classe 8 - Comptes speciaux',
+};
 
 const BalancePage = () => {
   usePageTitle('Balance Generale', [
@@ -19,11 +31,8 @@ const BalancePage = () => {
     { label: 'Balance' },
   ]);
 
-  const [filters, setFilters] = useState({
-    dateDebut: '',
-    dateFin: '',
-    classe: '',
-  });
+  const [filters, setFilters] = useState({ dateDebut: '', dateFin: '', classe: '' });
+  const { downloadPdf, printPdf, isLoading: pdfLoading } = usePdfActions();
 
   const { data: balanceData, isLoading, error } = useGetBalanceQuery(filters);
 
@@ -40,29 +49,23 @@ const BalancePage = () => {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleExport = () => {
-    alert('Fonction d\'export en cours de developpement');
+  const buildExportPath = (base) => {
+    const params = new URLSearchParams();
+    if (filters.dateDebut) params.set('dateDebut', filters.dateDebut);
+    if (filters.dateFin) params.set('dateFin', filters.dateFin);
+    if (filters.classe) params.set('classe', filters.classe);
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
   };
 
-  const getClasseLabel = (classe) => {
-    const labels = {
-      1: 'Classe 1 - Comptes de capitaux',
-      2: 'Classe 2 - Comptes d\'immobilisations',
-      3: 'Classe 3 - Comptes de stocks',
-      4: 'Classe 4 - Comptes de tiers',
-      5: 'Classe 5 - Comptes de tresorerie',
-      6: 'Classe 6 - Comptes de charges',
-      7: 'Classe 7 - Comptes de produits',
-      8: 'Classe 8 - Comptes speciaux',
-    };
-    return labels[classe] || `Classe ${classe}`;
-  };
+  const handleExportExcel = () =>
+    downloadPdf(buildExportPath('/comptabilite/balance/export'), `balance-${Date.now()}.xlsx`);
+  const handlePrint = () =>
+    window.print();
 
   const groupedComptes = comptes.reduce((acc, compte) => {
     const classe = compte.numero.charAt(0);
-    if (!acc[classe]) {
-      acc[classe] = [];
-    }
+    if (!acc[classe]) acc[classe] = [];
     acc[classe].push(compte);
     return acc;
   }, {});
@@ -74,13 +77,22 @@ const BalancePage = () => {
       <div className="page-header">
         <h1>Balance Generale</h1>
         <div className="d-flex gap-2">
-          <Button variant="outline-secondary" size="sm" onClick={handleExport}>
+          <Button variant="outline-secondary" size="sm" onClick={handlePrint}>
             <FiPrinter className="me-1" />
             Imprimer
           </Button>
-          <Button variant="outline-primary" size="sm" onClick={handleExport}>
-            <FiDownload className="me-1" />
-            Exporter PDF
+          <Button
+            variant="outline-success"
+            size="sm"
+            onClick={handleExportExcel}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? (
+              <Spinner animation="border" size="sm" className="me-1" />
+            ) : (
+              <FiDownload className="me-1" />
+            )}
+            Exporter Excel
           </Button>
         </div>
       </div>
@@ -115,14 +127,9 @@ const BalancePage = () => {
                 <Form.Label>Classe (optionnel)</Form.Label>
                 <Form.Select name="classe" value={filters.classe} onChange={handleFilterChange}>
                   <option value="">Toutes les classes</option>
-                  <option value="1">Classe 1 - Capitaux</option>
-                  <option value="2">Classe 2 - Immobilisations</option>
-                  <option value="3">Classe 3 - Stocks</option>
-                  <option value="4">Classe 4 - Tiers</option>
-                  <option value="5">Classe 5 - Tresorerie</option>
-                  <option value="6">Classe 6 - Charges</option>
-                  <option value="7">Classe 7 - Produits</option>
-                  <option value="8">Classe 8 - Comptes speciaux</option>
+                  {Object.entries(CLASSE_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
                 </Form.Select>
               </Form.Group>
             </Col>
@@ -134,8 +141,8 @@ const BalancePage = () => {
         <Alert variant="warning" className="d-flex align-items-center">
           <FiAlertCircle className="me-2" size={20} />
           <div>
-            <strong>Attention:</strong> La balance n'est pas equilibree. Total Debit:{' '}
-            {formatMoney(totaux.totalDebit)}, Total Credit: {formatMoney(totaux.totalCredit)}
+            <strong>Attention :</strong> La balance n&apos;est pas equilibree. Total Debit :{' '}
+            {formatMoney(totaux.totalDebit)}, Total Credit : {formatMoney(totaux.totalCredit)}
           </div>
         </Alert>
       )}
@@ -152,12 +159,10 @@ const BalancePage = () => {
             </div>
           ) : error ? (
             <Alert variant="danger">
-              Erreur lors du chargement: {error.data?.message || error.message}
+              Erreur lors du chargement : {error.data?.message || error.message}
             </Alert>
           ) : comptes.length === 0 ? (
-            <Alert variant="info">
-              Aucun compte trouve pour cette periode.
-            </Alert>
+            <Alert variant="info">Aucun compte trouve pour cette periode.</Alert>
           ) : (
             <div className="table-responsive">
               <Table hover className="mb-0">
@@ -176,12 +181,12 @@ const BalancePage = () => {
                     .sort()
                     .map((classe) => {
                       const comptesClasse = groupedComptes[classe];
-                      const subtotaux = comptesClasse.reduce(
-                        (acc, compte) => ({
-                          debit: acc.debit + compte.totalDebit,
-                          credit: acc.credit + compte.totalCredit,
-                          soldeDebiteur: acc.soldeDebiteur + compte.soldeDebiteur,
-                          soldeCrediteur: acc.soldeCrediteur + compte.soldeCrediteur,
+                      const sub = comptesClasse.reduce(
+                        (acc, c) => ({
+                          debit: acc.debit + c.totalDebit,
+                          credit: acc.credit + c.totalCredit,
+                          soldeDebiteur: acc.soldeDebiteur + c.soldeDebiteur,
+                          soldeCrediteur: acc.soldeCrediteur + c.soldeCrediteur,
                         }),
                         { debit: 0, credit: 0, soldeDebiteur: 0, soldeCrediteur: 0 }
                       );
@@ -190,7 +195,7 @@ const BalancePage = () => {
                         <React.Fragment key={classe}>
                           <tr className="table-secondary">
                             <td colSpan="6">
-                              <strong>{getClasseLabel(classe)}</strong>
+                              <strong>{CLASSE_LABELS[classe] || `Classe ${classe}`}</strong>
                             </td>
                           </tr>
                           {comptesClasse.map((compte) => (
@@ -203,26 +208,22 @@ const BalancePage = () => {
                                 {compte.soldeDebiteur > 0 ? formatMoney(compte.soldeDebiteur) : '-'}
                               </td>
                               <td className="text-end">
-                                {compte.soldeCrediteur > 0 ? formatMoney(compte.soldeCrediteur) : '-'}
+                                {compte.soldeCrediteur > 0
+                                  ? formatMoney(compte.soldeCrediteur)
+                                  : '-'}
                               </td>
                             </tr>
                           ))}
                           <tr className="table-light">
                             <td colSpan="2" className="text-end">
-                              <strong>Sous-total {getClasseLabel(classe)}:</strong>
+                              <strong>
+                                Sous-total {CLASSE_LABELS[classe] || `Classe ${classe}`} :
+                              </strong>
                             </td>
-                            <td className="text-end">
-                              <strong>{formatMoney(subtotaux.debit)}</strong>
-                            </td>
-                            <td className="text-end">
-                              <strong>{formatMoney(subtotaux.credit)}</strong>
-                            </td>
-                            <td className="text-end">
-                              <strong>{formatMoney(subtotaux.soldeDebiteur)}</strong>
-                            </td>
-                            <td className="text-end">
-                              <strong>{formatMoney(subtotaux.soldeCrediteur)}</strong>
-                            </td>
+                            <td className="text-end"><strong>{formatMoney(sub.debit)}</strong></td>
+                            <td className="text-end"><strong>{formatMoney(sub.credit)}</strong></td>
+                            <td className="text-end"><strong>{formatMoney(sub.soldeDebiteur)}</strong></td>
+                            <td className="text-end"><strong>{formatMoney(sub.soldeCrediteur)}</strong></td>
                           </tr>
                         </React.Fragment>
                       );
@@ -230,9 +231,7 @@ const BalancePage = () => {
                 </tbody>
                 <tfoot className="table-dark">
                   <tr>
-                    <th colSpan="2" className="text-end">
-                      TOTAUX GENERAUX:
-                    </th>
+                    <th colSpan="2" className="text-end">TOTAUX GENERAUX :</th>
                     <th className="text-end">{formatMoney(totaux.totalDebit)}</th>
                     <th className="text-end">{formatMoney(totaux.totalCredit)}</th>
                     <th className="text-end">{formatMoney(totaux.totalSoldeDebiteur)}</th>
