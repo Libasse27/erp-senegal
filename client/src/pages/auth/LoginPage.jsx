@@ -224,6 +224,13 @@ const LoginPage = () => {
               </button>
             </form>
 
+            <p style={styles.registerRow}>
+              Pas encore de compte ?{' '}
+              <Link to="/register" style={styles.registerLink}>
+                Créer un compte
+              </Link>
+            </p>
+
             <div style={styles.divider}>
               <span style={styles.dividerLine} />
               <span style={styles.dividerText}>SYSCOHADA / OHADA</span>
@@ -355,6 +362,8 @@ const styles = {
     border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff',
     borderRadius: '50%', animation: 'spin 0.7s linear infinite',
   },
+  registerRow: { textAlign: 'center', fontSize: '0.875rem', color: '#6b7280', margin: '1.25rem 0 0' },
+  registerLink: { color: '#1a56db', textDecoration: 'none', fontWeight: 600 },
   divider: { display: 'flex', alignItems: 'center', gap: '1rem', margin: '1.75rem 0 1rem' },
   dividerLine: { flex: 1, height: '1px', backgroundColor: '#e5e7eb' },
   dividerText: { fontSize: '0.7rem', color: '#9ca3af', fontWeight: 600, letterSpacing: '0.08em', whiteSpace: 'nowrap' },
