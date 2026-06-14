@@ -6,6 +6,8 @@ import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Badge from 'react-bootstrap/Badge';
 import Alert from 'react-bootstrap/Alert';
+import Spinner from 'react-bootstrap/Spinner';
+import ProgressBar from 'react-bootstrap/ProgressBar';
 import {
   FiDollarSign,
   FiUsers,
@@ -21,56 +23,55 @@ import {
   FiPackage,
   FiShoppingCart,
   FiClipboard,
+  FiInfo,
+  FiAlertCircle,
+  FiCalendar,
+  FiRefreshCw,
 } from 'react-icons/fi';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatMoney, formatDateTime } from '../../utils/formatters';
-import { useGetDashboardStatsQuery } from '../../redux/api/dashboardApi';
+import { useGetDashboardStatsQuery, useGetDashboardChartsQuery } from '../../redux/api/dashboardApi';
+import { useGetUsageSaasQuery } from '../../redux/api/saasApi';
+import useNotificationsHook from '../../hooks/useNotifications';
 import StatCard from '../../components/ui/StatCard';
 import { SalesEvolutionChart, TopProductsChart } from '../../components/charts';
 import { useAuth } from '../../contexts/AuthContext';
 import { PERM } from '../../config/permissions';
 
-// Thème par rôle (couleur d'accent du workspace)
 const ROLE_WORKSPACE = {
-  admin:              { label: 'Administrateur',    color: '#f87171', icon: '🔐' },
-  manager:            { label: 'Manager',            color: '#818cf8', icon: '👔' },
-  comptable:          { label: 'Comptable',          color: '#34d399', icon: '💰' },
-  commercial:         { label: 'Commercial',         color: '#fb923c', icon: '📈' },
-  vendeur:            { label: 'Vendeur',            color: '#fbbf24', icon: '🛒' },
-  caissier:           { label: 'Caissier',           color: '#22d3ee', icon: '💳' },
-  gestionnaire_stock: { label: 'Gestion du Stock',  color: '#a78bfa', icon: '📦' },
+  admin:              { label: 'Administrateur',   color: '#f87171', icon: '🔐' },
+  manager:            { label: 'Manager',           color: '#818cf8', icon: '👔' },
+  comptable:          { label: 'Comptable',         color: '#34d399', icon: '💰' },
+  commercial:         { label: 'Commercial',        color: '#fb923c', icon: '📈' },
+  vendeur:            { label: 'Vendeur',           color: '#fbbf24', icon: '🛒' },
+  caissier:           { label: 'Caissier',          color: '#22d3ee', icon: '💳' },
+  gestionnaire_stock: { label: 'Gestion du Stock', color: '#a78bfa', icon: '📦' },
 };
 
-const revenueData = [
-  { mois: 'Jan', ca: 4500000 },
-  { mois: 'Fev', ca: 5200000 },
-  { mois: 'Mar', ca: 3800000 },
-  { mois: 'Avr', ca: 6100000 },
-  { mois: 'Mai', ca: 5500000 },
-  { mois: 'Jun', ca: 7200000 },
-  { mois: 'Jul', ca: 6800000 },
-  { mois: 'Aou', ca: 5900000 },
-  { mois: 'Sep', ca: 7500000 },
-  { mois: 'Oct', ca: 8100000 },
-  { mois: 'Nov', ca: 7800000 },
-  { mois: 'Dec', ca: 9200000 },
-];
+const MONTHS = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const paymentData = [
-  { name: 'Especes',      value: 35 },
-  { name: 'Virement',     value: 25 },
-  { name: 'Orange Money', value: 20 },
-  { name: 'Wave',         value: 15 },
-  { name: 'Cheque',       value: 5  },
-];
+const MODE_LABELS = {
+  especes:      'Espèces',
+  virement:     'Virement',
+  cheque:       'Chèque',
+  orange_money: 'Orange Money',
+  wave:         'Wave',
+  free_money:   'Free Money',
+  carte:        'Carte bancaire',
+};
 
-const recentActivities = [
-  { id: 1, icon: FiFileText,   color: '#1a56db', message: 'Facture FA-2026-001 creee',           time: new Date(Date.now() - 1000 * 60 * 15)  },
-  { id: 2, icon: FiCreditCard, color: '#059669', message: 'Paiement de 500 000 FCFA recu',       time: new Date(Date.now() - 1000 * 60 * 45)  },
-  { id: 3, icon: FiUsers,      color: '#ff6900', message: 'Nouveau client ajoute : SONATEL',     time: new Date(Date.now() - 1000 * 60 * 120) },
-  { id: 4, icon: FiAlertTriangle, color: '#dc2626', message: 'Stock faible : Produit XYZ',       time: new Date(Date.now() - 1000 * 60 * 180) },
-  { id: 5, icon: FiCheckCircle,   color: '#059669', message: 'Devis DE-2026-015 accepte',        time: new Date(Date.now() - 1000 * 60 * 240) },
-];
+const NOTIF_ICON = {
+  success: FiCheckCircle,
+  warning: FiAlertTriangle,
+  error:   FiAlertCircle,
+  info:    FiInfo,
+};
+const NOTIF_COLOR = {
+  success: '#059669',
+  warning: '#d97706',
+  error:   '#dc2626',
+  info:    '#1a56db',
+};
 
 const DashboardPage = () => {
   usePageTitle('Tableau de bord', [{ label: 'Accueil', path: '/' }]);
@@ -79,11 +80,50 @@ const DashboardPage = () => {
   const { data: statsData, isLoading } = useGetDashboardStatsQuery();
   const stats = statsData?.data || {};
 
+  const { data: chartsData, isLoading: isLoadingCharts } = useGetDashboardChartsQuery();
+
+  const isAdmin = hasRole('admin');
+  const { data: usageData } = useGetUsageSaasQuery(undefined, { skip: !isAdmin });
+
+  const { notifications: recentNotifs } = useNotificationsHook({ page: 1, limit: 5 });
+
   const roleName = user?.role?.name || '';
   const workspace = ROLE_WORKSPACE[roleName];
   const firstName = user?.firstName || '';
 
-  // ── Stat cards filtrées par permission ──────────────────────────────────
+  // ── Données graphique CA mensuel ─────────────────────────────────────────
+  const revenueData = MONTHS.map((mois, i) => {
+    const found = (chartsData?.data?.caMensuel || []).find((m) => m._id === i + 1);
+    return { mois, ca: found?.total || 0 };
+  });
+
+  // ── Données graphique paiements par mode ─────────────────────────────────
+  const rawPayments = chartsData?.data?.paiementsParMode || [];
+  const grandTotal = rawPayments.reduce((s, p) => s + p.total, 0);
+  const paymentData = rawPayments.map((p) => ({
+    name:  MODE_LABELS[p._id] || p._id,
+    value: grandTotal > 0 ? Math.round((p.total / grandTotal) * 100) : 0,
+  }));
+
+  // ── Activités récentes depuis les notifications API ───────────────────────
+  const recentActivities = recentNotifs.slice(0, 5).map((n, i) => ({
+    id:      n._id || i,
+    icon:    NOTIF_ICON[n.type] || FiInfo,
+    color:   NOTIF_COLOR[n.type] || '#1a56db',
+    message: n.message || n.title || '',
+    time:    new Date(n.createdAt),
+  }));
+
+  // ── Abonnement SaaS ───────────────────────────────────────────────────────
+  const abonnement = usageData?.abonnement;
+  const dateFin = abonnement?.dateFin ? new Date(abonnement.dateFin) : null;
+  const now = new Date();
+  const joursRestants = dateFin ? Math.max(0, Math.ceil((dateFin - now) / (1000 * 60 * 60 * 24))) : 0;
+  const dateDebut = abonnement?.dateDebut ? new Date(abonnement.dateDebut) : null;
+  const dureeTotal = dateFin && dateDebut ? Math.ceil((dateFin - dateDebut) / (1000 * 60 * 60 * 24)) : 30;
+  const progressPct = dateFin ? Math.round(((dureeTotal - joursRestants) / dureeTotal) * 100) : 0;
+
+  // ── Stat cards filtrées par permission ───────────────────────────────────
   const statCards = [
     hasPermission(PERM.FACTURES_READ) && {
       title: 'CA du mois',
@@ -113,7 +153,6 @@ const DashboardPage = () => {
       color: '#dc2626',
       subtitle: 'Rupture ou faible',
     },
-    // Caissier / Comptable sans accès factures → voir paiements
     hasPermission(PERM.PAIEMENTS_READ) && !hasPermission(PERM.FACTURES_READ) && {
       title: 'Paiements du mois',
       value: formatMoney(stats.paiementsDuMois || 0),
@@ -121,7 +160,6 @@ const DashboardPage = () => {
       color: '#22d3ee',
       subtitle: 'Encaissements',
     },
-    // Comptable → écritures comptables
     hasPermission(PERM.ECRITURES_READ) && {
       title: 'Ecritures du mois',
       value: stats.ecrituresDuMois || 0,
@@ -131,7 +169,6 @@ const DashboardPage = () => {
     },
   ].filter(Boolean);
 
-  // ── Boutons header ───────────────────────────────────────────────────────
   const headerActions = [
     hasPermission(PERM.DEVIS_CREATE) && (
       <Button key="devis" as={Link} to="/ventes/devis/nouveau" variant="outline-primary" size="sm">
@@ -150,7 +187,6 @@ const DashboardPage = () => {
     ),
   ].filter(Boolean);
 
-  // ── Actions rapides filtrées par permission ──────────────────────────────
   const quickActions = [
     hasPermission(PERM.DEVIS_CREATE) && {
       to: '/ventes/devis/nouveau',
@@ -228,6 +264,7 @@ const DashboardPage = () => {
 
   const showRevenueChart = hasPermission(PERM.FACTURES_READ) || hasPermission(PERM.RAPPORTS_READ);
   const showPaymentChart  = hasPermission(PERM.PAIEMENTS_READ);
+  const showActivities    = hasPermission(PERM.FACTURES_READ) || hasPermission(PERM.PAIEMENTS_READ) || hasPermission(PERM.CLIENTS_READ);
 
   return (
     <>
@@ -239,9 +276,7 @@ const DashboardPage = () => {
             <p className="text-muted mb-0 small">
               {workspace.icon}{' '}
               Bonjour {firstName} —{' '}
-              <Badge
-                style={{ backgroundColor: workspace.color, color: '#fff', fontWeight: 500 }}
-              >
+              <Badge style={{ backgroundColor: workspace.color, color: '#fff', fontWeight: 500 }}>
                 {workspace.label}
               </Badge>
             </p>
@@ -253,6 +288,52 @@ const DashboardPage = () => {
           </div>
         )}
       </div>
+
+      {/* ── Widget abonnement SaaS (admin uniquement) ────────────────── */}
+      {isAdmin && abonnement && (
+        <Alert
+          variant={joursRestants <= 7 ? 'warning' : 'info'}
+          className="mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2"
+        >
+          <div className="d-flex align-items-center gap-2">
+            <FiCalendar size={18} />
+            <span>
+              <strong>Abonnement {abonnement?.forfaitId?.nom || 'SaaS'}</strong>
+              {' — '}
+              <Badge bg={abonnement.statut === 'ACTIF' ? 'success' : 'danger'} className="me-2">
+                {abonnement.statut}
+              </Badge>
+              {dateFin && (
+                <>
+                  Expire le {dateFin.toLocaleDateString('fr-SN', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  {' ('}
+                  <strong>{joursRestants} jour{joursRestants !== 1 ? 's' : ''}</strong>
+                  {' restant)'}
+                </>
+              )}
+            </span>
+          </div>
+          <div className="d-flex align-items-center gap-2">
+            {joursRestants <= 30 && (
+              <Button as={Link} to="/abonnement/paiement" size="sm" variant={joursRestants <= 7 ? 'warning' : 'outline-primary'}>
+                <FiRefreshCw size={14} className="me-1" /> Renouveler
+              </Button>
+            )}
+            <Button as={Link} to="/abonnement" size="sm" variant="outline-secondary">
+              Gérer
+            </Button>
+          </div>
+          {dateFin && (
+            <div className="w-100 mt-1">
+              <ProgressBar
+                now={progressPct}
+                variant={joursRestants <= 7 ? 'danger' : joursRestants <= 30 ? 'warning' : 'success'}
+                style={{ height: 4 }}
+              />
+            </div>
+          )}
+        </Alert>
+      )}
 
       {/* ── Stat Cards ──────────────────────────────────────────────── */}
       {statCards.length > 0 ? (
@@ -282,8 +363,9 @@ const DashboardPage = () => {
           {showRevenueChart && (
             <Col lg={showPaymentChart ? 8 : 12}>
               <Card className="shadow-sm">
-                <Card.Header className="bg-white">
-                  <h6 className="mb-0">Evolution du chiffre d'affaires (2026)</h6>
+                <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                  <h6 className="mb-0">Evolution du chiffre d'affaires ({new Date().getFullYear()})</h6>
+                  {isLoadingCharts && <Spinner animation="border" size="sm" />}
                 </Card.Header>
                 <Card.Body>
                   <SalesEvolutionChart data={revenueData} dataKey="ca" labelKey="mois" type="bar" />
@@ -294,11 +376,16 @@ const DashboardPage = () => {
           {showPaymentChart && (
             <Col lg={showRevenueChart ? 4 : 12}>
               <Card className="shadow-sm">
-                <Card.Header className="bg-white">
+                <Card.Header className="bg-white d-flex justify-content-between align-items-center">
                   <h6 className="mb-0">Modes de paiement</h6>
+                  {isLoadingCharts && <Spinner animation="border" size="sm" />}
                 </Card.Header>
                 <Card.Body>
-                  <TopProductsChart data={paymentData} />
+                  {paymentData.length > 0 ? (
+                    <TopProductsChart data={paymentData} />
+                  ) : (
+                    <p className="text-muted text-center py-4 mb-0">Aucun paiement enregistré</p>
+                  )}
                 </Card.Body>
               </Card>
             </Col>
@@ -308,8 +395,7 @@ const DashboardPage = () => {
 
       {/* ── Activité + Actions rapides ──────────────────────────────── */}
       <Row className="g-3">
-        {/* Activité récente — visible si au moins une permission globale */}
-        {(hasPermission(PERM.FACTURES_READ) || hasPermission(PERM.PAIEMENTS_READ) || hasPermission(PERM.CLIENTS_READ)) && (
+        {showActivities && (
           <Col lg={quickActions.length > 0 ? 8 : 12}>
             <Card className="shadow-sm">
               <Card.Header className="bg-white d-flex justify-content-between align-items-center">
@@ -317,39 +403,42 @@ const DashboardPage = () => {
                 <Badge bg="secondary">{recentActivities.length}</Badge>
               </Card.Header>
               <Card.Body>
-                <div className="activity-list">
-                  {recentActivities.map((activity) => (
-                    <div key={activity.id} className="d-flex align-items-start py-3 border-bottom">
-                      <div
-                        className="rounded-circle d-flex align-items-center justify-content-center me-3"
-                        style={{
-                          width: 40,
-                          height: 40,
-                          backgroundColor: `${activity.color}15`,
-                          color: activity.color,
-                          flexShrink: 0,
-                        }}
-                      >
-                        <activity.icon size={18} />
+                {recentActivities.length > 0 ? (
+                  <div className="activity-list">
+                    {recentActivities.map((activity) => (
+                      <div key={activity.id} className="d-flex align-items-start py-3 border-bottom">
+                        <div
+                          className="rounded-circle d-flex align-items-center justify-content-center me-3"
+                          style={{
+                            width: 40,
+                            height: 40,
+                            backgroundColor: `${activity.color}15`,
+                            color: activity.color,
+                            flexShrink: 0,
+                          }}
+                        >
+                          <activity.icon size={18} />
+                        </div>
+                        <div className="flex-grow-1">
+                          <p className="mb-1">{activity.message}</p>
+                          <small className="text-muted d-flex align-items-center">
+                            <FiClock size={12} className="me-1" />
+                            {formatDateTime(activity.time)}
+                          </small>
+                        </div>
                       </div>
-                      <div className="flex-grow-1">
-                        <p className="mb-1">{activity.message}</p>
-                        <small className="text-muted d-flex align-items-center">
-                          <FiClock size={12} className="me-1" />
-                          {formatDateTime(activity.time)}
-                        </small>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted text-center py-4 mb-0">Aucune activité récente</p>
+                )}
               </Card.Body>
             </Card>
           </Col>
         )}
 
-        {/* Actions rapides ─────────────────────────────────────────── */}
         {quickActions.length > 0 && (
-          <Col lg={hasPermission(PERM.FACTURES_READ) || hasPermission(PERM.PAIEMENTS_READ) || hasPermission(PERM.CLIENTS_READ) ? 4 : 12}>
+          <Col lg={showActivities ? 4 : 12}>
             <Card className="shadow-sm">
               <Card.Header className="bg-white">
                 <h6 className="mb-0">Actions rapides</h6>
@@ -377,7 +466,6 @@ const DashboardPage = () => {
           </Col>
         )}
 
-        {/* Raccourcis comptabilité pour comptable sans autres sections */}
         {hasPermission(PERM.COMPTABILITE_READ) && !hasPermission(PERM.FACTURES_READ) && !hasPermission(PERM.CLIENTS_READ) && (
           <Col lg={12}>
             <Card className="shadow-sm">
@@ -387,12 +475,12 @@ const DashboardPage = () => {
               <Card.Body>
                 <Row className="g-2">
                   {[
-                    { to: '/comptabilite/ecritures',   label: 'Ecritures',         icon: FiBookOpen,  variant: 'outline-success'   },
-                    { to: '/comptabilite/grand-livre', label: 'Grand Livre',       icon: FiFileText,  variant: 'outline-primary'   },
-                    { to: '/comptabilite/balance',     label: 'Balance',           icon: FiBarChart2, variant: 'outline-primary'   },
-                    { to: '/comptabilite/bilan',       label: 'Bilan',             icon: FiBarChart2, variant: 'outline-primary'   },
-                    { to: '/comptabilite/resultat',    label: 'Compte de Resultat',icon: FiBarChart2, variant: 'outline-primary'   },
-                    { to: '/comptabilite/exercices',   label: 'Exercices',         icon: FiShoppingCart, variant: 'outline-secondary' },
+                    { to: '/comptabilite/ecritures',   label: 'Ecritures',          icon: FiBookOpen,     variant: 'outline-success'   },
+                    { to: '/comptabilite/grand-livre', label: 'Grand Livre',        icon: FiFileText,     variant: 'outline-primary'   },
+                    { to: '/comptabilite/balance',     label: 'Balance',            icon: FiBarChart2,    variant: 'outline-primary'   },
+                    { to: '/comptabilite/bilan',       label: 'Bilan',              icon: FiBarChart2,    variant: 'outline-primary'   },
+                    { to: '/comptabilite/resultat',    label: 'Compte de Resultat', icon: FiBarChart2,    variant: 'outline-primary'   },
+                    { to: '/comptabilite/exercices',   label: 'Exercices',          icon: FiShoppingCart, variant: 'outline-secondary' },
                   ].map((a) => {
                     const Icon = a.icon;
                     return (
@@ -409,7 +497,6 @@ const DashboardPage = () => {
           </Col>
         )}
 
-        {/* Espace gestionnaire stock */}
         {hasRole('gestionnaire_stock') && (
           <Col lg={12}>
             <Card className="shadow-sm border-warning">
@@ -419,9 +506,9 @@ const DashboardPage = () => {
               <Card.Body>
                 <Row className="g-2">
                   {[
-                    { to: '/stocks',          label: 'Etat des stocks',    icon: FiBox,     variant: 'outline-warning'  },
-                    { to: '/produits',        label: 'Catalogue produits', icon: FiPackage, variant: 'outline-primary'  },
-                    { to: '/produits/nouveau',label: 'Ajouter un produit', icon: FiPlus,    variant: 'warning'          },
+                    { to: '/stocks',           label: 'Etat des stocks',    icon: FiBox,     variant: 'outline-warning' },
+                    { to: '/produits',         label: 'Catalogue produits', icon: FiPackage, variant: 'outline-primary' },
+                    { to: '/produits/nouveau', label: 'Ajouter un produit', icon: FiPlus,    variant: 'warning'         },
                   ].map((a) => {
                     const Icon = a.icon;
                     return (

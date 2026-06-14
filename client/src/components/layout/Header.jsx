@@ -3,11 +3,12 @@ import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import Dropdown from 'react-bootstrap/Dropdown';
 import Breadcrumb from 'react-bootstrap/Breadcrumb';
-import { FiMenu, FiUser, FiLogOut, FiSettings } from 'react-icons/fi';
+import { FiMenu, FiUser, FiLogOut, FiSettings, FiDownload } from 'react-icons/fi';
 import { useSelector } from 'react-redux';
 import { toggleSidebar, selectPageTitle, selectBreadcrumbs } from '../../redux/slices/uiSlice';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationBell from './NotificationBell';
+import usePWAInstall from '../../hooks/usePWAInstall';
 
 const Header = () => {
   const dispatch = useDispatch();
@@ -15,6 +16,7 @@ const Header = () => {
   const pageTitle = useSelector(selectPageTitle);
   const breadcrumbs = useSelector(selectBreadcrumbs);
   const { user, logout } = useAuth();
+  const { isInstallable, promptInstall } = usePWAInstall();
 
   const handleLogout = async () => {
     await logout();
@@ -48,6 +50,18 @@ const Header = () => {
       </div>
 
       <div className="d-flex align-items-center gap-3">
+        {/* Bouton installation PWA */}
+        {isInstallable && (
+          <button
+            className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+            onClick={promptInstall}
+            title="Installer l'application sur cet appareil"
+          >
+            <FiDownload size={15} />
+            <span className="d-none d-md-inline">Installer</span>
+          </button>
+        )}
+
         {/* Notifications */}
         <NotificationBell />
 

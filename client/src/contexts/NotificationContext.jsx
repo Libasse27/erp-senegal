@@ -52,6 +52,7 @@ export const NotificationProvider = ({ children }) => {
     };
 
     const events = [
+      'notification',
       'stock:alert',
       'facture:created',
       'facture:validated',
