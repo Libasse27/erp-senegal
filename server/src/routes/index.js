@@ -30,6 +30,7 @@ const commandesAchatRoutes = require('./commandes-achat.routes');
 const paymentsRoutes = require('./payments.routes');
 const bankAccountsRoutes = require('./bank-accounts.routes');
 const comptabiliteRoutes = require('./comptabilite.routes');
+const rapportsRoutes = require('./rapports.routes');
 
 // Dashboard
 const dashboardRoutes = require('./dashboard.routes');
@@ -77,6 +78,7 @@ router.use('/commandes-achat', commandesAchatRoutes);
 router.use('/payments', paymentsRoutes);
 router.use('/bank-accounts', bankAccountsRoutes);
 router.use('/comptabilite', comptabiliteRoutes);
+router.use('/rapports', rapportsRoutes);
 
 // === Dashboard ===
 router.use('/dashboard', dashboardRoutes);

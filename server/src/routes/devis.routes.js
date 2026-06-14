@@ -23,6 +23,7 @@ const {
   changeStatut: changeStatutSchema,
 } = require('../validations/devis.validation');
 const audit = require('../middlewares/audit');
+const { pdfLimiter } = require('../middlewares/rateLimiter');
 
 router.use(protect);
 router.use(tenantMiddleware);
@@ -31,7 +32,7 @@ router.use(subscriptionGuard('GESCOM'));
 // CRUD
 router.get('/', authorize('devis:read'), getDevisList);
 router.get('/:id', authorize('devis:read'), getDevis);
-router.get('/:id/pdf', authorize('devis:read'), getDevisPDF);
+router.get('/:id/pdf', pdfLimiter, authorize('devis:read'), getDevisPDF);
 router.post(
   '/',
   authorize('devis:create'),

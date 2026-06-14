@@ -47,6 +47,7 @@ const {
 } = require('../validations/comptabilite.validation');
 const audit = require('../middlewares/audit');
 const { cache } = require('../middlewares/cache');
+const { exportLimiter } = require('../middlewares/rateLimiter');
 
 router.use(protect);
 router.use(tenantMiddleware);
@@ -143,11 +144,11 @@ router.get('/balance', authorize('comptabilite:read'), getBalance);
 router.get('/compte-resultat', authorize('comptabilite:read'), getCompteResultat);
 router.get('/bilan', authorize('comptabilite:read'), getBilan);
 router.get('/tva', authorize('comptabilite:read'), getDeclarationTVA);
-router.get('/fec', authorize('comptabilite:export'), exportFEC);
+router.get('/fec', exportLimiter, authorize('comptabilite:export'), exportFEC);
 
 // === Exports Excel ===
-router.get('/balance/export', authorize('comptabilite:export'), exportBalanceExcelHandler);
-router.get('/grand-livre/export', authorize('comptabilite:export'), exportGrandLivreExcelHandler);
-router.get('/compte-resultat/export', authorize('comptabilite:export'), exportCompteResultatExcelHandler);
+router.get('/balance/export', exportLimiter, authorize('comptabilite:export'), exportBalanceExcelHandler);
+router.get('/grand-livre/export', exportLimiter, authorize('comptabilite:export'), exportGrandLivreExcelHandler);
+router.get('/compte-resultat/export', exportLimiter, authorize('comptabilite:export'), exportCompteResultatExcelHandler);
 
 module.exports = router;

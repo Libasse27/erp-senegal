@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bilan SYSCOHADA</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #1a1a1a; background: #fff; }
+
+    /* Header */
+    .header { background: #1a237e; color: #fff; padding: 18px 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .header-left .company-name { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .header-left .company-details { font-size: 9px; opacity: 0.85; line-height: 1.6; }
+    .header-right { text-align: right; }
+    .header-right .doc-title { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+    .header-right .doc-subtitle { font-size: 11px; opacity: 0.9; margin-top: 4px; }
+    .header-right .doc-meta { font-size: 9px; opacity: 0.8; margin-top: 6px; line-height: 1.6; }
+
+    /* Meta band */
+    .meta-band { background: #e8eaf6; border-bottom: 2px solid #1a237e; padding: 8px 24px; display: flex; gap: 32px; font-size: 9px; color: #1a237e; font-weight: 600; }
+
+    /* Bilan layout */
+    .bilan-container { display: flex; margin: 0; }
+    .bilan-col { width: 50%; }
+    .bilan-col:first-child { border-right: 2px solid #1a237e; }
+
+    /* Section headers */
+    .section-header { background: #1a237e; color: #fff; padding: 7px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    .subsection-header { background: #3949ab; color: #fff; padding: 5px 14px 5px 20px; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+
+    /* Rows */
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 4px 14px 4px 22px; border-bottom: 1px solid #e8eaf6; }
+    .row:nth-child(even) { background: #f5f7fa; }
+    .row:nth-child(odd) { background: #fff; }
+    .row .compte-num { color: #3949ab; font-weight: 600; min-width: 62px; font-size: 9px; }
+    .row .compte-libelle { flex: 1; padding: 0 8px; color: #333; }
+    .row .montant { font-weight: 600; color: #1a237e; text-align: right; min-width: 90px; font-size: 9px; }
+
+    /* Empty state */
+    .row-empty { padding: 6px 14px 6px 22px; color: #aaa; font-style: italic; font-size: 9px; background: #fafafa; border-bottom: 1px solid #e8eaf6; }
+
+    /* Subtotals */
+    .subtotal-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 14px 5px 14px; background: #e8eaf6; border-top: 1px solid #9fa8da; border-bottom: 2px solid #9fa8da; }
+    .subtotal-row .label { font-weight: 700; color: #1a237e; font-size: 9.5px; flex: 1; }
+    .subtotal-row .amount { font-weight: 700; color: #1a237e; text-align: right; min-width: 90px; font-size: 9.5px; }
+
+    /* Total footer */
+    .totals-footer { background: #1a237e; color: #fff; padding: 10px 24px; display: flex; justify-content: space-around; font-size: 11px; font-weight: 700; }
+    .totals-footer .total-block { text-align: center; }
+    .totals-footer .total-block .total-label { font-size: 9px; font-weight: 400; opacity: 0.85; margin-bottom: 4px; }
+    .totals-footer .total-block .total-value { font-size: 14px; }
+    .totals-footer .equilibre-badge { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .badge { padding: 3px 12px; border-radius: 12px; font-size: 9px; font-weight: 700; }
+    .badge-ok { background: #43a047; color: #fff; }
+    .badge-ko { background: #e53935; color: #fff; }
+
+    /* Document footer */
+    .doc-footer { padding: 8px 24px; font-size: 8px; color: #666; display: flex; justify-content: space-between; border-top: 1px solid #e8eaf6; margin-top: 4px; }
+
+    /* Column fill so both cols are same height visual */
+    .spacer { min-height: 10px; }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="company-name">{{company.name}}</div>
+      <div class="company-details">
+        {{#if company.address.street}}{{company.address.street}}, {{/if}}{{company.address.city}}{{#if company.address.country}}, {{company.address.country}}{{/if}}<br />
+        {{#if company.phone}}Tel : {{company.phone}} &nbsp;|&nbsp; {{/if}}
+        {{#if company.email}}{{company.email}}{{/if}}<br />
+        {{#if company.ninea}}NINEA : {{company.ninea}}{{/if}}
+        {{#if company.rccm}}&nbsp;|&nbsp; RCCM : {{company.rccm}}{{/if}}
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="doc-title">BILAN</div>
+      <div class="doc-subtitle">SYSCOHADA — Plan Comptable OHADA</div>
+      <div class="doc-meta">
+        {{#if dateTo}}Au {{formatDate dateTo}}{{else}}Exercice {{exercice}}{{/if}}<br />
+        {{#if dateFrom}}Du {{formatDate dateFrom}} au {{formatDate dateTo}}{{/if}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Meta band -->
+  <div class="meta-band">
+    {{#if exercice}}<span>Exercice : {{exercice}}</span>{{/if}}
+    {{#if dateFrom}}<span>Periode : {{formatDate dateFrom}} - {{formatDate dateTo}}</span>{{/if}}
+    <span>Unite : FCFA</span>
+    <span>Referentiel : SYSCOHADA</span>
+  </div>
+
+  <!-- Bilan two-column layout -->
+  <div class="bilan-container">
+
+    <!-- ACTIF -->
+    <div class="bilan-col">
+      <div class="section-header">ACTIF</div>
+
+      <!-- Immobilisations (Classe 2) -->
+      <div class="subsection-header">Actif Immobilise (Classe 2)</div>
+      {{#if bilan.actif.immobilisations.length}}
+        {{#each bilan.actif.immobilisations}}
+        <div class="row">
+          <span class="compte-num">{{_id}}</span>
+          <span class="compte-libelle">{{compteLibelle}}</span>
+          <span class="montant">{{formatMontant solde}}</span>
+        </div>
+        {{/each}}
+      {{else}}
+        <div class="row-empty">Aucun actif immobilise</div>
+      {{/if}}
+
+      <!-- Stocks (Classe 3) -->
+      <div class="subsection-header">Stocks (Classe 3)</div>
+      {{#if bilan.actif.stocks.length}}
+        {{#each bilan.actif.stocks}}
+        <div class="row">
+          <span class="compte-num">{{_id}}</span>
+          <span class="compte-libelle">{{compteLibelle}}</span>
+          <span class="montant">{{formatMontant solde}}</span>
+        </div>
+        {{/each}}
+      {{else}}
+        <div class="row-empty">Aucun stock</div>
+      {{/if}}
+
+      <!-- Creances (Classe 4 debit) -->
+      <div class="subsection-header">Creances (Classe 4 — Debiteur)</div>
+      {{#if bilan.actif.creances.length}}
+        {{#each bilan.actif.creances}}
+        <div class="row">
+          <span class="compte-num">{{_id}}</span>
+          <span class="compte-libelle">{{compteLibelle}}</span>
+          <span class="montant">{{formatMontant solde}}</span>
+        </div>
+        {{/each}}
+      {{else}}
+        <div class="row-empty">Aucune creance</div>
+      {{/if}}
+
+      <!-- Tresorerie active (Classe 5 debit) -->
+      <div class="subsection-header">Tresorerie Active (Classe 5 — Debiteur)</div>
+      {{#if bilan.actif.tresorerie.length}}
+        {{#each bilan.actif.tresorerie}}
+        <div class="row">
+          <span class="compte-num">{{_id}}</span>
+          <span class="compte-libelle">{{compteLibelle}}</span>
+          <span class="montant">{{formatMontant solde}}</span>
+        </div>
+        {{/each}}
+      {{else}}
+        <div class="row-empty">Aucune tresorerie active</div>
+      {{/if}}
+
+      <div class="spacer"></div>
+      <div class="subtotal-row">
+        <span class="label">TOTAL ACTIF</span>
+        <span class="amount">{{formatMontant bilan.totalActif}} FCFA</span>
+      </div>
+    </div>
+
+    <!-- PASSIF -->
+    <div class="bilan-col">
+      <div class="section-header">PASSIF</div>
+
+      <!-- Capitaux propres (Classe 1) -->
+      <div class="subsection-header">Capitaux Propres (Classe 1)</div>
+      {{#if bilan.passif.capitaux.length}}
+        {{#each bilan.passif.capitaux}}
+        <div class="row">
+          <span class="compte-num">{{_id}}</span>
+          <span class="compte-libelle">{{compteLibelle}}</span>
+          <span class="montant">{{formatMontant solde}}</span>
+        </div>
+        {{/each}}
+      {{else}}
+        <div class="row-empty">Aucun capital propre</div>
+      {{/if}}
+
+      <!-- Dettes (Classe 4 credit) -->
+      <div class="subsection-header">Dettes (Classe 4 — Crediteur)</div>
+      {{#if bilan.passif.dettes.length}}
+        {{#each bilan.passif.dettes}}
+        <div class="row">
+          <span class="compte-num">{{_id}}</span>
+          <span class="compte-libelle">{{compteLibelle}}</span>
+          <span class="montant">{{formatMontant solde}}</span>
+        </div>
+        {{/each}}
+      {{else}}
+        <div class="row-empty">Aucune dette</div>
+      {{/if}}
+
+      <!-- Tresorerie passive (Classe 5 credit) -->
+      <div class="subsection-header">Tresorerie Passive (Classe 5 — Crediteur)</div>
+      {{#if bilan.passif.tresorerie.length}}
+        {{#each bilan.passif.tresorerie}}
+        <div class="row">
+          <span class="compte-num">{{_id}}</span>
+          <span class="compte-libelle">{{compteLibelle}}</span>
+          <span class="montant">{{formatMontant solde}}</span>
+        </div>
+        {{/each}}
+      {{else}}
+        <div class="row-empty">Aucune tresorerie passive</div>
+      {{/if}}
+
+      <div class="spacer"></div>
+      <div class="subtotal-row">
+        <span class="label">TOTAL PASSIF</span>
+        <span class="amount">{{formatMontant bilan.totalPassif}} FCFA</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Totals footer -->
+  <div class="totals-footer">
+    <div class="total-block">
+      <div class="total-label">TOTAL ACTIF</div>
+      <div class="total-value">{{formatMontant bilan.totalActif}} FCFA</div>
+    </div>
+    <div class="equilibre-badge">
+      {{#if bilan.isEquilibre}}
+        <span class="badge badge-ok">BILAN EQUILIBRE</span>
+      {{else}}
+        <span class="badge badge-ko">BILAN DESEQUILIBRE</span>
+        <div style="font-size:8px;opacity:0.7;margin-top:4px;">Ecart : {{formatMontant bilan.totalActif}} — {{formatMontant bilan.totalPassif}}</div>
+      {{/if}}
+    </div>
+    <div class="total-block">
+      <div class="total-label">TOTAL PASSIF</div>
+      <div class="total-value">{{formatMontant bilan.totalPassif}} FCFA</div>
+    </div>
+  </div>
+
+  <!-- Document footer -->
+  <div class="doc-footer">
+    <span>Document genere le {{formatDate generatedAt}} — {{company.name}}</span>
+    <span>SYSCOHADA / OHADA — Valeurs en FCFA (XOF)</span>
+  </div>
+
+</body>
+</html>

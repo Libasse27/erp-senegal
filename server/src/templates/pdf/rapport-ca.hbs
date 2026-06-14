@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chiffre d'Affaires par Periode</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #1a1a1a; background: #fff; }
+
+    /* Header */
+    .header { background: #1a237e; color: #fff; padding: 18px 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .header-left .company-name { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .header-left .company-details { font-size: 9px; opacity: 0.85; line-height: 1.6; }
+    .header-right { text-align: right; }
+    .header-right .doc-title { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
+    .header-right .doc-subtitle { font-size: 10px; opacity: 0.9; margin-top: 4px; }
+    .header-right .doc-meta { font-size: 9px; opacity: 0.8; margin-top: 6px; line-height: 1.6; }
+
+    /* Meta band */
+    .meta-band { background: #e8eaf6; border-bottom: 2px solid #1a237e; padding: 8px 24px; display: flex; gap: 24px; flex-wrap: wrap; font-size: 9px; color: #1a237e; font-weight: 600; }
+
+    /* KPI cards */
+    .kpi-row { display: flex; gap: 12px; padding: 14px 24px; background: #f5f7fa; border-bottom: 1px solid #e8eaf6; }
+    .kpi-card { flex: 1; background: #fff; border: 1px solid #e8eaf6; border-radius: 4px; padding: 10px 14px; text-align: center; border-top: 3px solid #1a237e; }
+    .kpi-card .kpi-label { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #666; letter-spacing: 0.3px; margin-bottom: 5px; }
+    .kpi-card .kpi-value { font-size: 14px; font-weight: 700; color: #1a237e; }
+    .kpi-card.highlight { border-top-color: #43a047; }
+    .kpi-card.highlight .kpi-value { color: #2e7d32; }
+
+    /* Content */
+    .content { padding: 0 24px 16px; }
+
+    /* Table */
+    .table-section { margin-top: 14px; }
+    .table-header { background: #1a237e; color: #fff; padding: 7px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { background: #3949ab; color: #fff; padding: 6px 12px; text-align: left; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+    thead th.right { text-align: right; }
+    thead th.center { text-align: center; }
+    tbody tr:nth-child(even) { background: #f5f7fa; }
+    tbody tr:nth-child(odd) { background: #fff; }
+    tbody td { padding: 5px 12px; font-size: 9.5px; border-bottom: 1px solid #e8eaf6; }
+    tbody td.right { text-align: right; font-weight: 600; }
+    tbody td.center { text-align: center; }
+    tbody td.periode { font-weight: 600; color: #3949ab; }
+    tbody td.montant-ht { text-align: right; color: #555; }
+    tbody td.montant-tva { text-align: right; color: #888; }
+    tbody td.montant-ttc { text-align: right; font-weight: 700; color: #1a237e; }
+    tbody tr.empty td { color: #aaa; font-style: italic; padding: 14px 12px; text-align: center; }
+
+    /* Totals row */
+    .totals-row td { background: #1a237e; color: #fff; font-weight: 700; font-size: 10px; padding: 7px 12px; border: none; }
+    .totals-row td.right { text-align: right; }
+    .totals-row td.center { text-align: center; }
+
+    /* Footer */
+    .doc-footer { padding: 8px 24px; font-size: 8px; color: #666; display: flex; justify-content: space-between; border-top: 1px solid #e8eaf6; margin-top: 12px; }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="company-name">{{company.name}}</div>
+      <div class="company-details">
+        {{#if company.address.street}}{{company.address.street}}, {{/if}}{{company.address.city}}{{#if company.address.country}}, {{company.address.country}}{{/if}}<br />
+        {{#if company.phone}}Tel : {{company.phone}} &nbsp;|&nbsp; {{/if}}
+        {{#if company.email}}{{company.email}}{{/if}}<br />
+        {{#if company.ninea}}NINEA : {{company.ninea}}{{/if}}
+        {{#if company.rccm}}&nbsp;|&nbsp; RCCM : {{company.rccm}}{{/if}}
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="doc-title">CHIFFRE D'AFFAIRES PAR PERIODE</div>
+      <div class="doc-subtitle">Rapport de facturation — Factures validees</div>
+      <div class="doc-meta">
+        Periode : {{formatDate dateFrom}} — {{formatDate dateTo}}<br />
+        Genere le {{formatDate generatedAt}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Meta band -->
+  <div class="meta-band">
+    <span>Periode : {{formatDate dateFrom}} au {{formatDate dateTo}}</span>
+    <span>Unite : FCFA (XOF)</span>
+    <span>TVA : 18%</span>
+    <span>Source : Factures validees</span>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Nb Factures</div>
+      <div class="kpi-value">{{rapport.nbFacturesTotal}}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">CA Hors Taxes</div>
+      <div class="kpi-value">{{formatMontant rapport.totalHT}} FCFA</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">TVA Collectee</div>
+      <div class="kpi-value">{{formatMontant rapport.totalTVA}} FCFA</div>
+    </div>
+    <div class="kpi-card highlight">
+      <div class="kpi-label">CA Toutes Taxes Comprises</div>
+      <div class="kpi-value">{{formatMontant rapport.totalTTC}} FCFA</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="table-section">
+      <div class="table-header">Detail Mensuel du Chiffre d'Affaires</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:130px;">Periode</th>
+            <th class="center" style="width:90px;">Nb Factures</th>
+            <th class="right">CA HT (FCFA)</th>
+            <th class="right">TVA (FCFA)</th>
+            <th class="right">CA TTC (FCFA)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#if rapport.lignes.length}}
+            {{#each rapport.lignes}}
+            <tr>
+              <td class="periode">{{label}}</td>
+              <td class="center">{{nbFactures}}</td>
+              <td class="montant-ht">{{formatMontant caHT}}</td>
+              <td class="montant-tva">{{formatMontant tva}}</td>
+              <td class="montant-ttc">{{formatMontant caTTC}}</td>
+            </tr>
+            {{/each}}
+          {{else}}
+            <tr class="empty">
+              <td colspan="5">Aucune facture validee sur cette periode</td>
+            </tr>
+          {{/if}}
+          <tr class="totals-row">
+            <td><strong>TOTAL GENERAL</strong></td>
+            <td class="center">{{rapport.nbFacturesTotal}}</td>
+            <td class="right">{{formatMontant rapport.totalHT}}</td>
+            <td class="right">{{formatMontant rapport.totalTVA}}</td>
+            <td class="right">{{formatMontant rapport.totalTTC}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Document footer -->
+  <div class="doc-footer">
+    <span>Document genere le {{formatDate generatedAt}} — {{company.name}}</span>
+    <span>FCFA (XOF) — TVA 18% — Donnees: Factures validees uniquement</span>
+  </div>
+
+</body>
+</html>

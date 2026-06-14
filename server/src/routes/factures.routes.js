@@ -24,18 +24,19 @@ const {
   createAvoir: createAvoirSchema,
 } = require('../validations/facture.validation');
 const audit = require('../middlewares/audit');
+const { pdfLimiter, exportLimiter } = require('../middlewares/rateLimiter');
 
 router.use(protect);
 router.use(tenantMiddleware);
 router.use(subscriptionGuard('FACTURATION'));
 
 // Export Excel (avant /:id pour éviter conflit de route)
-router.get('/export', authorize('factures:read'), exportFacturesExcelHandler);
+router.get('/export', exportLimiter, authorize('factures:read'), exportFacturesExcelHandler);
 
 // CRUD
 router.get('/', authorize('factures:read'), getFactures);
 router.get('/:id', authorize('factures:read'), getFacture);
-router.get('/:id/pdf', authorize('factures:read'), getFacturePDF);
+router.get('/:id/pdf', pdfLimiter, authorize('factures:read'), getFacturePDF);
 router.post(
   '/',
   authorize('factures:create'),

@@ -191,10 +191,64 @@ const generateCommandePDF = async (commande, company) => {
   });
 };
 
+/**
+ * Generate bilan (balance sheet) PDF
+ * @param {Object} bilan - Result from comptabiliteService.getBilan()
+ * @param {Object} company - Company document
+ * @param {Object} options - { exercice?, dateFrom?, dateTo? }
+ * @returns {Promise<Buffer>} PDF buffer
+ */
+const generateBilanPDF = async (bilan, company, options = {}) => {
+  return generatePDF('rapport-bilan', {
+    bilan,
+    company: company.toObject ? company.toObject() : company,
+    exercice: options.exercice || null,
+    dateFrom: options.dateFrom || null,
+    dateTo: options.dateTo || null,
+    generatedAt: new Date(),
+  });
+};
+
+/**
+ * Generate compte de resultat (income statement) PDF
+ * @param {Object} resultat - Result from comptabiliteService.getCompteResultat()
+ * @param {Object} company - Company document
+ * @param {Object} options - { exercice?, dateFrom?, dateTo? }
+ * @returns {Promise<Buffer>} PDF buffer
+ */
+const generateResultatPDF = async (resultat, company, options = {}) => {
+  return generatePDF('rapport-resultat', {
+    resultat,
+    company: company.toObject ? company.toObject() : company,
+    exercice: options.exercice || null,
+    generatedAt: new Date(),
+  });
+};
+
+/**
+ * Generate chiffre d'affaires (revenue) PDF
+ * @param {Object} rapport - { lignes, totalHT, totalTVA, totalTTC, nbFacturesTotal }
+ * @param {Object} company - Company document
+ * @param {Object} options - { dateFrom, dateTo }
+ * @returns {Promise<Buffer>} PDF buffer
+ */
+const generateCAPDF = async (rapport, company, options = {}) => {
+  return generatePDF('rapport-ca', {
+    rapport,
+    company: company.toObject ? company.toObject() : company,
+    dateFrom: options.dateFrom || null,
+    dateTo: options.dateTo || null,
+    generatedAt: new Date(),
+  });
+};
+
 module.exports = {
   generatePDF,
   generateFacturePDF,
   generateDevisPDF,
   generateBonLivraisonPDF,
   generateCommandePDF,
+  generateBilanPDF,
+  generateResultatPDF,
+  generateCAPDF,
 };

@@ -18,6 +18,7 @@ const {
   validateBL: validateBLSchema,
 } = require('../validations/bonLivraison.validation');
 const audit = require('../middlewares/audit');
+const { pdfLimiter } = require('../middlewares/rateLimiter');
 
 router.use(protect);
 router.use(tenantMiddleware);
@@ -25,7 +26,7 @@ router.use(subscriptionGuard('GESCOM'));
 
 // CRUD
 router.get('/', authorize('bons_livraison:read'), getBonsLivraison);
-router.get('/:id/pdf', authorize('bons_livraison:read'), getBonLivraisonPDF);
+router.get('/:id/pdf', pdfLimiter, authorize('bons_livraison:read'), getBonLivraisonPDF);
 router.get('/:id', authorize('bons_livraison:read'), getBonLivraison);
 router.post(
   '/',

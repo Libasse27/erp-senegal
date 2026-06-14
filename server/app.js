@@ -36,7 +36,35 @@ if (process.env.NODE_ENV !== 'production' || process.env.SWAGGER_ENABLED === 'tr
 app.set('trust proxy', 1);
 
 // --- Security middleware ---
-app.use(helmet());
+const isProd = process.env.NODE_ENV === 'production';
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        fontSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        ...(isProd ? { upgradeInsecureRequests: [] } : {}),
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    hsts: isProd
+      ? { maxAge: 31536000, includeSubDomains: true, preload: true }
+      : false,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    permittedCrossDomainPolicies: { permittedPolicies: 'none' },
+    xContentTypeOptions: true,
+    xFrameOptions: { action: 'deny' },
+  })
+);
 app.use(cors(corsOptions));
 
 // --- Body parsing ---
