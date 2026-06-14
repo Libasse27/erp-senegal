@@ -161,7 +161,7 @@ const createPayment = async (req, res, next) => {
       .populate('facture', 'numero totalTTC')
       .populate('compteBancaire', 'nom banque');
 
-    notifyPaymentReceived({ ...payment.toObject(), numero: payment.numero || payment.referenceInterne });
+    notifyPaymentReceived({ ...payment.toObject(), numero: payment.numero || payment.referenceInterne }, tc(req));
 
     res.status(201).json({
       success: true,
@@ -313,7 +313,7 @@ const validatePayment = async (req, res, next) => {
       .populate('facture', 'numero totalTTC montantPaye')
       .populate('compteBancaire', 'nom banque');
 
-    notifyPaymentValidated(populated);
+    notifyPaymentValidated(populated, tc(req));
 
     res.json({
       success: true,
@@ -340,7 +340,7 @@ const applyPaymentToFacture = async (factureId, montant) => {
   if (facture.montantPaye >= facture.totalTTC) {
     facture.montantPaye = facture.totalTTC; // Cap at total
     facture.statut = 'payee';
-    notifyInvoicePaid(facture);
+    notifyInvoicePaid(facture, facture.companyId);
   } else if (facture.montantPaye > 0) {
     facture.statut = 'partiellement_payee';
   }

@@ -1,7 +1,10 @@
+const mongoose = require('mongoose');
 const notificationService = require('../../src/services/notificationService');
 const Notification = require('../../src/models/Notification');
 const User = require('../../src/models/User');
 const Role = require('../../src/models/Role');
+
+const FAKE_COMPANY_ID = new mongoose.Types.ObjectId().toString();
 
 describe('notificationService', () => {
   let mockIO;
@@ -10,28 +13,25 @@ describe('notificationService', () => {
   let testUser2;
 
   beforeEach(async () => {
-    // Create mock Socket.io
     mockIO = {
       to: jest.fn().mockReturnThis(),
       emit: jest.fn(),
     };
 
-    // Initialize notification service
     notificationService.initNotificationService(mockIO);
 
-    // Create test role
     testRole = await Role.create({
       name: 'gestionnaire_stock',
       displayName: 'Gestionnaire Stock',
     });
 
-    // Create test users
     testUser1 = await User.create({
       firstName: 'User',
       lastName: 'One',
       email: 'user1@example.com',
       password: 'password123',
       role: testRole._id,
+      companyId: FAKE_COMPANY_ID,
     });
 
     testUser2 = await User.create({
@@ -40,6 +40,7 @@ describe('notificationService', () => {
       email: 'user2@example.com',
       password: 'password123',
       role: testRole._id,
+      companyId: FAKE_COMPANY_ID,
     });
   });
 
@@ -75,11 +76,6 @@ describe('notificationService', () => {
     });
 
     it('should warn if Socket.io is not initialized', () => {
-      // Create a new service instance without init
-      const { notifyUser } = require('../../src/services/notificationService');
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
-      // Reset the service
       const uninitializedService = notificationService;
       uninitializedService.initNotificationService(null);
 
@@ -87,34 +83,36 @@ describe('notificationService', () => {
 
       // Re-init for other tests
       notificationService.initNotificationService(mockIO);
-      consoleWarnSpy.mockRestore();
     });
   });
 
-  describe('notifyRole', () => {
-    it('should emit to correct role room', () => {
+  describe('notifyRoleInCompany', () => {
+    it('should emit to company-scoped role room', () => {
+      const companyId = FAKE_COMPANY_ID;
       const role = 'admin';
       const event = 'test:event';
       const data = { message: 'Test notification' };
 
-      notificationService.notifyRole(role, event, data);
+      notificationService.notifyRoleInCompany(companyId, role, event, data);
 
-      expect(mockIO.to).toHaveBeenCalledWith(`role:${role}`);
+      expect(mockIO.to).toHaveBeenCalledWith(`company:${companyId}:role:${role}`);
       expect(mockIO.emit).toHaveBeenCalledWith(event, expect.objectContaining({
         message: 'Test notification',
         timestamp: expect.any(String),
       }));
     });
 
-    it('should add timestamp to emitted data', () => {
+    it('should include companyId in emitted data', () => {
+      const companyId = FAKE_COMPANY_ID;
       const role = 'manager';
       const event = 'notification';
       const data = { title: 'Role notification' };
 
-      notificationService.notifyRole(role, event, data);
+      notificationService.notifyRoleInCompany(companyId, role, event, data);
 
       const emittedData = mockIO.emit.mock.calls[0][1];
       expect(emittedData).toHaveProperty('timestamp');
+      expect(emittedData.companyId).toBe(companyId);
     });
   });
 
@@ -137,6 +135,7 @@ describe('notificationService', () => {
     it('should create notification in database', async () => {
       const options = {
         userId: testUser1._id.toString(),
+        companyId: FAKE_COMPANY_ID,
         type: 'success',
         title: 'Test Title',
         message: 'Test Message',
@@ -204,7 +203,7 @@ describe('notificationService', () => {
   });
 
   describe('createAndNotifyRole', () => {
-    it('should create notifications for all users of a role', async () => {
+    it('should create notifications for all active users of a role in the company', async () => {
       const options = {
         type: 'warning',
         title: 'Role Notification',
@@ -213,7 +212,7 @@ describe('notificationService', () => {
         data: { test: true },
       };
 
-      await notificationService.createAndNotifyRole('gestionnaire_stock', options);
+      await notificationService.createAndNotifyRole(FAKE_COMPANY_ID, 'gestionnaire_stock', options);
 
       const notifications = await Notification.find({
         user: { $in: [testUser1._id, testUser2._id] },
@@ -226,16 +225,18 @@ describe('notificationService', () => {
       expect(notifications[1].title).toBe('Role Notification');
     });
 
-    it('should emit to role room', async () => {
+    it('should emit to company-scoped role room', async () => {
       const options = {
         type: 'info',
         title: 'Test',
         message: 'Test',
       };
 
-      await notificationService.createAndNotifyRole('gestionnaire_stock', options);
+      await notificationService.createAndNotifyRole(FAKE_COMPANY_ID, 'gestionnaire_stock', options);
 
-      expect(mockIO.to).toHaveBeenCalledWith('role:gestionnaire_stock');
+      expect(mockIO.to).toHaveBeenCalledWith(
+        `company:${FAKE_COMPANY_ID}:role:gestionnaire_stock`
+      );
       expect(mockIO.emit).toHaveBeenCalledWith('notification', expect.objectContaining({
         type: 'info',
         title: 'Test',
@@ -250,12 +251,11 @@ describe('notificationService', () => {
       };
 
       await expect(
-        notificationService.createAndNotifyRole('non_existent_role', options)
+        notificationService.createAndNotifyRole(FAKE_COMPANY_ID, 'non_existent_role', options)
       ).resolves.not.toThrow();
     });
 
     it('should only create notifications for active users', async () => {
-      // Deactivate one user
       await User.findByIdAndUpdate(testUser2._id, { isActive: false });
 
       const options = {
@@ -263,13 +263,12 @@ describe('notificationService', () => {
         message: 'Test',
       };
 
-      await notificationService.createAndNotifyRole('gestionnaire_stock', options);
+      await notificationService.createAndNotifyRole(FAKE_COMPANY_ID, 'gestionnaire_stock', options);
 
       const notifications = await Notification.find({
         user: { $in: [testUser1._id, testUser2._id] },
       });
 
-      // Should only create for active user (testUser1)
       expect(notifications).toHaveLength(1);
       expect(notifications[0].user.toString()).toBe(testUser1._id.toString());
     });
@@ -291,19 +290,15 @@ describe('notificationService', () => {
       });
     });
 
-    it('should notify gestionnaire_stock role', () => {
-      const product = {
-        _id: 'product123',
-        name: 'Test Product',
-      };
-      const warehouse = {
-        _id: 'warehouse123',
-        name: 'Main Warehouse',
-      };
+    it('should notify gestionnaire_stock in company room', () => {
+      const product = { _id: 'product123', name: 'Test Product' };
+      const warehouse = { _id: 'warehouse123', name: 'Main Warehouse' };
 
-      notificationService.notifyStockAlert(product, warehouse, 3, 10);
+      notificationService.notifyStockAlert(product, warehouse, 3, 10, FAKE_COMPANY_ID);
 
-      expect(mockIO.to).toHaveBeenCalledWith('role:gestionnaire_stock');
+      expect(mockIO.to).toHaveBeenCalledWith(
+        `company:${FAKE_COMPANY_ID}:role:gestionnaire_stock`
+      );
       expect(mockIO.emit).toHaveBeenCalledWith('stock:alert', expect.objectContaining({
         type: 'warning',
         title: 'Alerte stock bas',
@@ -316,29 +311,33 @@ describe('notificationService', () => {
       }));
     });
 
-    it('should notify manager role', () => {
+    it('should notify manager role in company room', () => {
       const product = { _id: 'p1', name: 'Product' };
       const warehouse = { _id: 'w1', name: 'Warehouse' };
 
-      notificationService.notifyStockAlert(product, warehouse, 5, 15);
+      notificationService.notifyStockAlert(product, warehouse, 5, 15, FAKE_COMPANY_ID);
 
-      expect(mockIO.to).toHaveBeenCalledWith('role:manager');
+      expect(mockIO.to).toHaveBeenCalledWith(
+        `company:${FAKE_COMPANY_ID}:role:manager`
+      );
     });
 
-    it('should notify admin role', () => {
+    it('should notify admin role in company room', () => {
       const product = { _id: 'p1', name: 'Product' };
       const warehouse = { _id: 'w1', name: 'Warehouse' };
 
-      notificationService.notifyStockAlert(product, warehouse, 5, 15);
+      notificationService.notifyStockAlert(product, warehouse, 5, 15, FAKE_COMPANY_ID);
 
-      expect(mockIO.to).toHaveBeenCalledWith('role:admin');
+      expect(mockIO.to).toHaveBeenCalledWith(
+        `company:${FAKE_COMPANY_ID}:role:admin`
+      );
     });
 
     it('should include product and warehouse names in message', () => {
       const product = { _id: 'p1', name: 'Test Product XYZ' };
       const warehouse = { _id: 'w1', name: 'Warehouse ABC' };
 
-      notificationService.notifyStockAlert(product, warehouse, 2, 20);
+      notificationService.notifyStockAlert(product, warehouse, 2, 20, FAKE_COMPANY_ID);
 
       const emitCall = mockIO.emit.mock.calls.find((call) => call[0] === 'stock:alert');
       expect(emitCall[1].message).toContain('Test Product XYZ');
@@ -350,7 +349,7 @@ describe('notificationService', () => {
       const product = { _id: 'p1', designation: 'Product Designation' };
       const warehouse = { _id: 'w1', nom: 'Warehouse Name' };
 
-      notificationService.notifyStockAlert(product, warehouse, 1, 5);
+      notificationService.notifyStockAlert(product, warehouse, 1, 5, FAKE_COMPANY_ID);
 
       const emitCall = mockIO.emit.mock.calls.find((call) => call[0] === 'stock:alert');
       expect(emitCall[1].message).toContain('Product Designation');

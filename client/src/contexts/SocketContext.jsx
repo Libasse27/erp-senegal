@@ -37,11 +37,12 @@ export const SocketProvider = ({ children }) => {
     newSocket.on('connect', () => {
       setIsConnected(true);
 
-      // Auto-join user room and role room
+      // Auto-join user room and company role room (tenant-scoped)
       if (user) {
         newSocket.emit('join', {
           userId: user._id,
           role: user.role?.name,
+          companyId: user.companyId,
         });
       }
     });
@@ -79,6 +80,7 @@ export const SocketProvider = ({ children }) => {
       socket.emit('join', {
         userId: user._id,
         role: user.role?.name,
+        companyId: user.companyId,
       });
     }
   }, [socket, isConnected, user]);

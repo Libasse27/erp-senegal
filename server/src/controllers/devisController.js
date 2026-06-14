@@ -306,7 +306,7 @@ const convertDevis = async (req, res, next) => {
     devis.commandeGeneree = commande._id;
     await devis.save();
 
-    notifyDevisConverted(devis, commande);
+    notifyDevisConverted(devis, commande, tc(req));
 
     const populated = await Commande.findById(commande._id)
       .populate('client', 'raisonSociale firstName lastName code')

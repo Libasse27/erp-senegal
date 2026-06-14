@@ -203,7 +203,8 @@ const validateBL = async (req, res, next) => {
           productDoc,
           warehouseDoc || { _id: ligne.warehouse, name: 'Depot' },
           stock.quantite,
-          productDoc.stockMinimum || productDoc.stockAlerte
+          productDoc.stockMinimum || productDoc.stockAlerte,
+          tc(req)
         );
       }
     }
@@ -244,7 +245,7 @@ const validateBL = async (req, res, next) => {
     }
     await bl.save();
 
-    createAndNotifyRole('gestionnaire_stock', {
+    createAndNotifyRole(tc(req), 'gestionnaire_stock', {
       type: 'success',
       title: 'Bon de livraison valide',
       message: `Le BL ${bl.numero} a ete valide. Le stock a ete decremente.`,
@@ -278,7 +279,7 @@ const validateBL = async (req, res, next) => {
           createdBy: req.user._id,
         });
 
-        notifyNewInvoice({ ...facture.toObject(), numero: facture.numero || facture.referenceInterne });
+        notifyNewInvoice({ ...facture.toObject(), numero: facture.numero || facture.referenceInterne }, tc(req));
 
         bl.facture = facture._id;
         await bl.save();

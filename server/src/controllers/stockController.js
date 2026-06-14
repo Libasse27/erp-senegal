@@ -349,7 +349,8 @@ const createMovement = async (req, res, next) => {
           productDoc,
           warehouseDoc || { _id: warehouseSource, name: 'Depot' },
           stock.quantite,
-          productDoc.stockMinimum || productDoc.stockAlerte
+          productDoc.stockMinimum || productDoc.stockAlerte,
+          tc(req)
         );
       }
 

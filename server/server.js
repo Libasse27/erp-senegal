@@ -62,6 +62,7 @@ io.use((socket, next) => {
     const decoded = jwt.verify(token, jwtConfig.accessToken.secret);
     socket.userId = decoded.id;
     socket.userRole = decoded.role;
+    socket.companyId = decoded.companyId;
     next();
   } catch (err) {
     return next(new Error('Token invalide'));
@@ -76,16 +77,22 @@ io.on('connection', (socket) => {
     socket.join(`user:${socket.userId}`);
     logger.info(`Socket ${socket.id} rejoint room user:${socket.userId}`);
   }
+  // Auto-join company role room for tenant-scoped broadcasts
+  if (socket.companyId && socket.userRole) {
+    socket.join(`company:${socket.companyId}:role:${socket.userRole}`);
+    logger.info(`Socket ${socket.id} rejoint room company:${socket.companyId}:role:${socket.userRole}`);
+  }
 
-  // Join user-specific room and role room
-  socket.on('join', ({ userId, role }) => {
+  // Join user-specific room and company role room
+  socket.on('join', ({ userId, role, companyId }) => {
     if (userId && userId === socket.userId) {
       socket.join(`user:${userId}`);
       logger.info(`Socket ${socket.id} rejoint room user:${userId}`);
     }
-    if (role) {
-      socket.join(`role:${role}`);
-      logger.info(`Socket ${socket.id} rejoint room role:${role}`);
+    const cid = companyId || socket.companyId;
+    if (role && cid) {
+      socket.join(`company:${cid}:role:${role}`);
+      logger.info(`Socket ${socket.id} rejoint room company:${cid}:role:${role}`);
     }
   });
 

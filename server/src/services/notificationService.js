@@ -3,86 +3,53 @@ const logger = require('../config/logger');
 
 let _io = null;
 
-/**
- * Initialiser le service de notification avec l'instance Socket.io
- * @param {import('socket.io').Server} io - Instance Socket.io
- */
 const initNotificationService = (io) => {
   _io = io;
   logger.info('Service de notification initialise');
 };
 
-/**
- * Obtenir l'instance Socket.io
- * @returns {import('socket.io').Server|null}
- */
 const getIO = () => _io;
 
-/**
- * Emettre un evenement a un utilisateur specifique via sa room
- * @param {string} userId - ID de l'utilisateur
- * @param {string} event - Nom de l'evenement
- * @param {Object} data - Donnees a emettre
- */
+// ─── Primitives ──────────────────────────────────────────────────────────────
+
+/** Unicast vers un utilisateur spécifique */
 const notifyUser = (userId, event, data) => {
-  if (!_io) {
-    logger.warn('Socket.io non initialise, notification ignoree');
-    return;
-  }
-  _io.to(`user:${userId}`).emit(event, {
-    ...data,
-    timestamp: new Date().toISOString(),
-  });
+  if (!_io) { logger.warn('Socket.io non initialise'); return; }
+  _io.to(`user:${userId}`).emit(event, { ...data, timestamp: new Date().toISOString() });
 };
 
-/**
- * Emettre un evenement a tous les utilisateurs d'un role
- * @param {string} role - Nom du role
- * @param {string} event - Nom de l'evenement
- * @param {Object} data - Donnees a emettre
- */
-const notifyRole = (role, event, data) => {
-  if (!_io) {
-    logger.warn('Socket.io non initialise, notification ignoree');
-    return;
-  }
-  _io.to(`role:${role}`).emit(event, {
-    ...data,
-    timestamp: new Date().toISOString(),
-  });
+/** Multicast vers un rôle dans une entreprise donnée (isolation tenant) */
+const notifyRoleInCompany = (companyId, role, event, data) => {
+  if (!_io) { logger.warn('Socket.io non initialise'); return; }
+  _io
+    .to(`company:${companyId}:role:${role}`)
+    .emit(event, { ...data, companyId: companyId.toString(), timestamp: new Date().toISOString() });
 };
 
-/**
- * Emettre un evenement a tous les utilisateurs connectes
- * @param {string} event - Nom de l'evenement
- * @param {Object} data - Donnees a emettre
- */
+/** Broadcast global (toutes entreprises — réservé aux événements système) */
 const notifyAll = (event, data) => {
-  if (!_io) {
-    logger.warn('Socket.io non initialise, notification ignoree');
-    return;
-  }
-  _io.emit(event, {
-    ...data,
-    timestamp: new Date().toISOString(),
-  });
+  if (!_io) { logger.warn('Socket.io non initialise'); return; }
+  _io.emit(event, { ...data, timestamp: new Date().toISOString() });
 };
 
+// ─── Persistance + émission ──────────────────────────────────────────────────
+
 /**
- * Creer une notification persistante en base et emettre en temps reel
- * @param {Object} options - Options de la notification
- * @param {string} options.userId - ID de l'utilisateur destinataire
- * @param {string} options.type - Type (info, success, warning, error)
- * @param {string} options.title - Titre
- * @param {string} options.message - Message
- * @param {string} [options.link] - Lien optionnel
- * @param {Object} [options.data] - Donnees supplementaires
- * @returns {Promise<Object>} Notification creee
+ * Crée une notification en base ET émet en temps réel vers l'utilisateur.
+ * @param {Object} opts
+ * @param {string}  opts.userId
+ * @param {string}  [opts.companyId]
+ * @param {string}  opts.type      info|success|warning|error
+ * @param {string}  opts.title
+ * @param {string}  opts.message
+ * @param {string}  [opts.link]
+ * @param {Object}  [opts.data]
  */
-const createAndNotify = async ({ userId, type, title, message, link, data }) => {
+const createAndNotify = async ({ userId, companyId, type, title, message, link, data }) => {
   try {
     const notification = await Notification.create({
       user: userId,
+      ...(companyId && { companyId }),
       type: type || 'info',
       title,
       message,
@@ -90,7 +57,6 @@ const createAndNotify = async ({ userId, type, title, message, link, data }) => 
       data,
     });
 
-    // Emettre en temps reel
     notifyUser(userId, 'notification', {
       type: type || 'info',
       title,
@@ -108,12 +74,13 @@ const createAndNotify = async ({ userId, type, title, message, link, data }) => 
 };
 
 /**
- * Creer des notifications pour tous les utilisateurs d'un role
- * @param {string} role - Nom du role
- * @param {Object} options - Options de la notification
- * @returns {Promise<void>}
+ * Persiste une notification pour tous les utilisateurs d'un rôle dans une entreprise
+ * ET émet en temps réel vers la room company:companyId:role.
+ * @param {string} companyId
+ * @param {string} role
+ * @param {Object} opts
  */
-const createAndNotifyRole = async (role, { type, title, message, link, data }) => {
+const createAndNotifyRole = async (companyId, role, { type, title, message, link, data }) => {
   try {
     const User = require('../models/User');
     const Role = require('../models/Role');
@@ -121,51 +88,50 @@ const createAndNotifyRole = async (role, { type, title, message, link, data }) =
     const roleDoc = await Role.findOne({ name: role });
     if (!roleDoc) return;
 
-    const users = await User.find({ role: roleDoc._id, isActive: true }).select('_id');
+    // Scope to the company to maintain tenant isolation
+    const filter = { role: roleDoc._id, isActive: true };
+    if (companyId) filter.companyId = companyId;
 
-    // Creer les notifications en base pour chaque utilisateur du role
-    const notifications = users.map((user) => ({
-      user: user._id,
-      type: type || 'info',
-      title,
-      message,
-      link,
-      data,
-    }));
+    const users = await User.find(filter).select('_id');
 
-    if (notifications.length > 0) {
-      await Notification.insertMany(notifications);
+    if (users.length > 0) {
+      await Notification.insertMany(
+        users.map((u) => ({
+          user: u._id,
+          ...(companyId && { companyId }),
+          type: type || 'info',
+          title,
+          message,
+          link,
+          data,
+        }))
+      );
     }
 
-    // Emettre en temps reel vers la room du role
-    notifyRole(role, 'notification', {
-      type: type || 'info',
-      title,
-      message,
-      link,
-      data,
-    });
+    // Real-time emit to company-scoped role room
+    if (companyId) {
+      notifyRoleInCompany(companyId, role, 'notification', { type: type || 'info', title, message, link, data });
+    }
   } catch (error) {
     logger.error(`Erreur notification role ${role}: ${error.message}`);
   }
 };
 
-// =====================================================
-// Methodes specifiques metier
-// =====================================================
+// ─── Méthodes métier ─────────────────────────────────────────────────────────
 
 /**
- * Notification d'alerte de stock bas
- * @param {Object} product - Produit concerne
- * @param {Object} warehouse - Depot concerne
- * @param {number} currentStock - Stock actuel
- * @param {number} minimum - Seuil minimum
+ * Alerte stock bas — notifie gestionnaire_stock, manager, admin de la même entreprise.
+ * @param {Object} product
+ * @param {Object} warehouse
+ * @param {number} currentStock
+ * @param {number} minimum
+ * @param {string} [companyId]
  */
-const notifyStockAlert = (product, warehouse, currentStock, minimum) => {
+const notifyStockAlert = (product, warehouse, currentStock, minimum, companyId) => {
   const payload = {
     type: 'warning',
     title: 'Alerte stock bas',
-    message: `Le produit "${product.name || product.designation}" est en dessous du seuil minimum dans le depot "${warehouse.name || warehouse.nom}" (${currentStock}/${minimum})`,
+    message: `Le produit "${product.name || product.designation}" est sous le seuil dans "${warehouse.name || warehouse.nom}" (${currentStock}/${minimum})`,
     data: {
       productId: product._id,
       warehouseId: warehouse._id,
@@ -176,31 +142,32 @@ const notifyStockAlert = (product, warehouse, currentStock, minimum) => {
     },
   };
 
-  // Emettre vers les gestionnaires de stock et les managers
-  notifyRole('gestionnaire_stock', 'stock:alert', payload);
-  notifyRole('manager', 'stock:alert', payload);
-  notifyRole('admin', 'stock:alert', payload);
+  const roles = ['gestionnaire_stock', 'manager', 'admin'];
 
-  // Creer des notifications persistantes pour les roles concernes
-  createAndNotifyRole('gestionnaire_stock', {
-    ...payload,
-    link: `/stocks`,
-  });
-  createAndNotifyRole('manager', {
-    ...payload,
-    link: `/stocks`,
-  });
+  if (companyId) {
+    roles.forEach((role) => {
+      notifyRoleInCompany(companyId, role, 'stock:alert', payload);
+      createAndNotifyRole(companyId, role, { ...payload, link: '/stocks' });
+    });
+  } else {
+    // Fallback (sans isolation tenant — interne/tests)
+    roles.forEach((role) => {
+      const { notifyRole } = module.exports;
+      if (notifyRole) notifyRole(role, 'stock:alert', payload);
+    });
+  }
 };
 
 /**
- * Notification de nouvelle facture creee
- * @param {Object} facture - Facture creee
+ * Nouvelle facture créée.
+ * @param {Object} facture
+ * @param {string} [companyId]
  */
-const notifyNewInvoice = (facture) => {
+const notifyNewInvoice = (facture, companyId) => {
   const payload = {
     type: 'info',
     title: 'Nouvelle facture',
-    message: `La facture ${facture.numero || 'brouillon'} a ete creee pour un montant de ${facture.totalTTC} FCFA`,
+    message: `Facture ${facture.numero || 'brouillon'} créée — ${facture.totalTTC} FCFA`,
     data: {
       factureId: facture._id,
       numero: facture.numero,
@@ -209,34 +176,37 @@ const notifyNewInvoice = (facture) => {
     },
   };
 
-  // Emettre vers les comptables et managers
-  notifyRole('comptable', 'facture:created', payload);
-  notifyRole('manager', 'facture:created', payload);
+  const cid = companyId || facture.companyId;
 
-  // Notifier le commercial createur si disponible
+  if (cid) {
+    notifyRoleInCompany(cid, 'comptable', 'facture:created', payload);
+    notifyRoleInCompany(cid, 'manager', 'facture:created', payload);
+  }
+
   if (facture.createdBy) {
     notifyUser(facture.createdBy.toString(), 'facture:created', payload);
   }
 };
 
 /**
- * Notification de facture validee
- * @param {Object} facture - Facture validee
+ * Facture validée (numéro DGI attribué).
+ * @param {Object} facture
+ * @param {string} [companyId]
  */
-const notifyInvoiceValidated = (facture) => {
+const notifyInvoiceValidated = (facture, companyId) => {
   const payload = {
     type: 'success',
-    title: 'Facture validee',
-    message: `La facture ${facture.numero} a ete validee (${facture.totalTTC} FCFA)`,
-    data: {
-      factureId: facture._id,
-      numero: facture.numero,
-      montant: facture.totalTTC,
-    },
+    title: 'Facture validée',
+    message: `Facture ${facture.numero} validée — ${facture.totalTTC} FCFA`,
+    data: { factureId: facture._id, numero: facture.numero, montant: facture.totalTTC },
   };
 
-  notifyRole('comptable', 'facture:validated', payload);
-  notifyRole('manager', 'facture:validated', payload);
+  const cid = companyId || facture.companyId;
+
+  if (cid) {
+    notifyRoleInCompany(cid, 'comptable', 'facture:validated', payload);
+    notifyRoleInCompany(cid, 'manager', 'facture:validated', payload);
+  }
 
   if (facture.createdBy) {
     notifyUser(facture.createdBy.toString(), 'facture:validated', payload);
@@ -244,36 +214,38 @@ const notifyInvoiceValidated = (facture) => {
 };
 
 /**
- * Notification de facture payee
- * @param {Object} facture - Facture payee
+ * Facture intégralement payée.
+ * @param {Object} facture
+ * @param {string} [companyId]
  */
-const notifyInvoicePaid = (facture) => {
+const notifyInvoicePaid = (facture, companyId) => {
   const payload = {
     type: 'success',
-    title: 'Facture payee',
-    message: `La facture ${facture.numero} a ete integralement payee (${facture.totalTTC} FCFA)`,
-    data: {
-      factureId: facture._id,
-      numero: facture.numero,
-      montant: facture.totalTTC,
-    },
+    title: 'Facture payée',
+    message: `Facture ${facture.numero} intégralement payée — ${facture.totalTTC} FCFA`,
+    data: { factureId: facture._id, numero: facture.numero, montant: facture.totalTTC },
   };
 
-  notifyRole('comptable', 'facture:paid', payload);
-  notifyRole('manager', 'facture:paid', payload);
-  notifyRole('commercial', 'facture:paid', payload);
+  const cid = companyId || facture.companyId;
+
+  if (cid) {
+    notifyRoleInCompany(cid, 'comptable', 'facture:paid', payload);
+    notifyRoleInCompany(cid, 'manager', 'facture:paid', payload);
+    notifyRoleInCompany(cid, 'commercial', 'facture:paid', payload);
+  }
 };
 
 /**
- * Notification de paiement recu
- * @param {Object} payment - Paiement recu
+ * Paiement client reçu.
+ * @param {Object} payment
+ * @param {string} [companyId]
  */
-const notifyPaymentReceived = (payment) => {
+const notifyPaymentReceived = (payment, companyId) => {
   const tiersName = payment.tiersSnapshot?.displayName || 'N/A';
   const payload = {
     type: 'success',
-    title: 'Paiement recu',
-    message: `Paiement de ${payment.montant} FCFA recu de ${tiersName} (${payment.modePaiement})`,
+    title: 'Paiement reçu',
+    message: `Paiement de ${payment.montant} FCFA reçu de ${tiersName} (${payment.modePaiement})`,
     data: {
       paymentId: payment._id,
       numero: payment.numero,
@@ -283,54 +255,47 @@ const notifyPaymentReceived = (payment) => {
     },
   };
 
-  notifyRole('comptable', 'payment:received', payload);
-  notifyRole('caissier', 'payment:received', payload);
-  notifyRole('manager', 'payment:received', payload);
+  const cid = companyId || payment.companyId;
+
+  if (cid) {
+    notifyRoleInCompany(cid, 'comptable', 'payment:received', payload);
+    notifyRoleInCompany(cid, 'caissier', 'payment:received', payload);
+    notifyRoleInCompany(cid, 'manager', 'payment:received', payload);
+  }
 };
 
 /**
- * Notification de paiement valide
- * @param {Object} payment - Paiement valide
+ * Paiement validé (numéro attribué).
+ * @param {Object} payment
+ * @param {string} [companyId]
  */
-const notifyPaymentValidated = (payment) => {
+const notifyPaymentValidated = (payment, companyId) => {
   const payload = {
     type: 'success',
-    title: 'Paiement valide',
-    message: `Le paiement ${payment.numero} de ${payment.montant} FCFA a ete valide`,
-    data: {
-      paymentId: payment._id,
-      numero: payment.numero,
-      montant: payment.montant,
-    },
+    title: 'Paiement validé',
+    message: `Paiement ${payment.numero} de ${payment.montant} FCFA validé`,
+    data: { paymentId: payment._id, numero: payment.numero, montant: payment.montant },
   };
 
-  notifyRole('comptable', 'payment:validated', payload);
-  notifyRole('manager', 'payment:validated', payload);
+  const cid = companyId || payment.companyId;
+
+  if (cid) {
+    notifyRoleInCompany(cid, 'comptable', 'payment:validated', payload);
+    notifyRoleInCompany(cid, 'manager', 'payment:validated', payload);
+  }
 };
 
 /**
- * Notification de mise a jour du dashboard
- * @param {Object} stats - Statistiques mises a jour
+ * Devis converti en commande.
+ * @param {Object} devis
+ * @param {Object} commande
+ * @param {string} [companyId]
  */
-const notifyDashboardUpdate = (stats) => {
-  notifyAll('dashboard:update', {
-    type: 'info',
-    title: 'Tableau de bord mis a jour',
-    message: 'Les indicateurs du tableau de bord ont ete actualises',
-    data: stats,
-  });
-};
-
-/**
- * Notification de conversion devis en commande
- * @param {Object} devis - Devis converti
- * @param {Object} commande - Commande creee
- */
-const notifyDevisConverted = (devis, commande) => {
+const notifyDevisConverted = (devis, commande, companyId) => {
   const payload = {
     type: 'success',
     title: 'Devis converti',
-    message: `Le devis ${devis.numero} a ete converti en commande ${commande.numero || ''}`,
+    message: `Devis ${devis.numero} converti en commande ${commande.numero || ''}`,
     data: {
       devisId: devis._id,
       devisNumero: devis.numero,
@@ -340,23 +305,39 @@ const notifyDevisConverted = (devis, commande) => {
     },
   };
 
-  notifyRole('commercial', 'devis:converted', payload);
-  notifyRole('manager', 'devis:converted', payload);
+  const cid = companyId || devis.companyId;
+
+  if (cid) {
+    notifyRoleInCompany(cid, 'commercial', 'devis:converted', payload);
+    notifyRoleInCompany(cid, 'manager', 'devis:converted', payload);
+  }
 
   if (devis.createdBy) {
     createAndNotify({
       userId: devis.createdBy.toString(),
+      companyId: cid,
       ...payload,
-      link: `/commandes/${commande._id}`,
+      link: `/ventes/commandes/${commande._id}`,
     });
   }
 };
+
+/** Broadcast mise à jour dashboard (interne, toutes entreprises connectées). */
+const notifyDashboardUpdate = (stats) => {
+  notifyAll('dashboard:update', {
+    type: 'info',
+    title: 'Tableau de bord mis à jour',
+    data: stats,
+  });
+};
+
+// ─── Export ──────────────────────────────────────────────────────────────────
 
 module.exports = {
   initNotificationService,
   getIO,
   notifyUser,
-  notifyRole,
+  notifyRoleInCompany,
   notifyAll,
   createAndNotify,
   createAndNotifyRole,

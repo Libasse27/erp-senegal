@@ -129,7 +129,7 @@ const createFacture = async (req, res, next) => {
       .populate('client', 'raisonSociale firstName lastName code')
       .populate('commercial', 'firstName lastName');
 
-    notifyNewInvoice({ ...facture.toObject(), numero: facture.numero || facture.referenceInterne });
+    notifyNewInvoice({ ...facture.toObject(), numero: facture.numero || facture.referenceInterne }, tc(req));
 
     res.status(201).json({
       success: true,
@@ -257,7 +257,7 @@ const validateFacture = async (req, res, next) => {
       .populate('client', 'raisonSociale firstName lastName code')
       .populate('commercial', 'firstName lastName');
 
-    notifyInvoiceValidated(facture);
+    notifyInvoiceValidated(facture, tc(req));
 
     res.json({
       success: true,
