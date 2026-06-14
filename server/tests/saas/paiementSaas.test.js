@@ -25,7 +25,7 @@ beforeEach(async () => {
   company = await createTestCompany({ name: 'Acme SaaS', status: 'pending_payment' });
   await createTestSettings(company._id);
 
-  forfait    = await createTestForfait({ code: 'STANDARD_T', nom: 'Standard Test' });
+  forfait    = await createTestForfait({ code: 'STANDARD', nom: 'Standard' });
   abonnement = await createTestAbonnement(company._id, forfait._id, {
     montant: 15000, statut: 'EN_ATTENTE',
     dateDebut: new Date(),

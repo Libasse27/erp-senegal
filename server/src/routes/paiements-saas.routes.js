@@ -9,6 +9,7 @@ const {
   getStatutPaiement,
   listerPaiements,
   confirmerSimulation,
+  getUsageSaas,
 } = require('../controllers/paiementSaasController');
 
 // ── Webhooks PSP — publics, pas d'auth (le PSP appelle depuis ses serveurs) ──
@@ -17,6 +18,9 @@ router.post('/webhook/:provider', webhookPaiement);
 
 // ── Routes authentifiées ──────────────────────────────────────────────────────
 router.use(protect);
+
+// Métriques d'usage et abonnement actif
+router.get('/usage', getUsageSaas);
 
 // Initier un paiement (admin entreprise ou super_admin)
 router.post(

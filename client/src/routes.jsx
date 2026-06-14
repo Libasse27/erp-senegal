@@ -91,6 +91,12 @@ const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 // Notifications
 const NotificationsListPage = lazy(() => import('./pages/notifications/NotificationsListPage'));
 
+// Abonnement SaaS
+const AbonnementPage        = lazy(() => import('./pages/abonnement/AbonnementPage'));
+const PricingPage           = lazy(() => import('./pages/abonnement/PricingPage'));
+const PaiementSaasPage      = lazy(() => import('./pages/abonnement/PaiementSaasPage'));
+const SubscriptionExpiredPage = lazy(() => import('./pages/abonnement/SubscriptionExpiredPage'));
+
 // 404
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
@@ -213,6 +219,12 @@ const AppRoutes = () => {
           <Route path="/admin/parametres" element={<SettingsPage />} />
           <Route path="/admin/entreprise" element={<CompanyPage />} />
           <Route path="/admin/audit" element={<AuditLogPage />} />
+
+          {/* Abonnement SaaS */}
+          <Route path="/abonnement"              element={<AbonnementPage />} />
+          <Route path="/abonnement/paiement"     element={<PaiementSaasPage />} />
+          <Route path="/abonnement-expire"       element={<SubscriptionExpiredPage />} />
+          <Route path="/pricing"                 element={<PricingPage />} />
 
           {/* Super Administration — accès restreint au rôle super_admin */}
           <Route element={<SuperAdminGuard />}>

@@ -79,7 +79,9 @@ export const apiSlice = createApi({
     'SystemLog',
     'Backup',
     'RbacMatrix',
-    'Company',
+    'Forfait',
+    'Abonnement',
+    'PaiementSaaS',
   ],
   endpoints: () => ({}),
 });

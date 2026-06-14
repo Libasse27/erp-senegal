@@ -6,19 +6,20 @@ process.env.JWT_EXPIRE = '15m';
 process.env.JWT_REFRESH_EXPIRE = '7d';
 
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { MongoMemoryReplSet } = require('mongodb-memory-server');
 
-let mongoServer;
+let replSet;
 
+// Replica set requis pour les transactions MongoDB (startSession)
 beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
+  replSet = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
+  const uri = replSet.getUri();
   await mongoose.connect(uri);
-});
+}, 120000); // 2 min — le démarrage du replica set prend plus de temps
 
 afterAll(async () => {
   await mongoose.disconnect();
-  await mongoServer.stop();
+  await replSet.stop();
 });
 
 afterEach(async () => {

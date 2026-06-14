@@ -7,7 +7,7 @@ module.exports = {
     '!src/seeds/**',
     '!src/config/logger.js',
   ],
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       branches: 60,
       functions: 70,

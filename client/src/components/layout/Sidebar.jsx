@@ -23,6 +23,7 @@ import {
   FiArchive,
   FiAlertTriangle,
   FiActivity,
+  FiStar,
 } from 'react-icons/fi';
 import {
   selectSidebarCollapsed,
@@ -132,6 +133,10 @@ const navItems = [
   { path: '/admin/parametres',   label: 'Parametres',      icon: FiSettings, roles: ['admin', 'super_admin'] },
   { path: '/admin/audit',        label: "Journal d'Audit", icon: FiFileText, roles: ['admin', 'super_admin'] },
 
+  { section: 'ABONNEMENT', enterpriseOnly: true },
+  { path: '/abonnement', label: 'Mon Abonnement', icon: FiStar,      roles: ['admin'], enterpriseOnly: true },
+  { path: '/pricing',    label: 'Changer de forfait', icon: FiLayers, roles: ['admin'], enterpriseOnly: true },
+
   { section: 'SUPER ADMIN', superAdminOnly: true },
   { path: '/super-admin',                label: 'Tableau de bord SA',   icon: FiShield,       roles: ['super_admin'] },
   { path: '/super-admin/entreprises',    label: 'Entreprises',          icon: FiDatabase,     roles: ['super_admin'] },
@@ -147,7 +152,7 @@ const Sidebar = () => {
   const dispatch = useDispatch();
   const collapsed = useSelector(selectSidebarCollapsed);
   const isOpen = useSelector(selectSidebarOpen);
-  const { user, hasPermission, hasRole } = useAuth();
+  const { user, hasPermission, hasRole, isSuperAdmin } = useAuth();
 
   const roleName = user?.role?.name || '';
   const theme = ROLE_THEMES[roleName] || DEFAULT_THEME;
@@ -158,6 +163,7 @@ const Sidebar = () => {
   const fullName = [firstName, lastName].filter(Boolean).join(' ') || 'Utilisateur';
 
   const shouldShowItem = (item) => {
+    if (item.enterpriseOnly && isSuperAdmin()) return false;
     if (item.permission && !hasPermission(item.permission)) return false;
     if (item.roles && !hasRole(...item.roles)) return false;
     return true;

@@ -6,6 +6,7 @@ const Company     = require('../models/Company');
 const Forfait     = require('../models/Forfait');
 const { AppError } = require('../middlewares/errorHandler');
 const logger      = require('../config/logger');
+const usageService = require('../services/usageService');
 
 const waveProvider       = require('../services/payment/WaveProvider');
 const orangeMoneyProvider = require('../services/payment/OrangeMoneyProvider');
@@ -380,10 +381,41 @@ const confirmerSimulation = async (req, res, next) => {
   }
 };
 
+// ─── GET /paiements-saas/usage ──────────────────────────────────────────────
+const getUsageSaas = async (req, res, next) => {
+  try {
+    const companyId = req.companyId || req.user?.companyId;
+    if (!companyId) return next(new AppError('Entreprise non identifiée', 400));
+
+    const [usage, company] = await Promise.all([
+      usageService.getUsage(companyId),
+      Company.findById(companyId)
+        .populate({
+          path: 'abonnementActifId',
+          populate: { path: 'forfaitId', select: 'code nom prixMensuel prixAnnuel modulesInclus limites ordre' },
+        })
+        .select('status subscriptionEndDate forfaitId abonnementActifId name'),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        ...usage,
+        companyStatus:       company?.status,
+        subscriptionEndDate: company?.subscriptionEndDate,
+        abonnement:          company?.abonnementActifId,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   initierPaiement,
   webhookPaiement,
   getStatutPaiement,
   listerPaiements,
   confirmerSimulation,
+  getUsageSaas,
 };
