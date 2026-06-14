@@ -9,7 +9,7 @@ describe('Product & Category Routes', () => {
   let testUser;
   let testCategory;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const result = await createTestUser('admin', [
       'products:create',
       'products:read',

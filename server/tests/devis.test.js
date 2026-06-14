@@ -1,4 +1,4 @@
-const request = require('supertest');
+﻿const request = require('supertest');
 const app = require('../app');
 const Devis = require('../src/models/Devis');
 const Permission = require('../src/models/Permission');
@@ -10,21 +10,7 @@ describe('Devis Routes', () => {
   let testClient;
   let testProduct;
 
-  beforeAll(async () => {
-    // Create additional permissions for devis module
-    const extraModules = ['devis'];
-    const actions = ['create', 'read', 'update', 'delete', 'export'];
-    for (const mod of extraModules) {
-      for (const action of actions) {
-        await Permission.create({
-          module: mod,
-          action,
-          code: `${mod}:${action}`,
-          description: `Permission to ${action} ${mod}`,
-        });
-      }
-    }
-
+  beforeEach(async () => {
     const result = await createTestUser('admin');
     authToken = result.token;
     testUser = result.user;
@@ -58,12 +44,12 @@ describe('Devis Routes', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty('numero');
       expect(res.body.data).toHaveProperty('statut', 'brouillon');
-      expect(res.body.data).toHaveProperty('montantHT');
-      expect(res.body.data).toHaveProperty('montantTVA');
-      expect(res.body.data).toHaveProperty('montantTTC');
-      expect(res.body.data.montantHT).toBe(20000); // 2 * 10000
-      expect(res.body.data.montantTVA).toBe(3600); // 20000 * 0.18
-      expect(res.body.data.montantTTC).toBe(23600); // 20000 + 3600
+      expect(res.body.data).toHaveProperty('totalHT');
+      expect(res.body.data).toHaveProperty('totalTVA');
+      expect(res.body.data).toHaveProperty('totalTTC');
+      expect(res.body.data.totalHT).toBe(20000); // 2 * 10000
+      expect(res.body.data.totalTVA).toBe(3600); // 20000 * 0.18
+      expect(res.body.data.totalTTC).toBe(23600); // 20000 + 3600
     });
 
     it('should reject creation without client', async () => {
@@ -201,7 +187,7 @@ describe('Devis Routes', () => {
         .put(`/api/devis/${fakeId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          lignes: [],
+          notes: 'Updated notes',
         });
 
       expect(res.status).toBe(404);

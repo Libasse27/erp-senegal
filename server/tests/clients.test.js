@@ -7,7 +7,7 @@ describe('Client Routes', () => {
   let authToken;
   let testUser;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const result = await createTestUser('admin', [
       'clients:create',
       'clients:read',

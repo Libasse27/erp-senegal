@@ -1,12 +1,12 @@
 const request = require('supertest');
 const app = require('../app');
-const { createTestUser } = require('./helpers');
+const { createTestUser, createSaasUser } = require('./helpers');
 
 describe('User Routes', () => {
   let adminToken;
   let adminUser;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const result = await createTestUser('admin');
     adminToken = result.token;
     adminUser = result.user;
@@ -20,7 +20,7 @@ describe('User Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data).toHaveProperty('email', 'admin@test.com');
+      expect(res.body.data).toHaveProperty('email', adminUser.email);
       expect(res.body.data).toHaveProperty('firstName', 'Test');
     });
 
@@ -102,7 +102,7 @@ describe('User Routes', () => {
         .send({
           firstName: 'Dup',
           lastName: 'User',
-          email: 'admin@test.com',
+          email: adminUser.email,
           password: 'Password123!',
           phone: '221771234591',
           role: adminUser.role._id || adminUser.role,
@@ -114,7 +114,7 @@ describe('User Routes', () => {
 
   describe('PUT /api/users/:id', () => {
     it('should update a user', async () => {
-      const { user: target } = await createTestUser('vendeur', ['users:read']);
+      const { user: target } = await createSaasUser(adminUser.companyId, 'vendeur');
       const res = await request(app)
         .put(`/api/users/${target._id}`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -127,7 +127,7 @@ describe('User Routes', () => {
 
   describe('DELETE /api/users/:id', () => {
     it('should soft-delete a user', async () => {
-      const { user: target } = await createTestUser('caissier', ['users:read']);
+      const { user: target } = await createSaasUser(adminUser.companyId, 'caissier');
       const res = await request(app)
         .delete(`/api/users/${target._id}`)
         .set('Authorization', `Bearer ${adminToken}`);

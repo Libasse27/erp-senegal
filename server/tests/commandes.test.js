@@ -1,4 +1,4 @@
-const request = require('supertest');
+﻿const request = require('supertest');
 const app = require('../app');
 const Commande = require('../src/models/Commande');
 const Permission = require('../src/models/Permission');
@@ -10,21 +10,7 @@ describe('Commande Routes', () => {
   let testClient;
   let testProduct;
 
-  beforeAll(async () => {
-    // Create additional permissions for commandes module
-    const extraModules = ['commandes', 'bons_livraison'];
-    const actions = ['create', 'read', 'update', 'delete', 'export'];
-    for (const mod of extraModules) {
-      for (const action of actions) {
-        await Permission.create({
-          module: mod,
-          action,
-          code: `${mod}:${action}`,
-          description: `Permission to ${action} ${mod}`,
-        });
-      }
-    }
-
+  beforeEach(async () => {
     const result = await createTestUser('admin');
     authToken = result.token;
     testUser = result.user;
@@ -57,12 +43,12 @@ describe('Commande Routes', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty('numero');
       expect(res.body.data).toHaveProperty('statut', 'brouillon');
-      expect(res.body.data).toHaveProperty('montantHT');
-      expect(res.body.data).toHaveProperty('montantTVA');
-      expect(res.body.data).toHaveProperty('montantTTC');
-      expect(res.body.data.montantHT).toBe(50000); // 5 * 10000
-      expect(res.body.data.montantTVA).toBe(9000); // 50000 * 0.18
-      expect(res.body.data.montantTTC).toBe(59000); // 50000 + 9000
+      expect(res.body.data).toHaveProperty('totalHT');
+      expect(res.body.data).toHaveProperty('totalTVA');
+      expect(res.body.data).toHaveProperty('totalTTC');
+      expect(res.body.data.totalHT).toBe(50000); // 5 * 10000
+      expect(res.body.data.totalTVA).toBe(9000); // 50000 * 0.18
+      expect(res.body.data.totalTTC).toBe(59000); // 50000 + 9000
     });
 
     it('should reject creation without client', async () => {
@@ -106,7 +92,7 @@ describe('Commande Routes', () => {
         statut: 'confirmee',
       });
       await createTestCommande(testUser._id, testClient._id, testProduct._id, {
-        statut: 'livree_partielle',
+        statut: 'partiellement_livree',
       });
     });
 
@@ -188,7 +174,7 @@ describe('Commande Routes', () => {
         .put(`/api/commandes/${fakeId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          lignes: [],
+          notes: 'Updated notes',
         });
 
       expect(res.status).toBe(404);

@@ -189,6 +189,10 @@ const deleteFacture = async (req, res, next) => {
       return next(new AppError('Facture non trouvee.', 404));
     }
 
+    if (facture.statut !== 'brouillon') {
+      return next(new AppError('Seules les factures en brouillon peuvent etre supprimees', 400));
+    }
+
     await facture.softDelete(req.user._id);
 
     res.json({

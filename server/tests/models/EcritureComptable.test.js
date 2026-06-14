@@ -11,9 +11,10 @@ describe('EcritureComptable Model', () => {
   let compte411;
   let compte701;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
+    const ts = Date.now();
     const role = await Role.create({
-      name: 'admin',
+      name: `admin-${ts}`,
       displayName: 'Admin',
       description: 'Admin role',
       permissions: [],
@@ -23,14 +24,14 @@ describe('EcritureComptable Model', () => {
     testUser = await User.create({
       firstName: 'Test',
       lastName: 'Comptable',
-      email: 'ecriture-test@test.com',
+      email: `ecriture-test-${ts}@test.com`,
       password: 'password123',
       phone: '221771234567',
       role: role._id,
     });
 
     exercice = await ExerciceComptable.create({
-      code: 'EX2026',
+      code: `EX-${ts}`,
       libelle: 'Exercice 2026',
       dateDebut: new Date('2026-01-01'),
       dateFin: new Date('2026-12-31'),
@@ -42,7 +43,7 @@ describe('EcritureComptable Model', () => {
       numero: '411000',
       libelle: 'Clients',
       classe: 4,
-      type: 'detail',
+      type: 'debit',
       isImputable: true,
       createdBy: testUser._id,
     });
@@ -51,7 +52,7 @@ describe('EcritureComptable Model', () => {
       numero: '701000',
       libelle: 'Ventes de marchandises',
       classe: 7,
-      type: 'detail',
+      type: 'credit',
       isImputable: true,
       createdBy: testUser._id,
     });

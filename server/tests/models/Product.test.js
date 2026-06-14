@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Product = require('../../src/models/Product');
 const Category = require('../../src/models/Category');
 const User = require('../../src/models/User');
@@ -7,9 +8,9 @@ describe('Product Model', () => {
   let testUser;
   let testCategory;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const role = await Role.create({
-      name: 'admin',
+      name: `admin-${Date.now()}`,
       displayName: 'Admin',
       description: 'Admin role',
       permissions: [],
@@ -19,7 +20,7 @@ describe('Product Model', () => {
     testUser = await User.create({
       firstName: 'Test',
       lastName: 'User',
-      email: 'product-test@test.com',
+      email: `product-test-${Date.now()}@test.com`,
       password: 'password123',
       phone: '221771234567',
       role: role._id,
@@ -31,6 +32,8 @@ describe('Product Model', () => {
     });
   });
 
+  const sharedCompanyId = new mongoose.Types.ObjectId();
+
   const validProductData = () => ({
     name: `Product-${Date.now()}`,
     category: testCategory._id,
@@ -39,6 +42,7 @@ describe('Product Model', () => {
     tauxTVA: 18,
     type: 'produit',
     createdBy: testUser._id,
+    companyId: sharedCompanyId,
   });
 
   it('should create a product with valid data', async () => {

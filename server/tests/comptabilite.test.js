@@ -1,4 +1,4 @@
-const request = require('supertest');
+﻿const request = require('supertest');
 const app = require('../app');
 const CompteComptable = require('../src/models/CompteComptable');
 const EcritureComptable = require('../src/models/EcritureComptable');
@@ -13,7 +13,7 @@ describe('Comptabilite Routes', () => {
   let compte701;
   let compte57;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const result = await createTestUser('admin', [
       'comptabilite:create',
       'comptabilite:read',
@@ -30,11 +30,14 @@ describe('Comptabilite Routes', () => {
 
     // Create an exercice
     testExercice = await ExerciceComptable.create({
-      libelle: '2024',
-      dateDebut: new Date('2024-01-01'),
-      dateFin: new Date('2024-12-31'),
+      code: 'EX-2026',
+      libelle: '2026',
+      dateDebut: new Date('2026-01-01'),
+      dateFin: new Date('2026-12-31'),
       statut: 'ouvert',
+      isCurrent: true,
       createdBy: testUser._id,
+      companyId: testUser.companyId,
     });
 
     // Create test accounts
@@ -44,6 +47,7 @@ describe('Comptabilite Routes', () => {
       classe: 4,
       type: 'debit',
       createdBy: testUser._id,
+        companyId: testUser.companyId,
     });
 
     compte701 = await CompteComptable.create({
@@ -52,6 +56,7 @@ describe('Comptabilite Routes', () => {
       classe: 7,
       type: 'credit',
       createdBy: testUser._id,
+        companyId: testUser.companyId,
     });
 
     compte57 = await CompteComptable.create({
@@ -60,6 +65,7 @@ describe('Comptabilite Routes', () => {
       classe: 5,
       type: 'debit',
       createdBy: testUser._id,
+        companyId: testUser.companyId,
     });
   });
 
@@ -122,8 +128,8 @@ describe('Comptabilite Routes', () => {
             },
             {
               compte: compte57._id,
-              compteNumero: '4431',
-              compteLibelle: 'TVA facturee',
+              compteNumero: '57',
+              compteLibelle: 'Caisse TVA',
               libelle: 'TVA 18%',
               debit: 0,
               credit: 1800,
@@ -195,6 +201,7 @@ describe('Comptabilite Routes', () => {
         ],
         statut: 'brouillon',
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
 
       const res = await request(app)
@@ -232,6 +239,7 @@ describe('Comptabilite Routes', () => {
         ],
         statut: 'validee',
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
 
       const res = await request(app)
@@ -250,7 +258,7 @@ describe('Comptabilite Routes', () => {
       const res = await request(app)
         .get('/api/comptabilite/grand-livre')
         .set('Authorization', `Bearer ${authToken}`)
-        .query({ exercice: testExercice._id });
+        .query({ exercice: testExercice._id.toString() });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -262,7 +270,7 @@ describe('Comptabilite Routes', () => {
       const res = await request(app)
         .get('/api/comptabilite/balance')
         .set('Authorization', `Bearer ${authToken}`)
-        .query({ exercice: testExercice._id });
+        .query({ exercice: testExercice._id.toString() });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);

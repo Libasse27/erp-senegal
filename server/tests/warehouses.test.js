@@ -8,7 +8,7 @@ describe('Warehouse Routes', () => {
   let authToken;
   let testUser;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     // Create additional permissions for depots module
     const extraModules = ['depots'];
     const actions = ['create', 'read', 'update', 'delete', 'export'];
@@ -36,7 +36,7 @@ describe('Warehouse Routes', () => {
         .send({
           name: 'Depot Principal',
           type: 'principal',
-          address: '123 Rue Test, Dakar',
+          address: { street: '123 Rue Test', city: 'Dakar' },
         });
 
       expect(res.status).toBe(201);

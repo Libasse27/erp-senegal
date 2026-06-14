@@ -7,7 +7,7 @@ describe('BankAccount Routes', () => {
   let authToken;
   let testUser;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const extraModules = ['comptes_bancaires'];
     const actions = ['create', 'read', 'update', 'delete', 'export'];
     for (const mod of extraModules) {

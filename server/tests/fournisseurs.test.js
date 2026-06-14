@@ -8,7 +8,7 @@ describe('Fournisseur Routes', () => {
   let authToken;
   let testUser;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     // Create additional permissions for fournisseurs module
     const extraModules = ['fournisseurs'];
     const actions = ['create', 'read', 'update', 'delete', 'export'];

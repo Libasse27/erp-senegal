@@ -13,16 +13,16 @@ describe('Auth Routes', () => {
         .set('Authorization', `Bearer ${token}`)
         .send({
           firstName: 'New',
-          lastName: 'User',
-          email: 'newuser@test.com',
-          password: 'password123',
-          phone: '221771234568',
-          role: user.role._id,
+          lastName:  'User',
+          email:     'newuser-register@test.com',
+          password:  'password123',
+          phone:     '221771234568',
+          role:      user.role._id,
         });
 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
-      expect(res.body.data).toHaveProperty('email', 'newuser@test.com');
+      expect(res.body.data).toHaveProperty('email', 'newuser-register@test.com');
       expect(res.body.data).not.toHaveProperty('password');
     });
 
@@ -31,9 +31,9 @@ describe('Auth Routes', () => {
         .post('/api/auth/register')
         .send({
           firstName: 'New',
-          lastName: 'User',
-          email: 'newuser@test.com',
-          password: 'password123',
+          lastName:  'User',
+          email:     'notoken@test.com',
+          password:  'password123',
         });
 
       expect(res.status).toBe(401);
@@ -42,15 +42,16 @@ describe('Auth Routes', () => {
     it('should reject duplicate email', async () => {
       const { token, user } = await createTestUser('admin');
 
+      // user.email is the already-existing email — try to register again with the same email
       const res = await request(app)
         .post('/api/auth/register')
         .set('Authorization', `Bearer ${token}`)
         .send({
           firstName: 'Duplicate',
-          lastName: 'User',
-          email: 'admin@test.com', // Already exists
-          password: 'password123',
-          role: user.role._id,
+          lastName:  'User',
+          email:     user.email,
+          password:  'password123',
+          role:      user.role._id,
         });
 
       expect(res.status).toBe(400);
@@ -60,12 +61,12 @@ describe('Auth Routes', () => {
 
   describe('POST /api/auth/login', () => {
     it('should login with valid credentials', async () => {
-      await createTestUser('admin');
+      const { user } = await createTestUser('admin');
 
       const res = await request(app)
         .post('/api/auth/login')
         .send({
-          email: 'admin@test.com',
+          email:    user.email,
           password: 'password123',
         });
 
@@ -73,17 +74,17 @@ describe('Auth Routes', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty('accessToken');
       expect(res.body.data).toHaveProperty('user');
-      expect(res.body.data.user).toHaveProperty('email', 'admin@test.com');
+      expect(res.body.data.user).toHaveProperty('email', user.email);
       expect(res.body.data.user).not.toHaveProperty('password');
     });
 
     it('should reject login with wrong password', async () => {
-      await createTestUser('admin');
+      const { user } = await createTestUser('admin');
 
       const res = await request(app)
         .post('/api/auth/login')
         .send({
-          email: 'admin@test.com',
+          email:    user.email,
           password: 'wrongpassword',
         });
 
@@ -95,7 +96,7 @@ describe('Auth Routes', () => {
       const res = await request(app)
         .post('/api/auth/login')
         .send({
-          email: 'nonexistent@test.com',
+          email:    'nonexistent@test.com',
           password: 'password123',
         });
 
@@ -106,14 +107,12 @@ describe('Auth Routes', () => {
     it('should reject login for inactive user', async () => {
       const { user } = await createTestUser('admin');
 
-      // Deactivate user
-      user.isActive = false;
-      await user.save();
+      await User.findByIdAndUpdate(user._id, { isActive: false });
 
       const res = await request(app)
         .post('/api/auth/login')
         .send({
-          email: 'admin@test.com',
+          email:    user.email,
           password: 'password123',
         });
 
@@ -124,19 +123,14 @@ describe('Auth Routes', () => {
 
   describe('POST /api/auth/refresh-token', () => {
     it('should refresh token successfully', async () => {
-      await createTestUser('admin');
+      const { user } = await createTestUser('admin');
 
-      // First login to get refresh token cookie
       const loginRes = await request(app)
         .post('/api/auth/login')
-        .send({
-          email: 'admin@test.com',
-          password: 'password123',
-        });
+        .send({ email: user.email, password: 'password123' });
 
       const cookies = loginRes.headers['set-cookie'];
 
-      // Use refresh token to get new access token
       const res = await request(app)
         .post('/api/auth/refresh-token')
         .set('Cookie', cookies);
@@ -148,7 +142,6 @@ describe('Auth Routes', () => {
 
     it('should reject refresh without cookie', async () => {
       const res = await request(app).post('/api/auth/refresh-token');
-
       expect(res.status).toBe(401);
       expect(res.body.success).toBe(false);
     });
@@ -169,7 +162,6 @@ describe('Auth Routes', () => {
 
     it('should reject logout without token', async () => {
       const res = await request(app).post('/api/auth/logout');
-
       expect(res.status).toBe(401);
     });
   });

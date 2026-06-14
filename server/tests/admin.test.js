@@ -1,7 +1,5 @@
 const request = require('supertest');
 const app = require('../app');
-const Company = require('../src/models/Company');
-const Settings = require('../src/models/Settings');
 const { createTestUser } = require('./helpers');
 
 describe('Admin Routes', () => {
@@ -9,7 +7,7 @@ describe('Admin Routes', () => {
   let adminUser;
   let vendeurToken;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const adminResult = await createTestUser('admin');
     adminToken = adminResult.token;
     adminUser = adminResult.user;
@@ -18,21 +16,7 @@ describe('Admin Routes', () => {
     const vendeurResult = await createTestUser('vendeur', ['products:read']);
     vendeurToken = vendeurResult.token;
 
-    // Create company and settings for tests
-    await Company.create({
-      raisonSociale: 'Test Company SA',
-      formeJuridique: 'SA',
-      ninea: '123456789',
-      rccm: 'RC-123',
-      telephone: '221338001234',
-      email: 'company@test.com',
-      devise: 'XOF',
-      createdBy: adminUser._id,
-    });
-
-    await Settings.create({
-      createdBy: adminUser._id,
-    });
+    // Company + Settings are created automatically by createTestUser above
   });
 
   describe('GET /api/admin/roles', () => {

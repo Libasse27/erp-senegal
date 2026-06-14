@@ -11,9 +11,10 @@ describe('Facture Model', () => {
   let testClient;
   let testProduct;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
+    const ts = Date.now();
     const role = await Role.create({
-      name: 'admin',
+      name: `admin-${ts}`,
       displayName: 'Admin',
       description: 'Admin role',
       permissions: [],
@@ -23,7 +24,7 @@ describe('Facture Model', () => {
     testUser = await User.create({
       firstName: 'Test',
       lastName: 'User',
-      email: 'model@test.com',
+      email: `model-${ts}@test.com`,
       password: 'password123',
       phone: '221771234567',
       role: role._id,
@@ -32,7 +33,7 @@ describe('Facture Model', () => {
     testClient = await Client.create({
       type: 'professionnel',
       raisonSociale: 'Client Test',
-      email: 'client-model@test.com',
+      email: `client-model-${ts}@test.com`,
       phone: '221771234568',
       segment: 'B',
       createdBy: testUser._id,
@@ -53,6 +54,8 @@ describe('Facture Model', () => {
     });
   });
 
+  const sharedCompanyId = new mongoose.Types.ObjectId();
+
   const validFactureData = () => ({
     client: testClient._id,
     lignes: [
@@ -65,6 +68,7 @@ describe('Facture Model', () => {
       },
     ],
     createdBy: testUser._id,
+    companyId: sharedCompanyId,
   });
 
   it('should create a facture with valid data', async () => {

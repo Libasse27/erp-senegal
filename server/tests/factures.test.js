@@ -1,4 +1,4 @@
-const request = require('supertest');
+﻿const request = require('supertest');
 const app = require('../app');
 const Facture = require('../src/models/Facture');
 const {
@@ -14,7 +14,7 @@ describe('Facture Routes', () => {
   let testClient;
   let testProduct;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const result = await createTestUser('admin', [
       'factures:create',
       'factures:read',
@@ -93,6 +93,7 @@ describe('Facture Routes', () => {
           },
         ],
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
     });
 
@@ -123,6 +124,7 @@ describe('Facture Routes', () => {
           },
         ],
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
 
       const res = await request(app)
@@ -160,6 +162,7 @@ describe('Facture Routes', () => {
         ],
         statut: 'brouillon',
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
 
       const res = await request(app)
@@ -190,6 +193,7 @@ describe('Facture Routes', () => {
         ],
         statut: 'validee',
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
 
       const res = await request(app)
@@ -219,6 +223,7 @@ describe('Facture Routes', () => {
         ],
         statut: 'brouillon',
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
 
       const res = await request(app)
@@ -249,6 +254,7 @@ describe('Facture Routes', () => {
         ],
         statut: 'brouillon',
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
 
       const res = await request(app)
@@ -279,6 +285,7 @@ describe('Facture Routes', () => {
         ],
         statut: 'validee',
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
 
       const res = await request(app)

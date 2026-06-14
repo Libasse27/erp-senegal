@@ -1,4 +1,4 @@
-const request = require('supertest');
+﻿const request = require('supertest');
 const app = require('../app');
 const Permission = require('../src/models/Permission');
 const Stock = require('../src/models/Stock');
@@ -11,7 +11,7 @@ describe('Stock Routes', () => {
   let testProduct;
   let testWarehouse;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     // Create additional permissions for stocks module
     const extraModules = ['stocks', 'depots'];
     const actions = ['create', 'read', 'update', 'delete', 'export'];
@@ -45,6 +45,7 @@ describe('Stock Routes', () => {
         quantite: 100,
         seuilAlerte: 20,
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
     });
 
@@ -69,6 +70,7 @@ describe('Stock Routes', () => {
         quantite: 10,
         seuilAlerte: 20,
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
     });
 
@@ -79,8 +81,8 @@ describe('Stock Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data).toBeInstanceOf(Array);
-      // Should return stocks where quantite <= seuilAlerte
+      expect(res.body.data).toHaveProperty('rupture');
+      expect(res.body.data).toHaveProperty('seuilAlerte');
     });
   });
 
@@ -92,8 +94,9 @@ describe('Stock Routes', () => {
         warehouse: testWarehouse._id,
         type: 'entree',
         quantite: 50,
-        motif: 'Achat',
+        motif: 'achat',
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
     });
 
@@ -116,10 +119,10 @@ describe('Stock Routes', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           product: testProduct._id,
-          warehouse: testWarehouse._id,
+          warehouseDestination: testWarehouse._id,
           type: 'entree',
           quantite: 50,
-          motif: 'Achat fournisseur',
+          motif: 'achat',
         });
 
       expect(res.status).toBe(201);
@@ -159,6 +162,7 @@ describe('Stock Routes', () => {
         quantite: 100,
         seuilAlerte: 20,
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
     });
 
@@ -168,15 +172,14 @@ describe('Stock Routes', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           product: testProduct._id,
-          fromWarehouse: testWarehouse._id,
-          toWarehouse: warehouseDestination._id,
+          warehouseSource: testWarehouse._id,
+          warehouseDestination: warehouseDestination._id,
           quantite: 30,
-          motif: 'Transfert inter-depots',
         });
 
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
-      expect(res.body.message).toContain('transfer');
+      expect(res.body.message).toContain('Transfert');
     });
   });
 });

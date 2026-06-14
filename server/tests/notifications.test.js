@@ -6,7 +6,7 @@ describe('Notification Routes', () => {
   let authToken;
   let testUser;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const result = await createTestUser('admin');
     authToken = result.token;
     testUser = result.user;

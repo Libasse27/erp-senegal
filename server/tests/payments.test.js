@@ -1,4 +1,4 @@
-const request = require('supertest');
+﻿const request = require('supertest');
 const app = require('../app');
 const Payment = require('../src/models/Payment');
 const Facture = require('../src/models/Facture');
@@ -15,7 +15,7 @@ describe('Payment Routes', () => {
   let testClient;
   let testFacture;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const result = await createTestUser('admin', [
       'paiements:create',
       'paiements:read',
@@ -48,6 +48,7 @@ describe('Payment Routes', () => {
       ],
       statut: 'validee',
       createdBy: testUser._id,
+        companyId: testUser.companyId,
     });
   });
 
@@ -107,6 +108,7 @@ describe('Payment Routes', () => {
         montant: 5000,
         client: testClient._id,
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
     });
 
@@ -132,6 +134,7 @@ describe('Payment Routes', () => {
         facture: testFacture._id,
         statut: 'brouillon',
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
 
       const res = await request(app)
@@ -156,6 +159,7 @@ describe('Payment Routes', () => {
         numero: 'PA-00001',
         statut: 'valide',
         createdBy: testUser._id,
+        companyId: testUser.companyId,
       });
 
       const res = await request(app)
@@ -176,7 +180,7 @@ describe('Payment Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data).toHaveProperty('soldeTotal');
+      expect(res.body.data).toHaveProperty('totalBanque');
     });
   });
 });

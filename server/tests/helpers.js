@@ -18,18 +18,14 @@ const Payment = require('../src/models/Payment');
 const BankAccount = require('../src/models/BankAccount');
 const Notification = require('../src/models/Notification');
 
-/**
- * Generate JWT access token for a user (legacy — no companyId in payload)
- */
+/** Token d'accès sans companyId (auth tests uniquement) */
 const getAuthToken = (user) => {
   return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '15m',
   });
 };
 
-/**
- * Generate JWT access token with SaaS scope (includes companyId + scope)
- */
+/** Token d'accès avec scope ENTREPRISE + companyId */
 const getSaasAuthToken = (user) => {
   return jwt.sign(
     {
@@ -42,49 +38,48 @@ const getSaasAuthToken = (user) => {
   );
 };
 
-/**
- * Create a test Company
- */
-const createTestCompany = async (data = {}) => {
-  return Company.create({
-    name:   data.name   || 'Entreprise Test SA',
-    email:  data.email  || 'contact@test-company.sn',
-    phone:  data.phone  || '+221 33 123 45 67',
-    status: data.status || 'active',
-    ...data,
-  });
+/** Récupère companyId d'un utilisateur en base */
+const getUserCompanyId = async (userId) => {
+  const u = await User.findById(userId).select('companyId').lean();
+  return u?.companyId || null;
 };
 
-/**
- * Create a test Forfait
- */
+// ── Forfait ──────────────────────────────────────────────────────────────────
 const createTestForfait = async (data = {}) => {
   return Forfait.create({
     code:          data.code || 'STANDARD',
     nom:           data.nom  || 'Standard Test',
     prixMensuel:   data.prixMensuel  || 15000,
     prixAnnuel:    data.prixAnnuel   || 150000,
-    modulesInclus: data.modulesInclus || ['GESCOM', 'FACTURATION'],
+    modulesInclus: data.modulesInclus || ['GESCOM', 'FACTURATION', 'COMPTABILITE', 'ACHAT', 'STOCK'],
     limites: {
-      maxUtilisateurs: data.maxUtilisateurs ?? 3,
-      maxFacturesMois: data.maxFacturesMois ?? 100,
-      stockageMo:      data.stockageMo ?? 1024,
+      maxUtilisateurs: data.maxUtilisateurs ?? 10,
+      maxFacturesMois: data.maxFacturesMois ?? 500,
+      stockageMo:      data.stockageMo      ?? 5120,
       supportPrioritaire: false,
       ...data.limites,
     },
-    actif:  true,
-    ordre:  data.ordre || 1,
+    actif: true,
+    ordre: data.ordre || 1,
     ...data,
   });
 };
 
-/**
- * Create a test Abonnement
- */
+// ── Entreprise ───────────────────────────────────────────────────────────────
+const createTestCompany = async (data = {}) => {
+  return Company.create({
+    name:   data.name   || 'Entreprise Test SA',
+    email:  data.email  || `company-${Date.now()}@test.com`,
+    phone:  data.phone  || '+221 33 123 45 67',
+    status: data.status || 'active',
+    ...data,
+  });
+};
+
+// ── Abonnement ───────────────────────────────────────────────────────────────
 const createTestAbonnement = async (entrepriseId, forfaitId, data = {}) => {
   const dateDebut = data.dateDebut || new Date();
   const dateFin   = data.dateFin   || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
   return Abonnement.create({
     entrepriseId,
     forfaitId,
@@ -97,9 +92,7 @@ const createTestAbonnement = async (entrepriseId, forfaitId, data = {}) => {
   });
 };
 
-/**
- * Create Settings (séquences de numérotation) for a company
- */
+// ── Settings ─────────────────────────────────────────────────────────────────
 const createTestSettings = async (companyId) => {
   return Settings.create({
     companyId,
@@ -117,8 +110,128 @@ const createTestSettings = async (companyId) => {
   });
 };
 
+// ── Permissions ───────────────────────────────────────────────────────────────
+const createTestPermissions = async () => {
+  const permissions = [];
+  const modules = [
+    'users', 'clients', 'products', 'factures', 'payments', 'comptabilite',
+    'devis', 'commandes', 'bons_livraison', 'paiements', 'ecritures',
+    'stocks', 'fournisseurs', 'warehouses', 'rapports',
+  ];
+  const actions = ['create', 'read', 'update', 'delete', 'export', 'validate'];
+  for (const module of modules) {
+    for (const action of actions) {
+      const perm = await Permission.create({
+        module,
+        action,
+        code: `${module}:${action}`,
+        description: `Permission to ${action} ${module}`,
+      });
+      permissions.push(perm);
+    }
+  }
+  return permissions;
+};
+
+const createTestRole = async (name, permissionCodes = []) => {
+  const permissions = await Permission.find({ code: { $in: permissionCodes } });
+  return Role.create({
+    name,
+    displayName: name.charAt(0).toUpperCase() + name.slice(1),
+    description: `Test ${name} role`,
+    permissions: permissions.map((p) => p._id),
+    isSystem: true,
+  });
+};
+
 /**
- * Create a user belonging to a specific company (SaaS ENTREPRISE scope)
+ * Crée un utilisateur de test COMPLET : role + company + abonnement ACTIF + settings.
+ * Le token inclut companyId pour passer tenantMiddleware et subscriptionGuard.
+ * @returns {{ user, token, company, abonnement }}
+ */
+const createTestUser = async (roleName = 'admin', permissionCodes = []) => {
+  // Permissions
+  let permissions = await Permission.find();
+  if (permissions.length === 0) {
+    permissions = await createTestPermissions();
+  }
+
+  // Rôle
+  let role = await Role.findOne({ name: roleName });
+  if (!role) {
+    const codes = permissionCodes.length > 0
+      ? permissionCodes
+      : permissions.map((p) => p.code);
+    role = await createTestRole(roleName, codes);
+  }
+
+  // Entreprise
+  const company = await Company.create({
+    name:   'Test Company SA',
+    email:  `company-${roleName}-${Date.now()}@test.com`,
+    phone:  '+221 33 000 00 00',
+    status: 'active',
+  });
+
+  // Forfait + abonnement ACTIF
+  let forfait = await Forfait.findOne({ code: 'STANDARD' });
+  if (!forfait) forfait = await createTestForfait();
+
+  const now     = new Date();
+  const dateFin = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const abonnement = await Abonnement.create({
+    entrepriseId: company._id,
+    forfaitId:    forfait._id,
+    periodicite:  'MENSUEL',
+    dateDebut:    now,
+    dateFin,
+    montant:      forfait.prixMensuel,
+    statut:       'ACTIF',
+  });
+
+  await Company.findByIdAndUpdate(company._id, {
+    abonnementActifId:   abonnement._id,
+    forfaitId:           forfait._id,
+    status:              'active',
+    subscriptionEndDate: dateFin,
+  });
+
+  // Settings numérotation
+  await Settings.create({
+    companyId: company._id,
+    isActive: true,
+    numbering: {
+      invoice:       { prefix: 'FA', currentSequence: 0 },
+      quote:         { prefix: 'DE', currentSequence: 0 },
+      purchaseOrder: { prefix: 'BC', currentSequence: 0 },
+      deliveryNote:  { prefix: 'BL', currentSequence: 0 },
+      creditNote:    { prefix: 'AV', currentSequence: 0 },
+      salesOrder:    { prefix: 'CM', currentSequence: 0 },
+      payment:       { prefix: 'PA', currentSequence: 0 },
+    },
+    general: { currency: 'XOF', language: 'fr', timezone: 'Africa/Dakar' },
+  });
+
+  // Utilisateur
+  const user = await User.create({
+    firstName: 'Test',
+    lastName:  'User',
+    email:     `${roleName}-${Date.now()}@test.com`,
+    password:  'password123',
+    phone:     '221771234567',
+    role:      role._id,
+    scope:     'ENTREPRISE',
+    companyId: company._id,
+    isActive:  true,
+  });
+
+  await user.populate({ path: 'role', populate: { path: 'permissions' } });
+  const token = getSaasAuthToken(user);
+  return { user, token, company, abonnement };
+};
+
+/**
+ * Crée un utilisateur SaaS lié à une company existante.
  */
 const createSaasUser = async (companyId, roleName = 'admin', data = {}) => {
   let role = await Role.findOne({ name: roleName });
@@ -134,7 +247,7 @@ const createSaasUser = async (companyId, roleName = 'admin', data = {}) => {
     });
   }
 
-  const email = data.email || `${roleName}-${companyId}@test.sn`;
+  const email = data.email || `${roleName}-${Date.now()}@test.sn`;
   const user  = await User.create({
     firstName: data.firstName || 'Test',
     lastName:  data.lastName  || 'User',
@@ -149,266 +262,179 @@ const createSaasUser = async (companyId, roleName = 'admin', data = {}) => {
   });
 
   await user.populate({ path: 'role', populate: { path: 'permissions' } });
-
   const token = getSaasAuthToken(user);
   return { user, token };
 };
 
-/**
- * Create test permissions
- */
-const createTestPermissions = async () => {
-  const permissions = [];
-  const modules = ['users', 'clients', 'products', 'factures', 'payments', 'comptabilite'];
-  const actions = ['create', 'read', 'update', 'delete', 'export'];
+// ── Helpers de données tenant-aware ─────────────────────────────────────────
+// Chaque helper auto-récupère companyId de l'utilisateur si non fourni dans data.
 
-  for (const module of modules) {
-    for (const action of actions) {
-      const permission = await Permission.create({
-        module,
-        action,
-        code: `${module}:${action}`,
-        description: `Permission to ${action} ${module}`,
-      });
-      permissions.push(permission);
-    }
-  }
-
-  return permissions;
-};
-
-/**
- * Create test role with permissions
- */
-const createTestRole = async (name, permissionCodes = []) => {
-  const permissions = await Permission.find({
-    code: { $in: permissionCodes },
-  });
-
-  const role = await Role.create({
-    name,
-    displayName: name.charAt(0).toUpperCase() + name.slice(1),
-    description: `Test ${name} role`,
-    permissions: permissions.map((p) => p._id),
-    isSystem: true,
-  });
-
-  return role;
-};
-
-/**
- * Create test user with role
- */
-const createTestUser = async (roleName = 'admin', permissionCodes = []) => {
-  // Create permissions if they don't exist
-  let permissions = await Permission.find();
-  if (permissions.length === 0) {
-    permissions = await createTestPermissions();
-  }
-
-  // Create role if it doesn't exist
-  let role = await Role.findOne({ name: roleName });
-  if (!role) {
-    const codes = permissionCodes.length > 0
-      ? permissionCodes
-      : permissions.map((p) => p.code);
-    role = await createTestRole(roleName, codes);
-  }
-
-  // Create user
-  const user = await User.create({
-    firstName: 'Test',
-    lastName: 'User',
-    email: `${roleName}@test.com`,
-    password: 'password123',
-    phone: '221771234567',
-    role: role._id,
-  });
-
-  const token = getAuthToken(user);
-
-  // Populate role and permissions for convenience
-  await user.populate({
-    path: 'role',
-    populate: { path: 'permissions' },
-  });
-
-  return { user, token };
-};
-
-/**
- * Create test client
- */
 const createTestClient = async (userId, data = {}) => {
-  const client = await Client.create({
-    type: data.type || 'professionnel',
-    raisonSociale: data.raisonSociale || 'Test Client SA',
-    email: data.email || 'client@test.com',
-    phone: data.phone || '221771234567',
-    ninea: data.ninea || '123456789',
-    segment: data.segment || 'C',
-    category: data.category || 'grossiste',
-    createdBy: userId,
+  const companyId = data.companyId || await getUserCompanyId(userId);
+  return Client.create({
+    type:          data.type          || 'professionnel',
+    raisonSociale: data.raisonSociale || `Client-${Date.now()}`,
+    email:         data.email         || `client-${Date.now()}@test.com`,
+    phone:         data.phone         || '221771234567',
+    ninea:         data.ninea         || '123456789',
+    segment:       data.segment       || 'C',
+    category:      data.category      || 'grossiste',
+    createdBy:     userId,
+    companyId,
+    isActive: true,
     ...data,
   });
-
-  return client;
 };
 
-/**
- * Create test category
- */
 const createTestCategory = async (userId, data = {}) => {
-  const category = await Category.create({
-    name: data.name || 'Test Category',
-    description: data.description || 'Test category description',
-    createdBy: userId,
+  const companyId = data.companyId || await getUserCompanyId(userId);
+  return Category.create({
+    name:        data.name        || `Category-${Date.now()}`,
+    description: data.description || 'Test category',
+    createdBy:   userId,
+    companyId,
+    isActive: true,
     ...data,
   });
-
-  return category;
 };
 
-/**
- * Create test product
- */
 const createTestProduct = async (userId, categoryId, data = {}) => {
-  const product = await Product.create({
-    name: data.name || 'Test Product',
-    category: categoryId,
+  const companyId = data.companyId || await getUserCompanyId(userId);
+  return Product.create({
+    name:      data.name      || `Product-${Date.now()}`,
+    category:  categoryId,
     prixAchat: data.prixAchat || 1000,
     prixVente: data.prixVente || 1500,
-    tauxTVA: data.tauxTVA !== undefined ? data.tauxTVA : 18,
-    type: data.type || 'produit',
+    tauxTVA:   data.tauxTVA  !== undefined ? data.tauxTVA : 18,
+    type:      data.type      || 'produit',
     createdBy: userId,
+    companyId,
+    isActive: true,
     ...data,
   });
-
-  return product;
 };
 
-/**
- * Create test fournisseur
- */
 const createTestFournisseur = async (userId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
   return Fournisseur.create({
-    raisonSociale: data.raisonSociale || 'Test Fournisseur SA',
-    email: data.email || 'fournisseur@test.com',
-    phone: data.phone || '221771234567',
-    category: data.category || 'local',
-    createdBy: userId,
+    raisonSociale: data.raisonSociale || `Fournisseur-${Date.now()}`,
+    email:         data.email         || `fournisseur-${Date.now()}@test.com`,
+    phone:         data.phone         || '221771234567',
+    category:      data.category      || 'local',
+    createdBy:     userId,
+    companyId,
+    isActive: true,
     ...data,
   });
 };
 
-/**
- * Create test warehouse
- */
 const createTestWarehouse = async (userId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
   return Warehouse.create({
-    name: data.name || 'Depot Test',
-    type: data.type || 'principal',
+    name:      data.name || `Depot-${Date.now()}`,
+    type:      data.type || 'principal',
     createdBy: userId,
+    companyId,
+    isActive: true,
     ...data,
   });
 };
 
-/**
- * Create test devis
- */
 const createTestDevis = async (userId, clientId, productId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
   return Devis.create({
-    client: clientId,
+    client:       clientId,
     dateValidite: data.dateValidite || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     lignes: data.lignes || [{
-      product: productId,
-      designation: 'Produit Test',
-      quantite: 2,
+      product:      productId,
+      designation:  'Produit Test',
+      quantite:     2,
       prixUnitaire: 10000,
-      tauxTVA: 18,
+      tauxTVA:      18,
     }],
     createdBy: userId,
+    companyId,
+    isActive: true,
     ...data,
   });
 };
 
-/**
- * Create test commande
- */
 const createTestCommande = async (userId, clientId, productId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
   return Commande.create({
     client: clientId,
     lignes: data.lignes || [{
-      product: productId,
-      designation: 'Produit Test',
-      quantite: 5,
+      product:      productId,
+      designation:  'Produit Test',
+      quantite:     5,
       prixUnitaire: 10000,
-      tauxTVA: 18,
+      tauxTVA:      18,
     }],
     createdBy: userId,
+    companyId,
+    isActive: true,
     ...data,
   });
 };
 
-/**
- * Create test facture
- */
 const createTestFacture = async (userId, clientId, productId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
   return Facture.create({
     client: clientId,
     lignes: data.lignes || [{
-      product: productId,
-      designation: 'Produit Test',
-      quantite: 3,
+      product:      productId,
+      designation:  'Produit Test',
+      quantite:     3,
       prixUnitaire: 15000,
-      tauxTVA: 18,
+      tauxTVA:      18,
     }],
     createdBy: userId,
+    companyId,
+    isActive: true,
     ...data,
   });
 };
 
-/**
- * Create test payment
- */
 const createTestPayment = async (userId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
   return Payment.create({
-    montant: data.montant || 50000,
+    montant:      data.montant      || 50000,
     modePaiement: data.modePaiement || 'especes',
-    typeTiers: data.typeTiers || 'client',
-    tiers: data.tiers,
-    facture: data.facture,
+    typeTiers:    data.typeTiers    || 'client',
+    tiers:        data.tiers,
+    facture:      data.facture,
     datePaiement: data.datePaiement || new Date(),
-    createdBy: userId,
+    createdBy:    userId,
+    companyId,
+    isActive: true,
     ...data,
   });
 };
 
-/**
- * Create test bank account
- */
 const createTestBankAccount = async (userId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
   return BankAccount.create({
-    nom: data.nom || 'Compte Test',
-    banque: data.banque || 'Banque Test',
+    nom:          data.nom          || 'Compte Test',
+    banque:       data.banque       || 'Banque Test',
     numeroCompte: data.numeroCompte || `TEST-${Date.now()}`,
-    type: data.type || 'courant',
+    type:         data.type         || 'courant',
     soldeInitial: data.soldeInitial || 1000000,
-    soldeActuel: data.soldeActuel || 1000000,
-    createdBy: userId,
+    soldeActuel:  data.soldeActuel  || 1000000,
+    createdBy:    userId,
+    companyId,
+    isActive: true,
     ...data,
   });
 };
 
-/**
- * Create test notification
- */
 const createTestNotification = async (userId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
   return Notification.create({
-    user: userId,
-    type: data.type || 'info',
-    title: data.title || 'Test Notification',
-    message: data.message || 'Ceci est une notification de test',
+    user:      userId,
+    type:      data.type    || 'info',
+    title:     data.title   || 'Test Notification',
+    message:   data.message || 'Ceci est une notification de test',
+    companyId,
     ...data,
   });
 };
@@ -416,6 +442,7 @@ const createTestNotification = async (userId, data = {}) => {
 module.exports = {
   getAuthToken,
   getSaasAuthToken,
+  getUserCompanyId,
   createTestPermissions,
   createTestRole,
   createTestUser,
