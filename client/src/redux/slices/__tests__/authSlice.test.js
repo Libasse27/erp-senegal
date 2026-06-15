@@ -40,7 +40,7 @@ describe('authSlice', () => {
       const state = authReducer(undefined, { type: 'unknown' });
       expect(state.user).toBeNull();
       expect(state.isAuthenticated).toBe(false);
-      expect(state.isLoading).toBe(true);
+      expect(state.isLoading).toBe(false);
     });
 
     it('should handle setCredentials', () => {

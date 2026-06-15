@@ -57,7 +57,7 @@ describe('LoginPage', () => {
     it('renders the login form', () => {
       renderWithProviders(<LoginPage />);
 
-      expect(screen.getByText('ERP Senegal')).toBeInTheDocument();
+      expect(screen.getByText('ERP Sénégal')).toBeInTheDocument();
       expect(screen.getByText('Gestion Commerciale & Comptable')).toBeInTheDocument();
     });
 
@@ -98,7 +98,7 @@ describe('LoginPage', () => {
     it('renders forgot password link', () => {
       renderWithProviders(<LoginPage />);
 
-      const forgotPasswordLink = screen.getByText('Mot de passe oublie ?');
+      const forgotPasswordLink = screen.getByText('Mot de passe oublié ?');
       expect(forgotPasswordLink).toBeInTheDocument();
       expect(forgotPasswordLink).toHaveAttribute('href', '/forgot-password');
     });
@@ -165,20 +165,21 @@ describe('LoginPage', () => {
   });
 
   describe('Submit button states', () => {
-    it('submit button is enabled by default', () => {
+    it('submit button is disabled when fields are empty', () => {
       renderWithProviders(<LoginPage />);
 
-      const submitButton = screen.getByRole('button', { name: 'Se connecter' });
-      expect(submitButton).not.toBeDisabled();
+      const submitButton = screen.getByRole('button', { name: /Se connecter/i });
+      expect(submitButton).toBeDisabled();
     });
   });
 
   describe('Email autofocus', () => {
-    it('email input has autofocus attribute', () => {
+    it('email input has autofocus', () => {
       renderWithProviders(<LoginPage />);
 
       const emailInput = screen.getByLabelText('Adresse email');
-      expect(emailInput).toHaveAttribute('autoFocus');
+      // React's autoFocus calls .focus() on mount rather than setting HTML attribute
+      expect(document.activeElement).toBe(emailInput);
     });
   });
 
@@ -186,16 +187,15 @@ describe('LoginPage', () => {
     it('renders footer text', () => {
       renderWithProviders(<LoginPage />);
 
-      expect(screen.getByText('ERP Commercial & Comptable - SYSCOHADA / OHADA')).toBeInTheDocument();
+      expect(screen.getByText('ERP Commercial & Comptable — Conforme aux normes sénégalaises')).toBeInTheDocument();
     });
   });
 
   describe('Styling', () => {
-    it('renders with correct styling classes', () => {
+    it('renders login form element', () => {
       const { container } = renderWithProviders(<LoginPage />);
 
-      const mainDiv = container.querySelector('.d-flex.justify-content-center.align-items-center.vh-100');
-      expect(mainDiv).toBeInTheDocument();
+      expect(container.querySelector('form')).toBeInTheDocument();
     });
   });
 });

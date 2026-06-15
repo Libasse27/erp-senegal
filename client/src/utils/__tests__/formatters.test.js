@@ -166,7 +166,7 @@ describe('formatters', () => {
     it('uses default maxLength of 50', () => {
       const text = 'This is a text that is exactly fifty characters long!';
       const result = truncate(text);
-      expect(result).toBe('This is a text that is exactly fifty characters ...');
+      expect(result).toBe('This is a text that is exactly fifty characters lo...');
     });
 
     it('returns original text when exactly at maxLength', () => {

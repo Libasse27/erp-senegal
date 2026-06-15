@@ -107,19 +107,23 @@ const Pagination = ({ meta, onPageChange, onLimitChange }) => {
       <Col xs={12} md={6}>
         <PaginationBs className="justify-content-md-end justify-content-center mb-0">
           <PaginationBs.First
+            aria-label="First"
             onClick={() => handlePageChange(1)}
             disabled={!hasPrevPage}
           />
           <PaginationBs.Prev
+            aria-label="Previous"
             onClick={() => handlePageChange(page - 1)}
             disabled={!hasPrevPage}
           />
           {renderPageItems()}
           <PaginationBs.Next
+            aria-label="Next"
             onClick={() => handlePageChange(page + 1)}
             disabled={!hasNextPage}
           />
           <PaginationBs.Last
+            aria-label="Last"
             onClick={() => handlePageChange(totalPages)}
             disabled={!hasNextPage}
           />

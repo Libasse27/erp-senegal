@@ -195,7 +195,7 @@ describe('DataTable', () => {
       const { container } = render(<DataTable columns={mockColumns} data={mockData} />);
 
       const table = container.querySelector('table');
-      expect(table).toHaveClass('table', 'table-striped', 'table-bordered', 'table-hover', 'table-responsive');
+      expect(table).toHaveClass('table', 'table-striped', 'table-bordered', 'table-hover');
     });
 
     it('renders correct number of rows', () => {

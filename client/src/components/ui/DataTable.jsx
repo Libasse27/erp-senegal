@@ -72,7 +72,7 @@ const DataTable = ({
               }}
               onClick={() => handleSort(column.key, column.sortable)}
             >
-              {column.label}
+              <span>{column.label}</span>
               {renderSortIcon(column.key, column.sortable)}
             </th>
           ))}

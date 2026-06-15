@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
+import { apiSlice } from '../../../redux/api/apiSlice';
 import DashboardPage from '../DashboardPage';
 
 // Mock recharts to avoid canvas issues in jsdom
@@ -29,13 +30,21 @@ jest.mock('../../../contexts/AuthContext', () => ({
 
 jest.mock('../../../hooks/usePageTitle', () => () => null);
 
+jest.mock('../../../contexts/SocketContext', () => ({
+  useSocket: () => ({ socket: null, isConnected: false, subscribe: jest.fn(), unsubscribe: jest.fn() }),
+}));
+
+jest.mock('../../../contexts/NotificationContext', () => ({
+  useNotifications: () => ({ notifications: [], unreadCount: 0, markAsRead: jest.fn(), markAllAsRead: jest.fn() }),
+}));
+
 const mockStatsData = {
   data: {
     success: true,
     data: {
-      chiffreAffaires: 15000000,
-      totalClients: 50,
-      facturesEnCours: 12,
+      caDuMois: 15000000,
+      clientsActifs: 50,
+      facturesImpayees: 12,
       alertesStock: 5,
       facturesRecentes: [],
       paiementsRecents: [],
@@ -47,8 +56,25 @@ const mockStatsData = {
   isError: false,
 };
 
+const emptyQuery = () => ({ data: undefined, isLoading: false, isError: false });
+
 jest.mock('../../../redux/api/dashboardApi', () => ({
   useGetDashboardStatsQuery: () => mockStatsData,
+  useGetDashboardChartsQuery: emptyQuery,
+  useGetDashboardTopClientsQuery: emptyQuery,
+  useGetDashboardStockAlertsQuery: emptyQuery,
+  useGetDashboardKpisQuery: emptyQuery,
+  useGetDashboardTopProductsQuery: emptyQuery,
+  useGetDashboardStockEvolutionQuery: emptyQuery,
+  useGetDashboardRecouvrementQuery: emptyQuery,
+  useGetDashboardCashflowQuery: emptyQuery,
+  useGetDashboardFunnelQuery: emptyQuery,
+  useGetDashboardPeriodeQuery: emptyQuery,
+  useGetDashboardComparaisonQuery: emptyQuery,
+}));
+
+jest.mock('../../../redux/api/saasApi', () => ({
+  useGetUsageSaasQuery: () => ({ data: undefined, isLoading: false }),
 }));
 
 const createStore = () =>
@@ -56,8 +82,9 @@ const createStore = () =>
     reducer: {
       auth: () => ({ user: { _id: '1', firstName: 'Test' }, accessToken: 'tok', isAuthenticated: true }),
       ui: () => ({ pageTitle: 'Dashboard', breadcrumbs: [] }),
+      [apiSlice.reducerPath]: apiSlice.reducer,
     },
-    middleware: (gd) => gd({ serializableCheck: false }),
+    middleware: (gd) => gd({ serializableCheck: false }).concat(apiSlice.middleware),
   });
 
 const renderDashboard = () =>

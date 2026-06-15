@@ -206,8 +206,8 @@ describe('Pagination', () => {
         />
       );
 
-      expect(screen.getByLabelText('First')).toBeDisabled();
-      expect(screen.getByLabelText('Previous')).toBeDisabled();
+      expect(screen.getByLabelText('First').closest('li')).toHaveClass('disabled');
+      expect(screen.getByLabelText('Previous').closest('li')).toHaveClass('disabled');
     });
 
     it('disables next and last buttons on last page', () => {
@@ -219,8 +219,8 @@ describe('Pagination', () => {
         />
       );
 
-      expect(screen.getByLabelText('Next')).toBeDisabled();
-      expect(screen.getByLabelText('Last')).toBeDisabled();
+      expect(screen.getByLabelText('Next').closest('li')).toHaveClass('disabled');
+      expect(screen.getByLabelText('Last').closest('li')).toHaveClass('disabled');
     });
   });
 

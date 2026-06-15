@@ -10,7 +10,7 @@ export const formatMoney = (amount) => {
       style: 'decimal',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(Math.round(amount)) + ' FCFA'
+    }).format(Math.round(amount)).replace(/\s+/g, ' ') + ' FCFA'
   );
 };
 

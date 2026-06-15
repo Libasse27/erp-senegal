@@ -5,12 +5,15 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
 import Layout from '../Layout';
 
+jest.mock('../../../hooks/usePWAInstall', () => () => ({ isInstallable: false, promptInstall: jest.fn() }));
+
 jest.mock('../../../contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { _id: '1', firstName: 'Test', lastName: 'User', fullName: 'Test User', role: { name: 'admin', displayName: 'Admin' } },
     logout: jest.fn(),
     hasPermission: () => true,
     hasRole: () => true,
+    isSuperAdmin: () => false,
   }),
 }));
 

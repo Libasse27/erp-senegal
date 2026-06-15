@@ -10,6 +10,7 @@ jest.mock('../../../contexts/AuthContext', () => ({
     user: { _id: '1', firstName: 'Test', role: { name: 'admin' } },
     hasPermission: () => true,
     hasRole: () => true,
+    isSuperAdmin: () => false,
   }),
 }));
 
@@ -39,7 +40,7 @@ describe('Sidebar', () => {
 
   it('shows brand name', () => {
     renderSidebar();
-    expect(screen.getByText('ERP Senegal')).toBeInTheDocument();
+    expect(screen.getByText('ERP Sénégal')).toBeInTheDocument();
   });
 
   it('shows navigation links', () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
@@ -15,6 +15,8 @@ const mockUser = {
   email: 'amadou@test.com',
   role: { name: 'admin', displayName: 'Administrateur' },
 };
+
+jest.mock('../../../hooks/usePWAInstall', () => () => ({ isInstallable: false, promptInstall: jest.fn() }));
 
 jest.mock('../../../contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -76,11 +78,14 @@ describe('Header', () => {
 
   it('contains deconnexion option', () => {
     renderHeader();
+    // Open the user dropdown (menu is lazy-rendered; must click toggle first)
+    fireEvent.click(screen.getByText('Amadou Diallo'));
     expect(screen.getByText('Deconnexion')).toBeInTheDocument();
   });
 
   it('contains profil link', () => {
     renderHeader();
+    fireEvent.click(screen.getByText('Amadou Diallo'));
     expect(screen.getByText('Mon profil')).toBeInTheDocument();
   });
 });
