@@ -10,7 +10,7 @@ import {
   FiUsers, FiCalendar, FiDollarSign, FiUserCheck, FiUserX, FiClock, FiPlus,
 } from 'react-icons/fi';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie,
 } from 'recharts';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatMoney } from '../../utils/formatters';
