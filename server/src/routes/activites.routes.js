@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { protect }          = require('../middlewares/auth');
-const { tenantMiddleware } = require('../middlewares/tenant');
+const tenantMiddleware = require('../middlewares/tenant');
 const { authorize }        = require('../middlewares/rbac');
 const {
   getActivites,

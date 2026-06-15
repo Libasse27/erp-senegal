@@ -208,22 +208,22 @@ exports.genererEcrituresPayroll = asyncHandler(async (req, res) => {
   // Écritures journal OD (Opérations Diverses)
   const lignes = [
     // D 661 — Rémunérations du personnel
-    { compteNum: '6611', libelle, debit: employe.salaireBrut, credit: 0 },
+    { compteNumero: '6611', libelle, debit: employe.salaireBrut, credit: 0 },
     // C 421 — Personnel - Rémunérations dues (salaire net)
-    { compteNum: '4211', libelle, debit: 0, credit: salaireNet },
+    { compteNumero: '4211', libelle, debit: 0, credit: salaireNet },
     // C 431 — IPRES (cotisations salariales)
-    ...(cotisationsIPRES > 0 ? [{ compteNum: '4311', libelle: `IPRES ${employe.matricule}`, debit: 0, credit: cotisationsIPRES }] : []),
+    ...(cotisationsIPRES > 0 ? [{ compteNumero: '4311', libelle: `IPRES ${employe.matricule}`, debit: 0, credit: cotisationsIPRES }] : []),
     // C 447 — Etat - IR retenu à la source
-    ...(irRetenu > 0 ? [{ compteNum: '4471', libelle: `IR ${employe.matricule}`, debit: 0, credit: irRetenu }] : []),
+    ...(irRetenu > 0 ? [{ compteNumero: '4471', libelle: `IR ${employe.matricule}`, debit: 0, credit: irRetenu }] : []),
   ];
 
   const ecriture = await EcritureComptable.create({
     companyId: tc(req),
-    exerciceId: exercice._id,
+    exercice: exercice._id,
     journal: 'OD',
     reference: `PAIE-${employe.matricule}-${String(mois).padStart(2,'0')}${annee}`,
     libelle,
-    date: dateOp,
+    dateEcriture: dateOp,
     lignes,
     statut: 'brouillon',
     createdBy: req.user._id,

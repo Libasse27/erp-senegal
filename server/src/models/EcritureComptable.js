@@ -5,7 +5,6 @@ const ligneEcritureSchema = new mongoose.Schema(
     compte: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'CompteComptable',
-      required: [true, 'Le compte est requis'],
     },
     compteNumero: {
       type: String,

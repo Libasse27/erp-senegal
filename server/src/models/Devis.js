@@ -105,7 +105,7 @@ const devisSchema = new mongoose.Schema(
     lignes: {
       type: [ligneSchema],
       validate: {
-        validator: (v) => v.length > 0,
+        validator: function (v) { return this.statut === 'brouillon' || v.length > 0; },
         message: 'Le devis doit contenir au moins une ligne',
       },
     },

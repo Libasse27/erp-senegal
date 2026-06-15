@@ -16,7 +16,12 @@ const Commande = require('../src/models/Commande');
 const Facture = require('../src/models/Facture');
 const Payment = require('../src/models/Payment');
 const BankAccount = require('../src/models/BankAccount');
-const Notification = require('../src/models/Notification');
+const Notification  = require('../src/models/Notification');
+const Employe       = require('../src/models/Employe');
+const Conge         = require('../src/models/Conge');
+const Opportunite   = require('../src/models/Opportunite');
+const Activite      = require('../src/models/Activite');
+const Budget        = require('../src/models/Budget');
 
 /** Token d'accès sans companyId (auth tests uniquement) */
 const getAuthToken = (user) => {
@@ -117,6 +122,7 @@ const createTestPermissions = async () => {
     'users', 'clients', 'products', 'factures', 'payments', 'comptabilite',
     'devis', 'commandes', 'bons_livraison', 'paiements', 'ecritures',
     'stocks', 'fournisseurs', 'warehouses', 'rapports',
+    'employes', 'conges', 'opportunites', 'activites',
   ];
   const actions = ['create', 'read', 'update', 'delete', 'export', 'validate'];
   for (const module of modules) {
@@ -439,6 +445,94 @@ const createTestNotification = async (userId, data = {}) => {
   });
 };
 
+// ── Helpers RH ───────────────────────────────────────────────────────────────
+
+const createTestEmploye = async (userId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
+  return Employe.create({
+    matricule:    data.matricule    || `EMP-2026-${String(Date.now()).slice(-5)}`,
+    nom:          data.nom          || 'Diallo',
+    prenom:       data.prenom       || 'Mamadou',
+    email:        data.email        || `employe-${Date.now()}@test.sn`,
+    poste:        data.poste        || 'Développeur',
+    departement:  data.departement  || 'Informatique',
+    dateEmbauche: data.dateEmbauche || new Date('2024-01-15'),
+    typeContrat:  data.typeContrat  || 'CDI',
+    salaireBrut:  data.salaireBrut  !== undefined ? data.salaireBrut : 350000,
+    tauxIPRES:    data.tauxIPRES    !== undefined ? data.tauxIPRES : 5.6,
+    tauxIR:       data.tauxIR       !== undefined ? data.tauxIR : 0,
+    companyId,
+    createdBy: userId,
+    ...data,
+  });
+};
+
+const createTestConge = async (userId, employeId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
+  return Conge.create({
+    employe:    employeId,
+    type:       data.type      || 'conge_annuel',
+    dateDebut:  data.dateDebut || new Date('2026-07-01'),
+    dateFin:    data.dateFin   || new Date('2026-07-05'),
+    nbJours:    data.nbJours   !== undefined ? data.nbJours : 5,
+    statut:     data.statut    || 'en_attente',
+    createdBy:  userId,
+    companyId,
+    ...data,
+  });
+};
+
+// ── Helpers CRM ───────────────────────────────────────────────────────────────
+
+const createTestOpportunite = async (userId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
+  return Opportunite.create({
+    reference:     data.reference     || `OPP-2026-T${String(Date.now()).slice(-4)}`,
+    titre:         data.titre         || `Opportunité-${Date.now()}`,
+    etape:         data.etape         || 'prospect',
+    probabilite:   data.probabilite   !== undefined ? data.probabilite : 10,
+    montantEstime: data.montantEstime || 500000,
+    isActive:      data.isActive      !== undefined ? data.isActive : true,
+    companyId,
+    createdBy: userId,
+    ...data,
+  });
+};
+
+const createTestActivite = async (userId, opportuniteId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
+  return Activite.create({
+    opportunite:  opportuniteId || null,
+    type:         data.type         || 'appel',
+    titre:        data.titre        || `Activité-${Date.now()}`,
+    dateActivite: data.dateActivite || new Date(),
+    dureeMinutes: data.dureeMinutes || 30,
+    statut:       data.statut       || 'planifie',
+    companyId,
+    createdBy: userId,
+    ...data,
+  });
+};
+
+// ── Helpers Budget ─────────────────────────────────────────────────────────────
+
+const createTestBudget = async (userId, data = {}) => {
+  const companyId = data.companyId || await getUserCompanyId(userId);
+  return Budget.create({
+    annee:        data.annee        || 2026,
+    mois:         data.mois         !== undefined ? data.mois : null,
+    type:         data.type         || 'produits',
+    categorie:    data.categorie    || 'ventes',
+    libelle:      data.libelle      || 'Budget Ventes 2026',
+    montantPrevu: data.montantPrevu || 10000000,
+    notes:        data.notes        || '',
+    isActive:     true,
+    companyId,
+    createdBy: userId,
+    ...data,
+  });
+};
+
 module.exports = {
   getAuthToken,
   getSaasAuthToken,
@@ -462,4 +556,9 @@ module.exports = {
   createTestPayment,
   createTestBankAccount,
   createTestNotification,
+  createTestEmploye,
+  createTestConge,
+  createTestOpportunite,
+  createTestActivite,
+  createTestBudget,
 };

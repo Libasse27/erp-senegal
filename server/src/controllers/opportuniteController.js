@@ -196,15 +196,19 @@ exports.convertirEnDevis = asyncHandler(async (req, res) => {
   const nextNum = lastDevis ? parseInt((lastDevis.numero || '0').replace(/\D/g,''), 10) + 1 : 1;
   const numero  = `DE${year}-${String(nextNum).padStart(5, '0')}`;
 
+  const dateValidite = new Date();
+  dateValidite.setDate(dateValidite.getDate() + 30);
+
   const devis = await Devis.create({
-    companyId:  tc(req),
+    companyId:    tc(req),
     numero,
-    client:     client._id,
-    statut:     'brouillon',
-    objet:      opp.titre,
-    lignes:     [],
-    notes:      `Converti depuis l'opportunité ${opp.reference}`,
-    createdBy:  req.user._id,
+    client:       client._id,
+    statut:       'brouillon',
+    objet:        opp.titre,
+    lignes:       [],
+    dateValidite,
+    notes:        `Converti depuis l'opportunité ${opp.reference}`,
+    createdBy:    req.user._id,
   });
 
   await Opportunite.findByIdAndUpdate(opp._id, { devisId: devis._id });
