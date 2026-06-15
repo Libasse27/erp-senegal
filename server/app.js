@@ -7,6 +7,11 @@ const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp');
 const compression = require('compression');
 
+// Tenant plugin doit être enregistré AVANT tout require de modèle Mongoose
+const mongoose = require('mongoose');
+const tenantPlugin = require('./src/infrastructure/tenantPlugin');
+mongoose.plugin(tenantPlugin);
+
 const corsOptions = require('./src/config/cors');
 const logger = require('./src/config/logger');
 const routes = require('./src/routes');

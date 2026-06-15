@@ -66,7 +66,7 @@ const createTestPlan = async (data = {}) => {
       maxStockageMo:   data.maxStockageMo   ?? 5120,
       ...data.limites,
     },
-    modules: data.modules || data.modulesInclus || ['GESCOM', 'FACTURATION', 'STOCK'],
+    modules: data.modules || data.modulesInclus || ['GESCOM', 'FACTURATION', 'STOCK', 'COMPTABILITE', 'VENTES'],
     features: { supportPrioritaire: false, apiAccess: false, multiEtablissement: false, ...data.features },
     essaiGratuitJours: data.essaiGratuitJours ?? 0,
     actif:          true,
@@ -108,7 +108,7 @@ const createTestAbonnement = async (entrepriseId, planId, data = {}) => {
       code: 'TEST', nom: 'Test Plan',
       tarifs: { mensuel: 15000, annuel: 150000, devise: 'XOF' },
       limites: { maxUtilisateurs: 10, maxFacturesMois: 500, maxStockageMo: 5120 },
-      modules: ['GESCOM', 'FACTURATION', 'STOCK'],
+      modules: ['GESCOM', 'FACTURATION', 'STOCK', 'COMPTABILITE', 'VENTES'],
       features: { supportPrioritaire: false, apiAccess: false, multiEtablissement: false },
       version: 1, snapshotAt: new Date(),
     };
