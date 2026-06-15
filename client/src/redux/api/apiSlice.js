@@ -88,6 +88,7 @@ export const apiSlice = createApi({
     'Forfait',
     'Abonnement',
     'PaiementSaaS',
+    'Budget',
   ],
   endpoints: () => ({}),
 });

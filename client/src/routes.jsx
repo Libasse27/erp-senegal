@@ -133,6 +133,10 @@ const PricingPage           = lazy(() => import('./pages/abonnement/PricingPage'
 const PaiementSaasPage      = lazy(() => import('./pages/abonnement/PaiementSaasPage'));
 const SubscriptionExpiredPage = lazy(() => import('./pages/abonnement/SubscriptionExpiredPage'));
 
+// Budget & Prévisions
+const BudgetsPage    = lazy(() => import('./pages/budgets/BudgetsPage'));
+const BudgetFormPage = lazy(() => import('./pages/budgets/BudgetFormPage'));
+
 // 404
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
@@ -275,6 +279,11 @@ const AppRoutes = () => {
           <Route path="/rapports/performance" element={<RapportPerformancePage />} />
           <Route path="/rapports/activite" element={<RapportActivitePage />} />
           <Route path="/rapports/financier" element={<RapportFinancierPage />} />
+
+          {/* Budget & Prévisions */}
+          <Route path="/budgets" element={<BudgetsPage />} />
+          <Route path="/budgets/nouveau" element={<BudgetFormPage />} />
+          <Route path="/budgets/:id/modifier" element={<BudgetFormPage />} />
 
           {/* Profil */}
           <Route path="/profil" element={<ProfilePage />} />

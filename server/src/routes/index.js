@@ -60,6 +60,9 @@ const forfaitsRoutes = require('./forfaits.routes');
 // SaaS — Paiements abonnements
 const paiementsSaasRoutes = require('./paiements-saas.routes');
 
+// Budget & Prévisions
+const budgetRoutes = require('./budget.routes');
+
 const { limiter } = require('../middlewares/rateLimiter');
 
 // Appliquer le rate limiter global
@@ -123,5 +126,8 @@ router.use('/forfaits', forfaitsRoutes);
 
 // === SaaS — Paiements abonnements ===
 router.use('/paiements-saas', paiementsSaasRoutes);
+
+// === Budget & Prévisions ===
+router.use('/budgets', budgetRoutes);
 
 module.exports = router;
