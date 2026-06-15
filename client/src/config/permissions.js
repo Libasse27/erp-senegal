@@ -104,6 +104,17 @@ export const PERM = {
   ECRITURES_UPDATE:     'ecritures:update',
   ECRITURES_VALIDATE:   'ecritures:validate',
 
+  // ── CRM ──────────────────────────────────────────────────────────────
+  OPPORTUNITES_READ:    'opportunites:read',
+  OPPORTUNITES_CREATE:  'opportunites:create',
+  OPPORTUNITES_UPDATE:  'opportunites:update',
+  OPPORTUNITES_DELETE:  'opportunites:delete',
+
+  ACTIVITES_READ:       'activites:read',
+  ACTIVITES_CREATE:     'activites:create',
+  ACTIVITES_UPDATE:     'activites:update',
+  ACTIVITES_DELETE:     'activites:delete',
+
   // ── RH ───────────────────────────────────────────────────────────────
   EMPLOYES_READ:    'employes:read',
   EMPLOYES_CREATE:  'employes:create',

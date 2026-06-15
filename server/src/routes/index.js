@@ -67,6 +67,10 @@ const budgetRoutes = require('./budget.routes');
 const employesRoutes = require('./employes.routes');
 const congesRoutes   = require('./conges.routes');
 
+// CRM
+const opportunitesRoutes = require('./opportunites.routes');
+const activitesRoutes    = require('./activites.routes');
+
 const { limiter } = require('../middlewares/rateLimiter');
 
 // Appliquer le rate limiter global
@@ -137,5 +141,9 @@ router.use('/budgets', budgetRoutes);
 // === RH ===
 router.use('/rh/employes', employesRoutes);
 router.use('/rh/conges',   congesRoutes);
+
+// === CRM ===
+router.use('/crm/opportunites', opportunitesRoutes);
+router.use('/crm/activites',    activitesRoutes);
 
 module.exports = router;

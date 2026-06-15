@@ -137,6 +137,11 @@ const SubscriptionExpiredPage = lazy(() => import('./pages/abonnement/Subscripti
 const BudgetsPage    = lazy(() => import('./pages/budgets/BudgetsPage'));
 const BudgetFormPage = lazy(() => import('./pages/budgets/BudgetFormPage'));
 
+// CRM
+const CRMDashboardPage      = lazy(() => import('./pages/crm/CRMDashboardPage'));
+const OpportuniteFormPage   = lazy(() => import('./pages/crm/OpportuniteFormPage'));
+const OpportuniteDetailPage = lazy(() => import('./pages/crm/OpportuniteDetailPage'));
+
 // RH
 const RHDashboardPage   = lazy(() => import('./pages/rh/RHDashboardPage'));
 const EmployesListPage  = lazy(() => import('./pages/rh/EmployesListPage'));
@@ -291,6 +296,12 @@ const AppRoutes = () => {
           <Route path="/budgets" element={<BudgetsPage />} />
           <Route path="/budgets/nouveau" element={<BudgetFormPage />} />
           <Route path="/budgets/:id/modifier" element={<BudgetFormPage />} />
+
+          {/* CRM */}
+          <Route path="/crm" element={<CRMDashboardPage />} />
+          <Route path="/crm/opportunites/nouveau" element={<OpportuniteFormPage />} />
+          <Route path="/crm/opportunites/:id" element={<OpportuniteDetailPage />} />
+          <Route path="/crm/opportunites/:id/modifier" element={<OpportuniteFormPage />} />
 
           {/* RH */}
           <Route path="/rh" element={<RHDashboardPage />} />

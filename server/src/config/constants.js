@@ -65,6 +65,8 @@ module.exports = {
     'ecritures',
     'employes',
     'conges',
+    'opportunites',
+    'activites',
     'rapports',
     'dashboard',
     'audit',
