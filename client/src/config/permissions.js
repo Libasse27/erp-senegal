@@ -104,6 +104,17 @@ export const PERM = {
   ECRITURES_UPDATE:     'ecritures:update',
   ECRITURES_VALIDATE:   'ecritures:validate',
 
+  // ── RH ───────────────────────────────────────────────────────────────
+  EMPLOYES_READ:    'employes:read',
+  EMPLOYES_CREATE:  'employes:create',
+  EMPLOYES_UPDATE:  'employes:update',
+  EMPLOYES_DELETE:  'employes:delete',
+
+  CONGES_READ:      'conges:read',
+  CONGES_CREATE:    'conges:create',
+  CONGES_UPDATE:    'conges:update',
+  CONGES_DELETE:    'conges:delete',
+
   // ── Rapports & Dashboard ──────────────────────────────────────────────
   RAPPORTS_READ:        'rapports:read',
   RAPPORTS_EXPORT:      'rapports:export',

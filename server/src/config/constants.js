@@ -63,6 +63,8 @@ module.exports = {
     'comptes_bancaires',
     'comptabilite',
     'ecritures',
+    'employes',
+    'conges',
     'rapports',
     'dashboard',
     'audit',

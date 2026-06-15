@@ -63,6 +63,10 @@ const paiementsSaasRoutes = require('./paiements-saas.routes');
 // Budget & Prévisions
 const budgetRoutes = require('./budget.routes');
 
+// RH
+const employesRoutes = require('./employes.routes');
+const congesRoutes   = require('./conges.routes');
+
 const { limiter } = require('../middlewares/rateLimiter');
 
 // Appliquer le rate limiter global
@@ -129,5 +133,9 @@ router.use('/paiements-saas', paiementsSaasRoutes);
 
 // === Budget & Prévisions ===
 router.use('/budgets', budgetRoutes);
+
+// === RH ===
+router.use('/rh/employes', employesRoutes);
+router.use('/rh/conges',   congesRoutes);
 
 module.exports = router;

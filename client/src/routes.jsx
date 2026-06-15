@@ -137,6 +137,13 @@ const SubscriptionExpiredPage = lazy(() => import('./pages/abonnement/Subscripti
 const BudgetsPage    = lazy(() => import('./pages/budgets/BudgetsPage'));
 const BudgetFormPage = lazy(() => import('./pages/budgets/BudgetFormPage'));
 
+// RH
+const RHDashboardPage   = lazy(() => import('./pages/rh/RHDashboardPage'));
+const EmployesListPage  = lazy(() => import('./pages/rh/EmployesListPage'));
+const EmployeFormPage   = lazy(() => import('./pages/rh/EmployeFormPage'));
+const EmployeDetailPage = lazy(() => import('./pages/rh/EmployeDetailPage'));
+const CongesPage        = lazy(() => import('./pages/rh/CongesPage'));
+
 // 404
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
@@ -284,6 +291,15 @@ const AppRoutes = () => {
           <Route path="/budgets" element={<BudgetsPage />} />
           <Route path="/budgets/nouveau" element={<BudgetFormPage />} />
           <Route path="/budgets/:id/modifier" element={<BudgetFormPage />} />
+
+          {/* RH */}
+          <Route path="/rh" element={<RHDashboardPage />} />
+          <Route path="/rh/employes" element={<EmployesListPage />} />
+          <Route path="/rh/employes/nouveau" element={<EmployeFormPage />} />
+          <Route path="/rh/employes/:id" element={<EmployeDetailPage />} />
+          <Route path="/rh/employes/:id/modifier" element={<EmployeFormPage />} />
+          <Route path="/rh/conges" element={<CongesPage />} />
+          <Route path="/rh/conges/nouveau" element={<CongesPage />} />
 
           {/* Profil */}
           <Route path="/profil" element={<ProfilePage />} />
