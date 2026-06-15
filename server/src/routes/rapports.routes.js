@@ -14,6 +14,11 @@ const {
   getRapportTopProduits,
   getRapportRecouvrement,
   getRecouvrementPDF,
+  getRapportAchats,
+  getRapportStocksAnalyse,
+  getRapportABC,
+  getRapportPerformance,
+  getRapportActivite,
 } = require('../controllers/rapportController');
 const { protect } = require('../middlewares/auth');
 const tenantMiddleware = require('../middlewares/tenant');
@@ -51,5 +56,20 @@ router.get('/stock/pdf', pdfLimiter, authorize('rapports:read'), getRapportStock
 // === Rapport de recouvrement (créances) ===
 router.get('/recouvrement', authorize('rapports:read'), getRapportRecouvrement);
 router.get('/recouvrement/pdf', pdfLimiter, authorize('rapports:read'), getRecouvrementPDF);
+
+// === Rapport Achats ===
+router.get('/achats', authorize('rapports:read'), getRapportAchats);
+
+// === Rapport Stocks (valorisation & analyse) ===
+router.get('/stocks-analyse', authorize('rapports:read'), getRapportStocksAnalyse);
+
+// === Analyse ABC (Pareto) ===
+router.get('/abc', authorize('rapports:read'), getRapportABC);
+
+// === Performance Commerciale ===
+router.get('/performance', authorize('rapports:read'), getRapportPerformance);
+
+// === Rapport d'Activité Globale ===
+router.get('/activite', authorize('rapports:read'), getRapportActivite);
 
 module.exports = router;

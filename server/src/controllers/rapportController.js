@@ -3,6 +3,12 @@ const Facture = require('../models/Facture');
 const Client = require('../models/Client');
 const Payment = require('../models/Payment');
 const Stock = require('../models/Stock');
+const Product = require('../models/Product');
+const Category = require('../models/Category');
+const Devis = require('../models/Devis');
+const Commande = require('../models/Commande');
+const CommandeAchat = require('../models/CommandeAchat');
+const FactureFournisseur = require('../models/FactureFournisseur');
 const { AppError } = require('../middlewares/errorHandler');
 const comptabiliteService = require('../services/comptabiliteService');
 const {
@@ -646,6 +652,321 @@ const getRecouvrementPDF = async (req, res, next) => {
   }
 };
 
+// =====================================================
+// RAPPORT ACHATS
+// =====================================================
+
+const getRapportAchats = async (req, res, next) => {
+  try {
+    const { dateFrom, dateTo } = resolveCAPeriod(req.query.dateFrom, req.query.dateTo);
+    const cId = tc(req);
+
+    const [statsCmdAchat, statsFactFourn, evolution, topFournisseurs] = await Promise.all([
+      CommandeAchat.aggregate([
+        { $match: { companyId: cId, dateCommande: { $gte: dateFrom, $lte: dateTo } } },
+        { $group: { _id: null, total: { $sum: '$montantTTC' }, count: { $sum: 1 } } },
+      ]),
+      FactureFournisseur.aggregate([
+        { $match: { companyId: cId, dateFacture: { $gte: dateFrom, $lte: dateTo } } },
+        { $group: { _id: null, total: { $sum: '$montantTTC' }, totalHT: { $sum: '$montantHT' }, count: { $sum: 1 } } },
+      ]),
+      FactureFournisseur.aggregate([
+        { $match: { companyId: cId, dateFacture: { $gte: dateFrom, $lte: dateTo } } },
+        { $group: { _id: { year: { $year: '$dateFacture' }, month: { $month: '$dateFacture' } }, total: { $sum: '$montantTTC' }, count: { $sum: 1 } } },
+        { $sort: { '_id.year': 1, '_id.month': 1 } },
+      ]),
+      FactureFournisseur.aggregate([
+        { $match: { companyId: cId, dateFacture: { $gte: dateFrom, $lte: dateTo } } },
+        { $group: { _id: '$fournisseur', total: { $sum: '$montantTTC' }, count: { $sum: 1 } } },
+        { $sort: { total: -1 } },
+        { $limit: 10 },
+        { $lookup: { from: 'fournisseurs', localField: '_id', foreignField: '_id', as: 'info' } },
+        { $unwind: { path: '$info', preserveNullAndEmpty: true } },
+        { $project: { designation: { $ifNull: ['$info.nom', 'Inconnu'] }, total: 1, count: 1 } },
+      ]),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        kpis: {
+          totalAchats: statsFactFourn[0]?.total || 0,
+          totalAchatsHT: statsFactFourn[0]?.totalHT || 0,
+          nbFacturesFourn: statsFactFourn[0]?.count || 0,
+          nbCommandesAchat: statsCmdAchat[0]?.count || 0,
+        },
+        evolution: evolution.map((m) => ({ mois: formatMonthLabel(m._id.year, m._id.month), total: m.total, count: m.count })),
+        topFournisseurs,
+        dateFrom,
+        dateTo,
+      },
+    });
+  } catch (error) { next(error); }
+};
+
+// =====================================================
+// RAPPORT STOCKS (valorisation & analyse)
+// =====================================================
+
+const getRapportStocksAnalyse = async (req, res, next) => {
+  try {
+    const cId = tc(req);
+
+    const [valorisation, parCategorie, topProduits, alertes] = await Promise.all([
+      Stock.aggregate([
+        { $match: { companyId: cId, quantite: { $gt: 0 } } },
+        { $group: { _id: null, valeurTotale: { $sum: '$valeurStock' }, nbProduits: { $sum: 1 }, qteTotal: { $sum: '$quantite' } } },
+      ]),
+      Stock.aggregate([
+        { $match: { companyId: cId, quantite: { $gt: 0 } } },
+        { $lookup: { from: 'products', localField: 'product', foreignField: '_id', as: 'prod' } },
+        { $unwind: { path: '$prod', preserveNullAndEmpty: true } },
+        { $lookup: { from: 'categories', localField: 'prod.category', foreignField: '_id', as: 'cat' } },
+        { $unwind: { path: '$cat', preserveNullAndEmpty: true } },
+        { $group: { _id: { catId: '$cat._id', catNom: '$cat.name' }, valeur: { $sum: '$valeurStock' }, nbProduits: { $sum: 1 } } },
+        { $sort: { valeur: -1 } },
+        { $project: { designation: { $ifNull: ['$_id.catNom', 'Sans catégorie'] }, valeur: 1, nbProduits: 1 } },
+      ]),
+      Stock.aggregate([
+        { $match: { companyId: cId, quantite: { $gt: 0 } } },
+        { $lookup: { from: 'products', localField: 'product', foreignField: '_id', as: 'prod' } },
+        { $unwind: '$prod' },
+        { $project: { designation: '$prod.name', code: '$prod.code', quantite: 1, valeurStock: 1 } },
+        { $sort: { valeurStock: -1 } },
+        { $limit: 10 },
+      ]),
+      Stock.aggregate([
+        { $match: { companyId: cId } },
+        { $lookup: { from: 'products', localField: 'product', foreignField: '_id', as: 'prod' } },
+        { $unwind: '$prod' },
+        { $match: { $expr: { $and: [{ $gt: ['$prod.stockAlerte', 0] }, { $lte: ['$quantite', '$prod.stockAlerte'] }] } } },
+        { $count: 'total' },
+      ]),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        kpis: {
+          valeurTotale: valorisation[0]?.valeurTotale || 0,
+          nbReferences: valorisation[0]?.nbProduits || 0,
+          qteTotal: valorisation[0]?.qteTotal || 0,
+          nbAlertes: alertes[0]?.total || 0,
+        },
+        parCategorie,
+        topProduits,
+      },
+    });
+  } catch (error) { next(error); }
+};
+
+// =====================================================
+// ANALYSE ABC (Pareto clients / produits)
+// =====================================================
+
+const getRapportABC = async (req, res, next) => {
+  try {
+    const { dateFrom, dateTo } = resolveCAPeriod(req.query.dateFrom, req.query.dateTo);
+    const type = req.query.type === 'produits' ? 'produits' : 'clients';
+    const cId = tc(req);
+
+    const match = {
+      companyId: cId,
+      dateFacture: { $gte: dateFrom, $lte: dateTo },
+      statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] },
+    };
+
+    let rawData;
+    if (type === 'clients') {
+      rawData = await Facture.aggregate([
+        { $match: match },
+        { $group: { _id: '$client', totalCA: { $sum: '$totalTTC' }, nbFactures: { $sum: 1 } } },
+        { $sort: { totalCA: -1 } },
+        { $lookup: { from: 'clients', localField: '_id', foreignField: '_id', as: 'info' } },
+        { $unwind: { path: '$info', preserveNullAndEmpty: true } },
+        {
+          $project: {
+            designation: {
+              $ifNull: [
+                { $concat: [{ $ifNull: ['$info.prenom', ''] }, ' ', { $ifNull: ['$info.nom', ''] }] },
+                { $ifNull: ['$info.entreprise', 'Client inconnu'] },
+              ],
+            },
+            totalCA: 1,
+            nbFactures: 1,
+          },
+        },
+      ]);
+    } else {
+      rawData = await Facture.aggregate([
+        { $match: match },
+        { $unwind: '$lignes' },
+        { $group: { _id: '$lignes.productId', totalCA: { $sum: '$lignes.montantTTC' }, nbVentes: { $sum: '$lignes.quantite' } } },
+        { $sort: { totalCA: -1 } },
+        { $lookup: { from: 'products', localField: '_id', foreignField: '_id', as: 'info' } },
+        { $unwind: { path: '$info', preserveNullAndEmpty: true } },
+        { $project: { designation: { $ifNull: ['$info.name', 'Produit inconnu'] }, totalCA: 1, nbVentes: 1 } },
+      ]);
+    }
+
+    const totalGlobal = rawData.reduce((s, r) => s + r.totalCA, 0);
+    let cumulatif = 0;
+    const items = rawData.map((r) => {
+      cumulatif += r.totalCA;
+      const pct = totalGlobal > 0 ? (r.totalCA / totalGlobal) * 100 : 0;
+      const pctCumulatif = totalGlobal > 0 ? (cumulatif / totalGlobal) * 100 : 0;
+      const classe = pctCumulatif <= 80 ? 'A' : pctCumulatif <= 95 ? 'B' : 'C';
+      return { ...r, pct: Math.round(pct * 10) / 10, pctCumulatif: Math.round(pctCumulatif * 10) / 10, classe };
+    });
+
+    const nbA = items.filter((i) => i.classe === 'A').length;
+    const nbB = items.filter((i) => i.classe === 'B').length;
+    const nbC = items.filter((i) => i.classe === 'C').length;
+
+    res.json({
+      success: true,
+      data: {
+        type,
+        items,
+        kpis: { totalGlobal, nbItems: items.length, nbA, nbB, nbC },
+        dateFrom,
+        dateTo,
+      },
+    });
+  } catch (error) { next(error); }
+};
+
+// =====================================================
+// RAPPORT PERFORMANCE COMMERCIALE
+// =====================================================
+
+const getRapportPerformance = async (req, res, next) => {
+  try {
+    const { dateFrom, dateTo } = resolveCAPeriod(req.query.dateFrom, req.query.dateTo);
+    const cId = tc(req);
+
+    const periodeMatch = { companyId: cId, createdAt: { $gte: dateFrom, $lte: dateTo } };
+
+    const [
+      statsDevis,
+      statsCommandes,
+      statsFactures,
+      statsPaiements,
+      panierStats,
+      nouveauxClients,
+    ] = await Promise.all([
+      Devis.aggregate([{ $match: periodeMatch }, { $group: { _id: null, count: { $sum: 1 }, totalCA: { $sum: '$montantTTC' }, acceptes: { $sum: { $cond: [{ $eq: ['$statut', 'accepte'] }, 1, 0] } } } }]),
+      Commande.aggregate([{ $match: periodeMatch }, { $group: { _id: null, count: { $sum: 1 }, totalCA: { $sum: '$montantTTC' } } }]),
+      Facture.aggregate([{ $match: { ...periodeMatch, statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] } } }, { $group: { _id: null, count: { $sum: 1 }, totalCA: { $sum: '$totalTTC' } } }]),
+      Payment.aggregate([{ $match: { companyId: cId, createdAt: { $gte: dateFrom, $lte: dateTo } } }, { $group: { _id: null, total: { $sum: '$montant' }, count: { $sum: 1 } } }]),
+      Facture.aggregate([
+        { $match: { ...periodeMatch, statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] } } },
+        { $group: { _id: null, panierMoyen: { $avg: '$totalTTC' }, maxCA: { $max: '$totalTTC' }, minCA: { $min: '$totalTTC' } } },
+      ]),
+      Client.countDocuments({ ...periodeMatch }),
+    ]);
+
+    const nbDevis = statsDevis[0]?.count || 0;
+    const nbDevisAcceptes = statsDevis[0]?.acceptes || 0;
+    const nbCommandes = statsCommandes[0]?.count || 0;
+    const nbFactures = statsFactures[0]?.count || 0;
+
+    const tauxConversionDevis = nbDevis > 0 ? Math.round((nbDevisAcceptes / nbDevis) * 100) : 0;
+    const tauxConversionCommande = nbDevis > 0 ? Math.round((nbCommandes / nbDevis) * 100) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        kpis: {
+          nbDevis,
+          nbDevisAcceptes,
+          nbCommandes,
+          nbFactures,
+          totalCA: statsFactures[0]?.totalCA || 0,
+          totalEncaisse: statsPaiements[0]?.total || 0,
+          panierMoyen: Math.round(panierStats[0]?.panierMoyen || 0),
+          tauxConversionDevis,
+          tauxConversionCommande,
+          nouveauxClients,
+        },
+        funnel: [
+          { etape: 'Devis', count: nbDevis, color: '#6366f1' },
+          { etape: 'Devis acceptés', count: nbDevisAcceptes, color: '#8b5cf6' },
+          { etape: 'Commandes', count: nbCommandes, color: '#1a56db' },
+          { etape: 'Factures', count: nbFactures, color: '#059669' },
+        ],
+        dateFrom,
+        dateTo,
+      },
+    });
+  } catch (error) { next(error); }
+};
+
+// =====================================================
+// RAPPORT D'ACTIVITE GLOBALE
+// =====================================================
+
+const getRapportActivite = async (req, res, next) => {
+  try {
+    const { dateFrom, dateTo } = resolveCAPeriod(req.query.dateFrom, req.query.dateTo);
+    const cId = tc(req);
+
+    const match = (extra = {}) => ({ companyId: cId, createdAt: { $gte: dateFrom, $lte: dateTo }, ...extra });
+
+    const [
+      nbDevis, nbCommandes, nbBL, nbFactures, nbPaiements,
+      nbCmdAchat, nbFactFourn, nbClients, nbTransferts,
+      caFactures, totalPaiements, totalAchats,
+      evolutionCA,
+    ] = await Promise.all([
+      Devis.countDocuments(match()),
+      Commande.countDocuments(match()),
+      // BonLivraison not imported yet — use Facture count as proxy or skip
+      Facture.countDocuments(match({ statut: { $in: ['envoyee'] } })),
+      Facture.countDocuments(match({ statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] } })),
+      Payment.countDocuments({ companyId: cId, createdAt: { $gte: dateFrom, $lte: dateTo } }),
+      CommandeAchat.countDocuments(match()),
+      FactureFournisseur.countDocuments(match()),
+      Client.countDocuments(match()),
+      Stock.countDocuments({ companyId: cId }),
+      Facture.aggregate([{ $match: match({ statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] } }) }, { $group: { _id: null, total: { $sum: '$totalTTC' } } }]),
+      Payment.aggregate([{ $match: { companyId: cId, createdAt: { $gte: dateFrom, $lte: dateTo } } }, { $group: { _id: null, total: { $sum: '$montant' } } }]),
+      FactureFournisseur.aggregate([{ $match: match() }, { $group: { _id: null, total: { $sum: '$montantTTC' } } }]),
+      Facture.aggregate([
+        { $match: match({ statut: { $in: ['validee', 'envoyee', 'partiellement_payee', 'payee'] } }) },
+        { $group: { _id: { year: { $year: '$dateFacture' }, month: { $month: '$dateFacture' } }, ca: { $sum: '$totalTTC' } } },
+        { $sort: { '_id.year': 1, '_id.month': 1 } },
+      ]),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        kpis: {
+          nbDevis, nbCommandes, nbFactures, nbPaiements,
+          nbCmdAchat, nbFactFourn, nbClients, nbTransferts,
+          caFactures: caFactures[0]?.total || 0,
+          totalPaiements: totalPaiements[0]?.total || 0,
+          totalAchats: totalAchats[0]?.total || 0,
+        },
+        modules: [
+          { label: 'Devis créés',        count: nbDevis,       color: '#6366f1', icon: 'devis' },
+          { label: 'Commandes',           count: nbCommandes,   color: '#1a56db', icon: 'commandes' },
+          { label: 'Factures ventes',     count: nbFactures,    color: '#059669', icon: 'factures' },
+          { label: 'Paiements reçus',     count: nbPaiements,   color: '#10b981', icon: 'paiements' },
+          { label: 'Cmds achat',          count: nbCmdAchat,    color: '#f59e0b', icon: 'achats' },
+          { label: 'Factures fourn.',     count: nbFactFourn,   color: '#ef4444', icon: 'fournisseur' },
+          { label: 'Nouveaux clients',    count: nbClients,     color: '#8b5cf6', icon: 'clients' },
+          { label: 'Références en stock', count: nbTransferts,  color: '#0ea5e9', icon: 'stocks' },
+        ],
+        evolutionCA: evolutionCA.map((m) => ({ mois: formatMonthLabel(m._id.year, m._id.month), ca: m.ca })),
+        dateFrom,
+        dateTo,
+      },
+    });
+  } catch (error) { next(error); }
+};
+
 module.exports = {
   getBilanJSON,
   getBilanPDF,
@@ -659,4 +980,9 @@ module.exports = {
   getRapportTopProduits,
   getRapportRecouvrement,
   getRecouvrementPDF,
+  getRapportAchats,
+  getRapportStocksAnalyse,
+  getRapportABC,
+  getRapportPerformance,
+  getRapportActivite,
 };

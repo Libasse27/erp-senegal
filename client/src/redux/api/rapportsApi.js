@@ -26,6 +26,26 @@ export const rapportsApi = apiSlice.injectEndpoints({
       query: (params) => ({ url: '/rapports/recouvrement', params }),
       providesTags: [{ type: 'Facture', id: 'RAPPORT_RECOUVREMENT' }],
     }),
+    getRapportAchats: builder.query({
+      query: (params) => ({ url: '/rapports/achats', params }),
+      providesTags: [{ type: 'Facture', id: 'RAPPORT_ACHATS' }],
+    }),
+    getRapportStocksAnalyse: builder.query({
+      query: (params) => ({ url: '/rapports/stocks-analyse', params }),
+      providesTags: [{ type: 'Stock', id: 'RAPPORT_STOCKS' }],
+    }),
+    getRapportABC: builder.query({
+      query: (params) => ({ url: '/rapports/abc', params }),
+      providesTags: [{ type: 'Facture', id: 'RAPPORT_ABC' }],
+    }),
+    getRapportPerformance: builder.query({
+      query: (params) => ({ url: '/rapports/performance', params }),
+      providesTags: [{ type: 'Facture', id: 'RAPPORT_PERFORMANCE' }],
+    }),
+    getRapportActivite: builder.query({
+      query: (params) => ({ url: '/rapports/activite', params }),
+      providesTags: [{ type: 'Dashboard', id: 'RAPPORT_ACTIVITE' }],
+    }),
   }),
 });
 
@@ -36,4 +56,9 @@ export const {
   useGetRapportTopClientsQuery,
   useGetRapportTopProduitsQuery,
   useGetRapportRecouvrementQuery,
+  useGetRapportAchatsQuery,
+  useGetRapportStocksAnalyseQuery,
+  useGetRapportABCQuery,
+  useGetRapportPerformanceQuery,
+  useGetRapportActiviteQuery,
 } = rapportsApi;

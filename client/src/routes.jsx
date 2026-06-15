@@ -94,6 +94,12 @@ const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
 const SalesReportPage = lazy(() => import('./pages/reports/SalesReportPage'));
 const CARapportPage = lazy(() => import('./pages/reports/CARapportPage'));
 const RapportRecouvrementPage = lazy(() => import('./pages/reports/RapportRecouvrementPage'));
+const RapportAchatsPage = lazy(() => import('./pages/reports/RapportAchatsPage'));
+const RapportStocksPage = lazy(() => import('./pages/reports/RapportStocksPage'));
+const RapportABCPage = lazy(() => import('./pages/reports/RapportABCPage'));
+const RapportComptablePage = lazy(() => import('./pages/reports/RapportComptablePage'));
+const RapportPerformancePage = lazy(() => import('./pages/reports/RapportPerformancePage'));
+const RapportActivitePage = lazy(() => import('./pages/reports/RapportActivitePage'));
 
 // Administration
 const UsersListPage = lazy(() => import('./pages/admin/UsersListPage'));
@@ -261,6 +267,12 @@ const AppRoutes = () => {
           <Route path="/rapports/ventes" element={<SalesReportPage />} />
           <Route path="/rapports/ca" element={<CARapportPage />} />
           <Route path="/rapports/recouvrement" element={<RapportRecouvrementPage />} />
+          <Route path="/rapports/achats" element={<RapportAchatsPage />} />
+          <Route path="/rapports/stocks" element={<RapportStocksPage />} />
+          <Route path="/rapports/abc" element={<RapportABCPage />} />
+          <Route path="/rapports/comptable" element={<RapportComptablePage />} />
+          <Route path="/rapports/performance" element={<RapportPerformancePage />} />
+          <Route path="/rapports/activite" element={<RapportActivitePage />} />
 
           {/* Profil */}
           <Route path="/profil" element={<ProfilePage />} />
