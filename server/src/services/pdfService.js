@@ -6,7 +6,7 @@ const logger = require('../config/logger');
 
 // Register Handlebars helpers
 Handlebars.registerHelper('formatMontant', (montant) => {
-  if (montant == null) return '0';
+  if (montant === null || montant === undefined) return '0';
   return new Intl.NumberFormat('fr-FR').format(montant);
 });
 
@@ -29,12 +29,12 @@ Handlebars.registerHelper('multiply', (a, b) => Math.round((a || 0) * (b || 0)))
 Handlebars.registerHelper('inc', (val) => (val || 0) + 1);
 
 Handlebars.registerHelper('formatPercent', (val) => {
-  if (val == null) return '0%';
+  if (val === null || val === undefined) return '0%';
   return `${val}%`;
 });
 
 Handlebars.registerHelper('numberToWords', (montant) => {
-  if (montant == null || isNaN(montant)) return '';
+  if (montant === null || montant === undefined || isNaN(montant)) return '';
   const n = Math.round(montant);
   if (n === 0) return 'Zéro franc CFA';
 

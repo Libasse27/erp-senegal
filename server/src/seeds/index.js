@@ -1,8 +1,8 @@
+/* eslint-disable no-console */
 const path = require('path');
 const dotenv = require('dotenv');
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
-const mongoose = require('mongoose');
 const { connectDB } = require('../config/database');
 
 // Phase 1 Models

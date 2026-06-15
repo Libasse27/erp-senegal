@@ -70,7 +70,6 @@ const createFactureFournisseur = async (req, res, next) => {
   try {
     const { commandeAchatId, fournisseurId, lignes, ...rest } = req.body;
 
-    let fourn;
     let ffLignes = lignes;
     let ffFournisseur = fournisseurId;
     let linkedCmde = commandeAchatId || null;
@@ -97,7 +96,7 @@ const createFactureFournisseur = async (req, res, next) => {
     if (!ffFournisseur) return next(new AppError('Le fournisseur est requis', 400));
     if (!ffLignes || ffLignes.length === 0) return next(new AppError('Au moins une ligne est requise', 400));
 
-    fourn = await Fournisseur.findOne({ _id: ffFournisseur, companyId: tc(req) });
+    const fourn = await Fournisseur.findOne({ _id: ffFournisseur, companyId: tc(req) });
     if (!fourn) return next(new AppError('Fournisseur introuvable', 404));
 
     const ff = await FactureFournisseur.create({
@@ -131,7 +130,7 @@ const updateFactureFournisseur = async (req, res, next) => {
       return next(new AppError('Seules les factures en brouillon peuvent être modifiées', 400));
     }
 
-    const { lignes, fournisseurId, ...rest } = req.body;
+    const { lignes, ...rest } = req.body;
     Object.assign(ff, rest, { modifiedBy: req.user._id });
     if (lignes) ff.lignes = lignes;
     await ff.save();

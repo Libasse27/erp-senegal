@@ -20,7 +20,7 @@ const parseBuffer = (buffer) => {
   return XLSX.utils.sheet_to_json(ws, { defval: '' });
 };
 
-const str = (v) => (v != null ? String(v).trim() : '');
+const str = (v) => (v !== null && v !== undefined ? String(v).trim() : '');
 const num = (v) => {
   const n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.'));
   return isNaN(n) ? 0 : n;

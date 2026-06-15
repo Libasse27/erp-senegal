@@ -5,8 +5,6 @@ const Stock = require('../models/Stock');
 const StockMovement = require('../models/StockMovement');
 const Devis = require('../models/Devis');
 const Commande = require('../models/Commande');
-const Product = require('../models/Product');
-const Warehouse = require('../models/Warehouse');
 const { tc, tenantId } = require('../utils/tenantHelper');
 
 /**

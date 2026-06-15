@@ -16,7 +16,7 @@ class WaveProvider extends PaymentProvider {
     super('WAVE', process.env.WAVE_SECRET_KEY || 'wave-dev-secret-key');
   }
 
-  async initier({ reference, montant, description, clientEmail, clientPhone, callbackUrl, webhookUrl }) {
+  async initier({ reference, montant, description, clientEmail, clientPhone, callbackUrl: _callbackUrl, webhookUrl: _webhookUrl }) {
     if (WAVE_SIMULATION) {
       return this._simulerInitiation({ reference, montant, description, clientEmail, clientPhone });
     }

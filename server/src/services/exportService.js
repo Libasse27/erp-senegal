@@ -13,16 +13,9 @@ const Product  = require('../models/Product');
 const Stock    = require('../models/Stock');
 const Payment  = require('../models/Payment');
 
-const fmt = (n) => (n == null ? 0 : Math.round(n));
+const fmt = (n) => (n === null || n === undefined ? 0 : Math.round(n));
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
-
-const buildWorkbook = (sheetName, rows) => {
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
-  return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-};
 
 const autoWidth = (ws, rows) => {
   if (!rows || rows.length === 0) return;
@@ -334,7 +327,7 @@ const exportClientsExcel = async (companyId, filter = {}) => {
 
 // ─── Fournisseurs ─────────────────────────────────────────────────────────────
 
-const exportFournisseursExcel = async (companyId, filter = {}) => {
+const exportFournisseursExcel = async (companyId, _filter = {}) => {
   const query = { companyId, isActive: true };
   const fournisseurs = await Fournisseur.find(query).sort({ raisonSociale: 1 }).limit(5000).lean();
 
@@ -389,7 +382,7 @@ const exportProduitsExcel = async (companyId, filter = {}) => {
 
 // ─── Stocks ───────────────────────────────────────────────────────────────────
 
-const exportStocksExcel = async (companyId, filter = {}) => {
+const exportStocksExcel = async (companyId, _filter = {}) => {
   const query = { companyId, isActive: true };
 
   const stocks = await Stock.find(query)

@@ -22,7 +22,7 @@ const isValidNINEA = (ninea) => {
  */
 const isValidSenegalPhone = (phone) => {
   if (!phone) return false;
-  const cleaned = phone.replace(/[\s\-\.\(\)]/g, '');
+  const cleaned = phone.replace(/[\s\-.()]/g, '');
   return /^(\+221)?[73][0-9]{8}$/.test(cleaned);
 };
 

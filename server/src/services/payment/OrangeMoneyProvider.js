@@ -16,7 +16,7 @@ class OrangeMoneyProvider extends PaymentProvider {
     super('ORANGE_MONEY', process.env.ORANGE_MONEY_SECRET_KEY || 'om-dev-secret-key');
   }
 
-  async initier({ reference, montant, description, clientPhone, callbackUrl }) {
+  async initier({ reference, montant, description, clientPhone, callbackUrl: _callbackUrl }) {
     if (OM_SIMULATION) {
       return this._simulerInitiation({ reference, montant, description, clientPhone });
     }

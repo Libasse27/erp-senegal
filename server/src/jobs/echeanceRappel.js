@@ -10,7 +10,6 @@
 const cron = require('node-cron');
 const Facture = require('../models/Facture');
 const Company = require('../models/Company');
-const User = require('../models/User');
 const logger = require('../config/logger');
 const { createAndNotify } = require('../services/notificationService');
 const { sendEcheanceRappelEmail } = require('../services/emailService');

@@ -1,5 +1,4 @@
 const Company = require('../models/Company');
-const { AppError } = require('../middlewares/errorHandler');
 
 /**
  * @desc    Obtenir les informations de l'entreprise

@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Row, Col, Card, Badge, Spinner, Alert, ProgressBar } from 'react-bootstrap';
 import {
-  FiUsers, FiShield, FiDatabase, FiServer, FiActivity,
+  FiUsers, FiShield, FiServer, FiActivity,
   FiAlertTriangle, FiHardDrive, FiCpu, FiCheckCircle,
   FiXCircle, FiRefreshCw, FiArchive, FiFileText,
 } from 'react-icons/fi';

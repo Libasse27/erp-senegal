@@ -44,7 +44,6 @@ const BackupManagementPage = () => {
   };
 
   const handleDownload = (filename) => {
-    const token = localStorage.getItem('accessToken') || '';
     const url = `/api/super-admin/backups/${encodeURIComponent(filename)}/download`;
     const a = document.createElement('a');
     a.href = url;

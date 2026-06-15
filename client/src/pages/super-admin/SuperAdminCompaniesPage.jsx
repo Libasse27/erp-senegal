@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Card, Table, Badge, Button, Form, Row, Col, Modal,
-  Spinner, Alert, InputGroup, Tabs, Tab, ProgressBar,
+  Spinner, Alert, InputGroup, Tabs, Tab,
 } from 'react-bootstrap';
 import {
   FiPlus, FiSearch, FiEdit2, FiTrash2, FiRefreshCw,

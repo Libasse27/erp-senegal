@@ -3,7 +3,7 @@ const Category = require('../models/Category');
 const Stock = require('../models/Stock');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
-const { tc, findByTenant } = require('../utils/tenantHelper');
+const { tc } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all products with pagination, filters, and search

@@ -4,9 +4,7 @@
  */
 const Facture    = require('../models/Facture');
 const User       = require('../models/User');
-const Abonnement = require('../models/Abonnement');
-const Company    = require('../models/Company');
-const logger     = require('../config/logger');
+const Company = require('../models/Company');
 
 /**
  * Compte les factures émises dans le mois courant pour une entreprise.

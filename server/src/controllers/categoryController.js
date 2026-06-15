@@ -1,7 +1,7 @@
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const { AppError } = require('../middlewares/errorHandler');
-const { tc, findByTenant } = require('../utils/tenantHelper');
+const { tc } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all categories as tree structure

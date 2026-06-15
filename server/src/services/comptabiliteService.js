@@ -414,7 +414,7 @@ const contrepasser = async (ecritureId, userId) => {
  * @param {string} userId - User performing lettrage
  * @returns {Promise<string>} Lettrage code
  */
-const lettrer = async (compteNumero, ligneIds, userId) => {
+const lettrer = async (compteNumero, ligneIds, _userId) => {
   // Find all ecritures containing these line IDs
   const ecritures = await EcritureComptable.find({
     'lignes._id': { $in: ligneIds },

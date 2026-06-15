@@ -2,7 +2,7 @@ const Warehouse = require('../models/Warehouse');
 const Stock = require('../models/Stock');
 const { AppError } = require('../middlewares/errorHandler');
 const { buildPaginationOptions, buildPaginationResponse } = require('../utils/helpers');
-const { tc, findByTenant } = require('../utils/tenantHelper');
+const { tc } = require('../utils/tenantHelper');
 
 /**
  * @desc    Get all warehouses

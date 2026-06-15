@@ -3,8 +3,6 @@ const Facture = require('../models/Facture');
 const Client = require('../models/Client');
 const Payment = require('../models/Payment');
 const Stock = require('../models/Stock');
-const Product = require('../models/Product');
-const Category = require('../models/Category');
 const Devis = require('../models/Devis');
 const Commande = require('../models/Commande');
 const CommandeAchat = require('../models/CommandeAchat');
@@ -914,7 +912,7 @@ const getRapportActivite = async (req, res, next) => {
     const match = (extra = {}) => ({ companyId: cId, createdAt: { $gte: dateFrom, $lte: dateTo }, ...extra });
 
     const [
-      nbDevis, nbCommandes, nbBL, nbFactures, nbPaiements,
+      nbDevis, nbCommandes, , nbFactures, nbPaiements,
       nbCmdAchat, nbFactFourn, nbClients, nbTransferts,
       caFactures, totalPaiements, totalAchats,
       evolutionCA,

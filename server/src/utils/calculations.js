@@ -44,7 +44,7 @@ const calculateInvoiceTotals = (lines) => {
 
   const computedLines = lines.map((line) => {
     const lineHT = calculateLineHT(line.quantite, line.prixUnitaire, line.remise || 0);
-    const lineTVA = calculateTVA(lineHT, line.tauxTVA != null ? line.tauxTVA : TVA_RATE);
+    const lineTVA = calculateTVA(lineHT, line.tauxTVA !== null && line.tauxTVA !== undefined ? line.tauxTVA : TVA_RATE);
     const lineTTC = lineHT + lineTVA;
 
     totalHT += lineHT;

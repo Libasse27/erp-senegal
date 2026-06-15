@@ -228,8 +228,6 @@ const validerTransfert = async (req, res, next) => {
         companyId, product: ligne.product, warehouse: t.warehouseDestination,
       }).session(session);
 
-      const stockAvantDst = dstStock ? dstStock.quantite : 0;
-
       if (!dstStock) {
         // Create new stock entry for this product/warehouse
         [dstStock] = await Stock.create(

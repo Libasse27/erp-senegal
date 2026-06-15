@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 const Devis = require('../models/Devis');
 const Commande = require('../models/Commande');
 const BonLivraison = require('../models/BonLivraison');

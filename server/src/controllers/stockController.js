@@ -485,7 +485,6 @@ const transferStock = async (req, res, next) => {
       });
     }
 
-    const destBefore = destStock.quantite;
     destStock.updateCUMP(quantite, sourceStock.cump);
     destStock.modifiedBy = req.user._id;
     await destStock.save();
