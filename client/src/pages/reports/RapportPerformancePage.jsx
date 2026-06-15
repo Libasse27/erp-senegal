@@ -9,7 +9,7 @@ import Alert from 'react-bootstrap/Alert';
 import ProgressBar from 'react-bootstrap/ProgressBar';
 import { Link } from 'react-router-dom';
 import {
-  FiArrowLeft, FiFileText, FiShoppingBag, FiDollarSign, FiUsers, FiTrendingUp,
+  FiArrowLeft, FiShoppingBag, FiDollarSign, FiUsers, FiTrendingUp,
 } from 'react-icons/fi';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,

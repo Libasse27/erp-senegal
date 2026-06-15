@@ -967,6 +967,107 @@ const getRapportActivite = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+// =====================================================
+// RAPPORT FINANCIER (trésorerie & flux)
+// =====================================================
+
+const BankAccount = require('../models/BankAccount');
+const PaymentModel = require('../models/Payment');
+
+const getRapportFinancier = async (req, res, next) => {
+  try {
+    const { dateFrom, dateTo } = resolveCAPeriod(req.query.dateFrom, req.query.dateTo);
+    const cId = tc(req);
+
+    const payMatch = (type) => ({
+      companyId: cId,
+      statut: 'valide',
+      typePaiement: type,
+      datePaiement: { $gte: dateFrom, $lte: dateTo },
+    });
+
+    const [
+      comptes,
+      statsEnc,
+      statsDec,
+      evolutionEnc,
+      evolutionDec,
+      parModeEnc,
+      creancessClients,
+    ] = await Promise.all([
+      BankAccount.find({ companyId: cId, isActive: true }).sort('-isDefault nom'),
+      PaymentModel.aggregate([{ $match: payMatch('client') },    { $group: { _id: null, total: { $sum: '$montant' }, count: { $sum: 1 } } }]),
+      PaymentModel.aggregate([{ $match: payMatch('fournisseur') }, { $group: { _id: null, total: { $sum: '$montant' }, count: { $sum: 1 } } }]),
+      PaymentModel.aggregate([
+        { $match: payMatch('client') },
+        { $group: { _id: { year: { $year: '$datePaiement' }, month: { $month: '$datePaiement' } }, total: { $sum: '$montant' } } },
+        { $sort: { '_id.year': 1, '_id.month': 1 } },
+      ]),
+      PaymentModel.aggregate([
+        { $match: payMatch('fournisseur') },
+        { $group: { _id: { year: { $year: '$datePaiement' }, month: { $month: '$datePaiement' } }, total: { $sum: '$montant' } } },
+        { $sort: { '_id.year': 1, '_id.month': 1 } },
+      ]),
+      PaymentModel.aggregate([
+        { $match: payMatch('client') },
+        { $group: { _id: '$modePaiement', total: { $sum: '$montant' }, count: { $sum: 1 } } },
+        { $sort: { total: -1 } },
+      ]),
+      Facture.aggregate([
+        { $match: { companyId: cId, statut: { $in: ['validee', 'envoyee', 'partiellement_payee'] }, isActive: true } },
+        { $group: { _id: null, total: { $sum: { $subtract: ['$totalTTC', '$montantPaye'] } }, count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const totalTresorerie = comptes.reduce((s, c) => s + c.soldeActuel, 0);
+    const totalEnc = statsEnc[0]?.total || 0;
+    const totalDec = statsDec[0]?.total || 0;
+
+    // Merge evolution months
+    const allMonths = new Set([
+      ...evolutionEnc.map((m) => `${m._id.year}-${m._id.month}`),
+      ...evolutionDec.map((m) => `${m._id.year}-${m._id.month}`),
+    ]);
+    const encMap = Object.fromEntries(evolutionEnc.map((m) => [`${m._id.year}-${m._id.month}`, m.total]));
+    const decMap = Object.fromEntries(evolutionDec.map((m) => [`${m._id.year}-${m._id.month}`, m.total]));
+    const evolution = Array.from(allMonths).sort().map((key) => {
+      const [year, month] = key.split('-').map(Number);
+      return { mois: formatMonthLabel(year, month), encaissements: encMap[key] || 0, decaissements: decMap[key] || 0 };
+    });
+
+    const comptesData = comptes.map((c) => ({
+      _id: c._id,
+      nom: c.nom,
+      type: c.type,
+      banque: c.banque,
+      numeroCompte: c.numeroCompte,
+      soldeActuel: c.soldeActuel,
+      isDefault: c.isDefault,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        kpis: {
+          totalTresorerie,
+          totalEncaissements: totalEnc,
+          totalDecaissements: totalDec,
+          soldeNet: totalEnc - totalDec,
+          nbEncaissements: statsEnc[0]?.count || 0,
+          nbDecaissements: statsDec[0]?.count || 0,
+          creancesClients: creancessClients[0]?.total || 0,
+          nbCreances: creancessClients[0]?.count || 0,
+        },
+        evolution,
+        comptes: comptesData,
+        parModeEnc: parModeEnc.map((m) => ({ mode: m._id, total: m.total, count: m.count })),
+        dateFrom,
+        dateTo,
+      },
+    });
+  } catch (error) { next(error); }
+};
+
 module.exports = {
   getBilanJSON,
   getBilanPDF,
@@ -985,4 +1086,5 @@ module.exports = {
   getRapportABC,
   getRapportPerformance,
   getRapportActivite,
+  getRapportFinancier,
 };

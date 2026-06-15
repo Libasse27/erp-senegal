@@ -46,6 +46,10 @@ export const rapportsApi = apiSlice.injectEndpoints({
       query: (params) => ({ url: '/rapports/activite', params }),
       providesTags: [{ type: 'Dashboard', id: 'RAPPORT_ACTIVITE' }],
     }),
+    getRapportFinancier: builder.query({
+      query: (params) => ({ url: '/rapports/financier', params }),
+      providesTags: [{ type: 'Paiement', id: 'RAPPORT_FINANCIER' }, { type: 'BankAccount', id: 'LIST' }],
+    }),
   }),
 });
 
@@ -61,4 +65,5 @@ export const {
   useGetRapportABCQuery,
   useGetRapportPerformanceQuery,
   useGetRapportActiviteQuery,
+  useGetRapportFinancierQuery,
 } = rapportsApi;

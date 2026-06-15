@@ -19,6 +19,7 @@ const {
   getRapportABC,
   getRapportPerformance,
   getRapportActivite,
+  getRapportFinancier,
 } = require('../controllers/rapportController');
 const { protect } = require('../middlewares/auth');
 const tenantMiddleware = require('../middlewares/tenant');
@@ -71,5 +72,8 @@ router.get('/performance', authorize('rapports:read'), getRapportPerformance);
 
 // === Rapport d'Activité Globale ===
 router.get('/activite', authorize('rapports:read'), getRapportActivite);
+
+// === Rapport Financier (trésorerie & flux) ===
+router.get('/financier', authorize('rapports:read'), getRapportFinancier);
 
 module.exports = router;
