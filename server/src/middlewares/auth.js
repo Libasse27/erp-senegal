@@ -51,4 +51,4 @@ const protect = async (req, _res, next) => {
   }
 };
 
-module.exports = { protect };
+module.exports = { protect, authenticate: protect };
