@@ -36,10 +36,10 @@ const traiterExpirations = async () => {
       // Passer l'abonnement à EXPIRE
       await Abonnement.findByIdAndUpdate(abo._id, { statut: 'EXPIRE' });
 
-      // Passer l'entreprise à expired
+      // Passer l'entreprise à EXPIREE (uppercase — enum Company.status)
       const company = await Company.findByIdAndUpdate(
         abo.entrepriseId,
-        { status: 'expired' },
+        { status: 'EXPIREE' },
         { new: true }
       );
 
@@ -62,12 +62,12 @@ const traiterExpirations = async () => {
       // Email d'expiration (non bloquant)
       const admin = await User.findById(company.adminUser).select('email firstName');
       if (admin?.email) {
-        const forfait = abo.forfaitId ? await require('../models/Forfait').findById(abo.forfaitId).select('nom') : null;
+        const planNom = abo.planSnapshot?.nom || '';
         const dateFin = new Date(abo.dateFin).toLocaleDateString('fr-SN', { day: '2-digit', month: 'long', year: 'numeric' });
         sendSubscriptionExpiredEmail(admin.email, {
           firstName:   admin.firstName || 'Admin',
           companyName: company.name,
-          forfaitNom:  forfait?.nom || '',
+          forfaitNom:  planNom,
           dateFin,
           renewUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/abonnement/paiement`,
         }).catch((err) => logger.warn(`[Email] Expiration non envoyée : ${err.message}`));

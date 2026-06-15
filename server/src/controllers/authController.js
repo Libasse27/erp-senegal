@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Company = require('../models/Company');
 const Role = require('../models/Role');
-const Forfait = require('../models/Forfait');
+const Plan = require('../models/Plan');
 const { AppError } = require('../middlewares/errorHandler');
 const {
   generateAccessToken,
@@ -70,8 +70,8 @@ const registerSaaS = async (req, res, next) => {
       // Entreprise
       companyName, legalForm, ninea, rccm, sector,
       address, city, companyPhone, companyEmail, website,
-      // Forfait choisi
-      forfaitCode, periodicite,
+      // Plan choisi
+      planCode, periodicite,
     } = req.body;
 
     // 1. Verifier unicite email
@@ -81,11 +81,11 @@ const registerSaaS = async (req, res, next) => {
       return next(new AppError('Un compte existe deja avec cet email.', 400));
     }
 
-    // 2. Verifier que le forfait existe
-    const forfait = await Forfait.findOne({ code: forfaitCode, actif: true }).session(session);
-    if (!forfait) {
+    // 2. Verifier que le plan existe et est actif
+    const plan = await Plan.findOne({ code: planCode?.toUpperCase(), actif: true }).session(session);
+    if (!plan) {
       await session.abortTransaction();
-      return next(new AppError('Forfait invalide ou inactif.', 400));
+      return next(new AppError('Plan invalide ou inactif.', 400));
     }
 
     // 3. Recuperer le role admin_entreprise
@@ -94,6 +94,9 @@ const registerSaaS = async (req, res, next) => {
       await session.abortTransaction();
       return next(new AppError('Configuration systeme manquante : role admin introuvable.', 500));
     }
+
+    // 4. Statut initial : ESSAI si le plan a un essai gratuit, sinon EN_ATTENTE_PAIEMENT
+    const statusInitial = plan.essaiGratuitJours > 0 ? 'ESSAI' : 'EN_ATTENTE_PAIEMENT';
 
     // 4. Creer l'entreprise en attente de paiement
     const [company] = await Company.create(
@@ -112,9 +115,9 @@ const registerSaaS = async (req, res, next) => {
           phone: companyPhone || undefined,
           email: companyEmail || email,
           website: website || undefined,
-          status: 'pending_payment',
-          plan: forfaitCode,
-          forfaitId: forfait._id,
+          status: statusInitial,
+          plan: plan.code,
+          planId: plan._id,
           subscriptionStartDate: new Date(),
         },
       ],
@@ -138,39 +141,65 @@ const registerSaaS = async (req, res, next) => {
       { session }
     );
 
-    // 6. Lier l'admin à l'entreprise
+    // 6. Lier l'admin à l'entreprise + incrémenter usage
     company.adminUser = user._id;
+    company.usage = { utilisateurs: 1, stockageMo: 0 };
     await company.save({ session });
+
+    // 7. Si essai gratuit : créer l'abonnement d'essai immédiatement
+    if (plan.essaiGratuitJours > 0) {
+      const dateFin = new Date();
+      dateFin.setDate(dateFin.getDate() + plan.essaiGratuitJours);
+
+      const planSnapshot = {
+        code: plan.code, nom: plan.nom,
+        tarifs: plan.tarifs, limites: plan.limites,
+        modules: plan.modules, features: plan.features,
+        version: plan.version, snapshotAt: new Date(),
+      };
+
+      const Abonnement = require('../models/Abonnement');
+      const [abonnement] = await Abonnement.create(
+        [{ entrepriseId: company._id, planId: plan._id, planSnapshot, periodicite: 'MENSUEL',
+           dateDebut: new Date(), dateFin, montant: 0, statut: 'ESSAI',
+           historique: [{ action: 'creation', nouveauPlan: plan.code, note: 'Essai gratuit' }] }],
+        { session }
+      );
+
+      company.abonnementActifId = abonnement._id;
+      await company.save({ session });
+    }
 
     await session.commitTransaction();
 
-    // Ne pas renvoyer le mot de passe
     user.password = undefined;
 
-    const montant = periodicite === 'ANNUEL' ? forfait.prixAnnuel : forfait.prixMensuel;
+    const montant = periodicite === 'ANNUEL' ? plan.tarifs.annuel : plan.tarifs.mensuel;
 
-    logger.info(`Inscription SaaS: entreprise="${companyName}" admin="${email}"`);
+    logger.info(`Inscription SaaS: entreprise="${companyName}" admin="${email}" plan="${plan.code}"`);
 
     // Email de bienvenue (non bloquant)
     const { sendWelcomeSaasEmail } = require('../services/emailService');
     sendWelcomeSaasEmail(email, {
       firstName:   firstName,
       companyName: companyName,
-      forfaitNom:  forfait.nom,
+      forfaitNom:  plan.nom,
       loginUrl:    `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`,
     }).catch((err) => logger.warn(`[Email] Welcome SaaS non envoyé : ${err.message}`));
 
     res.status(201).json({
       success: true,
-      message: 'Compte cree avec succes. Finalisez l\'inscription en effectuant le paiement.',
+      message: plan.essaiGratuitJours > 0
+        ? `Essai gratuit de ${plan.essaiGratuitJours} jours activé. Bienvenue !`
+        : 'Compte créé. Finalisez l\'inscription en effectuant le paiement.',
       data: {
         user,
         company,
-        paiement: {
-          forfait: { code: forfait.code, nom: forfait.nom },
+        paiement: plan.essaiGratuitJours > 0 ? null : {
+          plan: { code: plan.code, nom: plan.nom },
           periodicite: periodicite || 'MENSUEL',
           montant,
-          devise: 'FCFA',
+          devise: 'XOF',
           statut: 'EN_ATTENTE',
         },
       },

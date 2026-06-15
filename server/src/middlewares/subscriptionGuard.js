@@ -4,91 +4,91 @@ const { AppError } = require('./errorHandler');
 /**
  * Garde d'abonnement SaaS.
  *
- * Vérifie que l'entreprise a un abonnement ACTIF et non expiré.
- * Si un moduleCode est fourni, vérifie aussi que le module est dans le forfait.
+ * Vérifie que l'entreprise a un abonnement actif et non expiré.
+ * Si un moduleCode est fourni, vérifie que le module est dans planSnapshot.modules
+ * (grandfathering : on lit le snapshot figé, pas le Plan vivant).
  *
- * @param {string|null} moduleCode - Code du module à vérifier (ex: 'COMPTABILITE'). null = vérif abonnement seule.
- * @returns middleware Express
+ * @param {string|null} moduleCode  Code du module requis (ex: 'COMPTABILITE'). null = vérif abonnement seule.
  */
 const subscriptionGuard = (moduleCode = null) => {
   return async (req, _res, next) => {
     try {
-      // Le super_admin de plateforme et les routes sans tenant bypasse
+      // Le super_admin de plateforme bypasse toujours
       if (req.scope === 'PLATFORM') return next();
 
       const companyId = req.companyId;
       if (!companyId) {
-        return next(new AppError('Entreprise non identifiee.', 403));
+        return next(new AppError('Entreprise non identifiée.', 403));
       }
 
-      // Charger l'entreprise avec son abonnement actif et son forfait
+      // Charger l'entreprise avec son abonnement actif (populate planId pour le nom)
       const company = await Company.findById(companyId).populate({
         path: 'abonnementActifId',
-        populate: { path: 'forfaitId' },
+        populate: { path: 'planId', select: 'nom code modules limites' },
       });
 
       if (!company) {
         return next(new AppError('Entreprise introuvable.', 404));
       }
 
-      // Entreprise suspendue manuellement par le super_admin
-      if (company.status === 'suspended') {
+      // Entreprise suspendue manuellement
+      if (company.status === 'SUSPENDUE') {
         return next(
-          new AppError(
-            'Votre entreprise est suspendue. Veuillez contacter le support.',
-            403
-          )
+          new AppError('Votre entreprise est suspendue. Contactez le support.', 403)
         );
       }
 
-      // Pas d'abonnement actif du tout
+      // Pas d'abonnement du tout
       const abonnement = company.abonnementActifId;
       if (!abonnement) {
         return next(
           new AppError(
-            'Aucun abonnement actif. Souscrivez a un forfait pour acceder a cette fonctionnalite.',
+            'Aucun abonnement actif. Souscrivez à un plan pour accéder à cette fonctionnalité.',
             403
           )
         );
       }
 
-      // Abonnement expiré (statut ou date)
+      // ── Vérification du statut et de la date ──────────────────────────────
       const maintenant = new Date();
-      if (abonnement.statut !== 'ACTIF' || abonnement.dateFin < maintenant) {
-        // Synchroniser le statut si nécessaire (sans bloquer la requête pour ça)
-        if (abonnement.statut === 'ACTIF') {
+      const statutsActifs = ['ACTIF', 'ESSAI', 'EN_PERIODE_GRACE'];
+
+      if (!statutsActifs.includes(abonnement.statut) || abonnement.dateFin < maintenant) {
+        // Synchroniser si nécessaire (non bloquant)
+        if (abonnement.statut === 'ACTIF' && abonnement.dateFin < maintenant) {
           abonnement.statut = 'EXPIRE';
           abonnement.save().catch(() => {});
-          company.status = 'expired';
+          company.status = 'EXPIREE';
           company.save({ validateBeforeSave: false }).catch(() => {});
         }
 
         return next(
           new AppError(
-            'Votre abonnement est expire ou inactif. Renouvelez votre abonnement pour continuer.',
+            'Votre abonnement est expiré ou inactif. Renouvelez votre abonnement pour continuer.',
             403
           )
         );
       }
 
-      // Vérification du module si demandé
+      // ── Vérification du module via planSnapshot (grandfathering) ─────────
       if (moduleCode) {
-        const forfait = abonnement.forfaitId;
-        const modulesInclus = forfait?.modulesInclus || [];
+        // Priorité : planSnapshot (conditions figées à l'achat)
+        const modules = abonnement.planSnapshot?.modules || abonnement.planId?.modules || [];
 
-        if (!modulesInclus.includes(moduleCode)) {
+        if (!modules.includes(moduleCode)) {
+          const planNom = abonnement.planSnapshot?.nom || abonnement.planId?.nom || 'actuel';
           return next(
             new AppError(
-              `Le module "${moduleCode}" n'est pas inclus dans votre forfait "${forfait?.nom || 'actuel'}". Passez a un forfait superieur.`,
+              `Le module "${moduleCode}" n'est pas inclus dans votre plan "${planNom}". Passez à un plan supérieur.`,
               403
             )
           );
         }
       }
 
-      // Attacher pour usage dans les controllers
+      // Attacher pour usage dans les contrôleurs
       req.abonnement = abonnement;
-      req.forfait = abonnement.forfaitId;
+      req.plan       = abonnement.planSnapshot || abonnement.planId;
 
       next();
     } catch (error) {

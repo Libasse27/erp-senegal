@@ -31,7 +31,7 @@ const mongoose = require('mongoose');
 const User     = require('../src/models/User');
 const Role     = require('../src/models/Role');
 const Company  = require('../src/models/Company');
-const Forfait  = require('../src/models/Forfait');
+const Plan     = require('../src/models/Plan');
 const Abonnement = require('../src/models/Abonnement');
 const Settings = require('../src/models/Settings');
 
@@ -90,40 +90,34 @@ const stamp = async (Model, companyId) => {
   return { stamped: result.modifiedCount, total };
 };
 
-// ── Seed Forfaits ─────────────────────────────────────────────────────────────
-const FORFAIT_DEFAULTS = [
+// ── Plans SaaS ────────────────────────────────────────────────────────────────
+const PLAN_DEFAULTS = [
   {
-    code: 'STANDARD',
-    nom: 'Standard',
+    code: 'STANDARD', nom: 'Standard',
     description: 'Idéal pour les TPE et petits commerces',
-    prixMensuel: 15000,
-    prixAnnuel: 150000,
-    modulesInclus: ['GESCOM', 'FACTURATION', 'STOCK'],
-    limites: { maxUtilisateurs: 3, maxFacturesMois: 100, stockageMo: 1024, supportPrioritaire: false },
-    actif: true,
-    ordre: 1,
+    tarifs: { mensuel: 15000, annuel: 150000, devise: 'XOF' },
+    modules: ['GESCOM', 'FACTURATION', 'STOCK'],
+    limites: { maxUtilisateurs: 3, maxFacturesMois: 100, maxStockageMo: 1024 },
+    features: { supportPrioritaire: false, apiAccess: false, multiEtablissement: false },
+    essaiGratuitJours: 14, actif: true, visible: true, ordreAffichage: 1,
   },
   {
-    code: 'PROFESSIONNEL',
-    nom: 'Professionnel',
+    code: 'PROFESSIONNEL', nom: 'Professionnel',
     description: 'Pour les PME en croissance',
-    prixMensuel: 35000,
-    prixAnnuel: 350000,
-    modulesInclus: ['GESCOM', 'FACTURATION', 'STOCK', 'COMPTABILITE', 'REPORTING'],
-    limites: { maxUtilisateurs: 10, maxFacturesMois: 1000, stockageMo: 5120, supportPrioritaire: false },
-    actif: true,
-    ordre: 2,
+    tarifs: { mensuel: 35000, annuel: 350000, devise: 'XOF' },
+    modules: ['GESCOM', 'FACTURATION', 'STOCK', 'COMPTABILITE', 'REPORTING'],
+    limites: { maxUtilisateurs: 10, maxFacturesMois: 1000, maxStockageMo: 5120 },
+    features: { supportPrioritaire: false, apiAccess: false, multiEtablissement: false },
+    essaiGratuitJours: 14, actif: true, visible: true, ordreAffichage: 2,
   },
   {
-    code: 'COMPLET',
-    nom: 'Complet',
+    code: 'COMPLET', nom: 'Complet',
     description: 'Solution tout-en-un pour entreprises établies',
-    prixMensuel: 75000,
-    prixAnnuel: 750000,
-    modulesInclus: ['GESCOM', 'FACTURATION', 'STOCK', 'COMPTABILITE', 'REPORTING', 'PAIE', 'API'],
-    limites: { maxUtilisateurs: -1, maxFacturesMois: -1, stockageMo: 20480, supportPrioritaire: true },
-    actif: true,
-    ordre: 3,
+    tarifs: { mensuel: 75000, annuel: 750000, devise: 'XOF' },
+    modules: ['GESCOM', 'FACTURATION', 'STOCK', 'COMPTABILITE', 'REPORTING', 'PAIE', 'API'],
+    limites: { maxUtilisateurs: -1, maxFacturesMois: -1, maxStockageMo: 20480 },
+    features: { supportPrioritaire: true, apiAccess: true, multiEtablissement: false },
+    essaiGratuitJours: 14, actif: true, visible: true, ordreAffichage: 3,
   },
 ];
 
@@ -133,7 +127,7 @@ const migrate = async () => {
     companiesCreated: 0,
     superAdminsCreated: 0,
     usersUpdated: 0,
-    forfaitsCreated: 0,
+    plansCreated: 0,
     abonnementsCreated: 0,
     settingsCreated: 0,
     documentsStamped: 0,
@@ -145,19 +139,19 @@ const migrate = async () => {
     console.log('║   Migration Multi-Tenant — ERP Sénégal       ║');
     console.log('╚══════════════════════════════════════════════╝\n');
 
-    // ── Étape 1 : Forfaits SaaS ───────────────────────────────────────────────
-    console.log('▶ Étape 1/7 : Seed des forfaits SaaS...');
-    for (const def of FORFAIT_DEFAULTS) {
-      const existing = await Forfait.findOne({ code: def.code });
+    // ── Étape 1 : Plans SaaS ─────────────────────────────────────────────────
+    console.log('▶ Étape 1/7 : Seed des plans SaaS...');
+    for (const def of PLAN_DEFAULTS) {
+      const existing = await Plan.findOne({ code: def.code });
       if (!existing) {
-        await Forfait.create(def);
-        stats.forfaitsCreated++;
-        console.log(`  [+] ${def.code} — ${fmt(def.prixMensuel)} FCFA/mois | ${fmt(def.prixAnnuel)} FCFA/an`);
+        await Plan.create(def);
+        stats.plansCreated++;
+        console.log(`  [+] ${def.code} — ${fmt(def.tarifs.mensuel)} FCFA/mois | ${fmt(def.tarifs.annuel)} FCFA/an`);
       } else {
         console.log(`  [=] ${def.code} déjà présent`);
       }
     }
-    const forfaitPro = await Forfait.findOne({ code: 'PROFESSIONNEL' });
+    const planPro = await Plan.findOne({ code: 'PROFESSIONNEL' });
 
     // ── Étape 2 : Entreprise principale ──────────────────────────────────────
     console.log('\n▶ Étape 2/7 : Entreprise principale...');
@@ -169,9 +163,9 @@ const migrate = async () => {
         email: MAIN_COMPANY_EMAIL,
         address: { city: 'Dakar', country: 'Senegal' },
         currency: 'XOF',
-        status: 'active',
+        status: 'ACTIVE',
         plan: 'PROFESSIONNEL',
-        forfaitId: forfaitPro._id,
+        planId: planPro._id,
         subscriptionStartDate: new Date(),
         subscriptionEndDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       });
@@ -179,9 +173,9 @@ const migrate = async () => {
       console.log(`  [+] Créée : ${company.name} (${company._id})`);
     } else {
       let changed = false;
-      if (!company.forfaitId) { company.forfaitId = forfaitPro._id; changed = true; }
+      if (!company.planId) { company.planId = planPro._id; changed = true; }
       if (!company.plan || company.plan === 'starter') { company.plan = 'PROFESSIONNEL'; changed = true; }
-      if (!company.status || company.status === 'pending_payment') { company.status = 'active'; changed = true; }
+      if (!company.status || company.status === 'pending_payment') { company.status = 'ACTIVE'; changed = true; }
       if (changed) { await company.save(); console.log(`  [~] Mise à jour : ${company.name}`); }
       else { console.log(`  [=] Existante : ${company.name} (${company._id})`); }
     }
@@ -192,15 +186,23 @@ const migrate = async () => {
     if (!existingAbo) {
       const now = new Date();
       const dateFin = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+      const planSnapshot = {
+        code: planPro.code, nom: planPro.nom,
+        tarifs: planPro.tarifs, limites: planPro.limites,
+        modules: planPro.modules, features: planPro.features,
+        version: planPro.version || 1, snapshotAt: now,
+      };
       const abo = await Abonnement.create({
         entrepriseId: company._id,
-        forfaitId: forfaitPro._id,
+        planId: planPro._id,
+        planSnapshot,
         periodicite: 'ANNUEL',
         dateDebut: now,
         dateFin,
-        montant: forfaitPro.prixAnnuel,
+        montant: planPro.tarifs.annuel,
         statut: 'ACTIF',
         renouvellementAuto: true,
+        historique: [{ action: 'creation', nouveauPlan: planPro.code, note: 'Migration multi-tenant' }],
       });
       company.abonnementActifId = abo._id;
       await company.save();
@@ -335,7 +337,7 @@ const migrate = async () => {
     console.log('║        Migration terminée avec succès         ║');
     console.log('╚══════════════════════════════════════════════╝');
     console.log('\nBilan :');
-    console.log(`  Forfaits créés        : ${stats.forfaitsCreated}`);
+    console.log(`  Plans créés           : ${stats.plansCreated}`);
     console.log(`  Entreprises créées    : ${stats.companiesCreated}`);
     console.log(`  Abonnements créés     : ${stats.abonnementsCreated}`);
     console.log(`  Super admins créés    : ${stats.superAdminsCreated}`);

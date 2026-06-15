@@ -21,7 +21,7 @@ const mongoose = require('mongoose');
 
 const User       = require('../src/models/User');
 const Company    = require('../src/models/Company');
-const Forfait    = require('../src/models/Forfait');
+const Plan       = require('../src/models/Plan');
 const Abonnement = require('../src/models/Abonnement');
 const Settings   = require('../src/models/Settings');
 

@@ -13,39 +13,41 @@ const paiementSaasSchema = new mongoose.Schema(
       ref: 'Abonnement',
       required: [true, "L'abonnement est requis"],
     },
+
     montant: {
       type: Number,
       required: [true, 'Le montant est requis'],
       min: [0, 'Le montant ne peut pas etre negatif'],
     },
-    devise: {
-      type: String,
-      default: 'XOF',
-    },
+    devise: { type: String, default: 'XOF' },
+
     methode: {
       type: String,
-      enum: ['WAVE', 'ORANGE_MONEY', 'CARTE', 'VIREMENT', 'ESPECES'],
+      enum: ['WAVE', 'ORANGE_MONEY', 'STRIPE', 'CARTE', 'VIREMENT', 'ESPECES'],
       required: [true, 'Le mode de paiement est requis'],
     },
 
-    // Reference interne (generee par l'ERP)
+    // Clé d'idempotence — empêche les doublons de paiement
+    idempotencyKey: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
+
+    // Référence interne (générée par l'ERP)
     reference: {
       type: String,
       unique: true,
       trim: true,
       index: true,
     },
-    // ID retourne par le PSP (Wave / Orange Money)
-    transactionId: {
-      type: String,
-      trim: true,
-      sparse: true,
-    },
-    // URL de paiement retournee par le PSP
-    checkoutUrl: {
-      type: String,
-      trim: true,
-    },
+
+    // ID retourné par le PSP (Wave / Orange Money / Stripe)
+    transactionId: { type: String, trim: true, sparse: true },
+
+    // URL de paiement retournée par le PSP
+    checkoutUrl: { type: String, trim: true },
 
     statut: {
       type: String,
@@ -53,40 +55,23 @@ const paiementSaasSchema = new mongoose.Schema(
       default: 'EN_ATTENTE',
       index: true,
     },
-    datePaiement: {
-      type: Date,
-      default: null,
-    },
-    dateExpiration: {
-      type: Date,
-      default: null,
-    },
 
-    // Donnees brutes retournees par le PSP (pour audit)
-    metadata: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {},
-    },
+    datePaiement:  { type: Date, default: null },
+    dateExpiration:{ type: Date, default: null },
 
-    // Signature de webhook (pour verification idempotence)
-    webhookSignature: {
-      type: String,
-      select: false,
-    },
-    webhookReceivedAt: {
-      type: Date,
-      default: null,
-    },
+    // Données brutes retournées par le PSP (pour audit)
+    metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
 
-    notes: {
-      type: String,
-      trim: true,
-    },
+    // Signature de webhook (sécurité HMAC — ne pas exposer)
+    webhookSignature:  { type: String, select: false },
+    webhookReceivedAt: { type: Date, default: null },
+
+    notes:     { type: String, trim: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
+    toJSON:   { virtuals: true },
     toObject: { virtuals: true },
   }
 );

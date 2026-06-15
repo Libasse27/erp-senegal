@@ -47,8 +47,8 @@ beforeEach(async () => {
 
   await Company.findByIdAndUpdate(companyA._id, {
     abonnementActifId: aboA._id,
-    forfaitId: forfait._id,
-    status: 'active',
+    planId: forfait._id,
+    status: 'ACTIVE',
   });
 
   const resA = await createSaasUser(companyA._id, 'admin', { email: 'admin@usage-a.sn' });
@@ -174,7 +174,7 @@ describe('getUsage()', () => {
     expect(usage).toHaveProperty('alertes');
     expect(usage.limites.maxFacturesMois).toBe(5);
     expect(usage.limites.maxUtilisateurs).toBe(3);
-    expect(usage.forfait.nom).toBe('Standard Usage');
+    expect(usage.plan.nom).toBe('Standard Usage');
   });
 
   it("génère une alerte quand la limite à 80% est approchée", async () => {

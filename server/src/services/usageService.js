@@ -1,16 +1,11 @@
 /**
  * Service de métriques d'utilisation par entreprise.
- * Vérifie la consommation par rapport aux limites du forfait.
+ * Vérifie la consommation par rapport aux limites du plan (lues depuis planSnapshot — grandfathering).
  */
-const Facture    = require('../models/Facture');
-const User       = require('../models/User');
+const Facture = require('../models/Facture');
+const User    = require('../models/User');
 const Company = require('../models/Company');
 
-/**
- * Compte les factures émises dans le mois courant pour une entreprise.
- * @param {string} companyId
- * @returns {Promise<number>}
- */
 const compterFacturesDuMois = async (companyId) => {
   const debut = new Date();
   debut.setDate(1);
@@ -23,36 +18,26 @@ const compterFacturesDuMois = async (companyId) => {
   });
 };
 
-/**
- * Compte les utilisateurs actifs d'une entreprise.
- * @param {string} companyId
- * @returns {Promise<number>}
- */
 const compterUtilisateursActifs = async (companyId) => {
   return User.countDocuments({ companyId, isActive: true });
 };
 
 /**
- * Retourne l'usage courant d'une entreprise et son état par rapport aux limites du forfait.
- *
- * @param {string} companyId
- * @returns {Promise<{
- *   facturesMois: number,
- *   utilisateurs: number,
- *   limites: { maxFacturesMois: number, maxUtilisateurs: number },
- *   alertes: string[],
- * }>}
+ * Retourne l'usage courant d'une entreprise et son état par rapport aux limites du plan.
+ * Lit planSnapshot en priorité (grandfathering), puis planId pour les abonnements anciens.
  */
 const getUsage = async (companyId) => {
   const company = await Company.findById(companyId).populate({
     path: 'abonnementActifId',
-    populate: { path: 'forfaitId', select: 'limites modulesInclus nom' },
+    populate: { path: 'planId', select: 'limites modules nom code' },
   });
 
   if (!company) throw new Error(`Entreprise ${companyId} introuvable`);
 
-  const forfait = company.abonnementActifId?.forfaitId;
-  const limites = forfait?.limites || { maxFacturesMois: -1, maxUtilisateurs: -1 };
+  const abonnement = company.abonnementActifId;
+  // Grandfathering : planSnapshot prime sur le plan vivant
+  const plan = abonnement?.planSnapshot || abonnement?.planId;
+  const limites = plan?.limites || { maxFacturesMois: -1, maxUtilisateurs: -1, maxStockageMo: -1 };
 
   const [facturesMois, utilisateurs] = await Promise.all([
     compterFacturesDuMois(companyId),
@@ -78,26 +63,25 @@ const getUsage = async (companyId) => {
     facturesMois,
     utilisateurs,
     limites,
-    forfait: forfait ? { nom: forfait.nom, modulesInclus: forfait.modulesInclus } : null,
+    plan: plan ? { nom: plan.nom, code: plan.code, modules: plan.modules } : null,
     alertes,
   };
 };
 
 /**
  * Vérifie si une entreprise a atteint la limite mensuelle de factures.
- * Utilisé par subscriptionGuard ou les controllers avant création de facture.
- *
- * @param {string} companyId
- * @returns {Promise<boolean>} true si la limite est atteinte
  */
 const limiteFacturesAtteinte = async (companyId) => {
   const company = await Company.findById(companyId).populate({
     path: 'abonnementActifId',
-    populate: { path: 'forfaitId', select: 'limites' },
+    populate: { path: 'planId', select: 'limites' },
   });
 
-  const limite = company?.abonnementActifId?.forfaitId?.limites?.maxFacturesMois;
-  if (!limite || limite === -1) return false; // illimité
+  const abonnement = company?.abonnementActifId;
+  const limites = abonnement?.planSnapshot?.limites || abonnement?.planId?.limites;
+  const limite = limites?.maxFacturesMois;
+
+  if (!limite || limite === -1) return false;
 
   const count = await compterFacturesDuMois(companyId);
   return count >= limite;

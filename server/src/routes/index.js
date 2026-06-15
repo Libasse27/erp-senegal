@@ -54,7 +54,8 @@ const importsRoutes = require('./imports.routes');
 // Facturation récurrente
 const facturesRecurrentesRoutes = require('./factures-recurrentes.routes');
 
-// SaaS — Forfaits publics
+// SaaS — Plans publics (nouveau) + alias forfaits
+const plansRoutes   = require('./plans.routes');
 const forfaitsRoutes = require('./forfaits.routes');
 
 // SaaS — Paiements abonnements
@@ -129,7 +130,9 @@ router.use('/imports', importsRoutes);
 // === Facturation récurrente ===
 router.use('/factures-recurrentes', facturesRecurrentesRoutes);
 
-// === SaaS — Forfaits (public) ===
+// === SaaS — Plans (public) ===
+router.use('/plans', plansRoutes);
+// === SaaS — Forfaits (alias rétrocompatibilité) ===
 router.use('/forfaits', forfaitsRoutes);
 
 // === SaaS — Paiements abonnements ===

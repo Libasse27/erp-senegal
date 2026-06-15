@@ -22,7 +22,7 @@ let company, forfait, abonnement;
 let adminUser, adminToken;
 
 beforeEach(async () => {
-  company = await createTestCompany({ name: 'Acme SaaS', status: 'pending_payment' });
+  company = await createTestCompany({ name: 'Acme SaaS', status: 'EN_ATTENTE_PAIEMENT' });
   await createTestSettings(company._id);
 
   forfait    = await createTestForfait({ code: 'STANDARD', nom: 'Standard' });
@@ -34,7 +34,7 @@ beforeEach(async () => {
 
   // Mettre à jour l'entreprise avec l'abonnement
   await Company.findByIdAndUpdate(company._id, {
-    forfaitId: forfait._id,
+    planId: forfait._id,
     abonnementActifId: null,
   });
 
@@ -124,7 +124,7 @@ describe('POST /api/paiements-saas/initier', () => {
 // ── POST /api/paiements-saas/confirmer-simulation ───────────────────────────
 
 describe('POST /api/paiements-saas/confirmer-simulation', () => {
-  it("active l'abonnement et met company.status='active'", async () => {
+  it("active l'abonnement et met company.status='ACTIVE'", async () => {
     // Initier le paiement d'abord
     const initRes = await request(app)
       .post('/api/paiements-saas/initier')
@@ -152,7 +152,7 @@ describe('POST /api/paiements-saas/confirmer-simulation', () => {
     expect(abo.paiementId.toString()).toBe(paiement._id.toString());
 
     const updatedCompany = await Company.findById(company._id);
-    expect(updatedCompany.status).toBe('active');
+    expect(updatedCompany.status).toBe('ACTIVE');
     expect(updatedCompany.abonnementActifId.toString()).toBe(abo._id.toString());
   });
 

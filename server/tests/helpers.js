@@ -3,7 +3,7 @@ const User = require('../src/models/User');
 const Role = require('../src/models/Role');
 const Permission = require('../src/models/Permission');
 const Company    = require('../src/models/Company');
-const Forfait    = require('../src/models/Forfait');
+const Plan       = require('../src/models/Plan');
 const Abonnement = require('../src/models/Abonnement');
 const Settings   = require('../src/models/Settings');
 const Client = require('../src/models/Client');
@@ -49,26 +49,35 @@ const getUserCompanyId = async (userId) => {
   return u?.companyId || null;
 };
 
-// ── Forfait ──────────────────────────────────────────────────────────────────
-const createTestForfait = async (data = {}) => {
-  return Forfait.create({
-    code:          data.code || 'STANDARD',
-    nom:           data.nom  || 'Standard Test',
-    prixMensuel:   data.prixMensuel  || 15000,
-    prixAnnuel:    data.prixAnnuel   || 150000,
-    modulesInclus: data.modulesInclus || ['GESCOM', 'FACTURATION', 'COMPTABILITE', 'ACHAT', 'STOCK'],
+// ── Plan ─────────────────────────────────────────────────────────────────────
+const createTestPlan = async (data = {}) => {
+  return Plan.create({
+    code: data.code || 'STANDARD',
+    nom:  data.nom  || 'Standard Test',
+    tarifs: {
+      mensuel: data.prixMensuel || 15000,
+      annuel:  data.prixAnnuel  || 150000,
+      devise:  'XOF',
+      ...data.tarifs,
+    },
     limites: {
       maxUtilisateurs: data.maxUtilisateurs ?? 10,
       maxFacturesMois: data.maxFacturesMois ?? 500,
-      stockageMo:      data.stockageMo      ?? 5120,
-      supportPrioritaire: false,
+      maxStockageMo:   data.maxStockageMo   ?? 5120,
       ...data.limites,
     },
-    actif: true,
-    ordre: data.ordre || 1,
+    modules: data.modules || data.modulesInclus || ['GESCOM', 'FACTURATION', 'STOCK'],
+    features: { supportPrioritaire: false, apiAccess: false, multiEtablissement: false, ...data.features },
+    essaiGratuitJours: data.essaiGratuitJours ?? 0,
+    actif:          true,
+    visible:        true,
+    ordreAffichage: data.ordre || data.ordreAffichage || 1,
     ...data,
   });
 };
+
+// Alias rétrocompatibilité dans les tests existants
+const createTestForfait = createTestPlan;
 
 // ── Entreprise ───────────────────────────────────────────────────────────────
 const createTestCompany = async (data = {}) => {
@@ -76,24 +85,45 @@ const createTestCompany = async (data = {}) => {
     name:   data.name   || 'Entreprise Test SA',
     email:  data.email  || `company-${Date.now()}@test.com`,
     phone:  data.phone  || '+221 33 123 45 67',
-    status: data.status || 'active',
+    status: data.status || 'ACTIVE',
     ...data,
   });
 };
 
 // ── Abonnement ───────────────────────────────────────────────────────────────
-const createTestAbonnement = async (entrepriseId, forfaitId, data = {}) => {
+const createTestAbonnement = async (entrepriseId, planId, data = {}) => {
   const dateDebut = data.dateDebut || new Date();
   const dateFin   = data.dateFin   || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  // Construire le planSnapshot si non fourni (requis par le schéma)
+  let { planSnapshot, ...rest } = data;
+  if (!planSnapshot) {
+    const plan = await Plan.findById(planId).lean();
+    planSnapshot = plan ? {
+      code: plan.code, nom: plan.nom,
+      tarifs: plan.tarifs, limites: plan.limites,
+      modules: plan.modules, features: plan.features,
+      version: plan.version || 1, snapshotAt: new Date(),
+    } : {
+      code: 'TEST', nom: 'Test Plan',
+      tarifs: { mensuel: 15000, annuel: 150000, devise: 'XOF' },
+      limites: { maxUtilisateurs: 10, maxFacturesMois: 500, maxStockageMo: 5120 },
+      modules: ['GESCOM', 'FACTURATION', 'STOCK'],
+      features: { supportPrioritaire: false, apiAccess: false, multiEtablissement: false },
+      version: 1, snapshotAt: new Date(),
+    };
+  }
+
   return Abonnement.create({
     entrepriseId,
-    forfaitId,
-    periodicite: data.periodicite || 'MENSUEL',
+    planId,
+    planSnapshot,
+    periodicite: rest.periodicite || 'MENSUEL',
     dateDebut,
     dateFin,
-    montant:     data.montant || 15000,
-    statut:      data.statut  || 'EN_ATTENTE',
-    ...data,
+    montant: rest.montant || 15000,
+    statut:  rest.statut  || 'EN_ATTENTE',
+    ...rest,
   });
 };
 
@@ -176,29 +206,36 @@ const createTestUser = async (roleName = 'admin', permissionCodes = []) => {
     name:   'Test Company SA',
     email:  `company-${roleName}-${Date.now()}@test.com`,
     phone:  '+221 33 000 00 00',
-    status: 'active',
+    status: 'ACTIVE',
   });
 
-  // Forfait + abonnement ACTIF
-  let forfait = await Forfait.findOne({ code: 'STANDARD' });
-  if (!forfait) forfait = await createTestForfait();
+  // Plan + abonnement ACTIF
+  let plan = await Plan.findOne({ code: 'STANDARD' });
+  if (!plan) plan = await createTestPlan();
 
   const now     = new Date();
   const dateFin = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const planSnapshot = {
+    code: plan.code, nom: plan.nom,
+    tarifs: plan.tarifs, limites: plan.limites,
+    modules: plan.modules, features: plan.features,
+    version: plan.version || 1, snapshotAt: now,
+  };
   const abonnement = await Abonnement.create({
     entrepriseId: company._id,
-    forfaitId:    forfait._id,
+    planId:       plan._id,
+    planSnapshot,
     periodicite:  'MENSUEL',
     dateDebut:    now,
     dateFin,
-    montant:      forfait.prixMensuel,
+    montant:      plan.tarifs?.mensuel || 15000,
     statut:       'ACTIF',
   });
 
   await Company.findByIdAndUpdate(company._id, {
     abonnementActifId:   abonnement._id,
-    forfaitId:           forfait._id,
-    status:              'active',
+    planId:              plan._id,
+    status:              'ACTIVE',
     subscriptionEndDate: dateFin,
   });
 
@@ -542,7 +579,8 @@ module.exports = {
   createTestUser,
   createSaasUser,
   createTestCompany,
-  createTestForfait,
+  createTestPlan,
+  createTestForfait,  // alias → createTestPlan
   createTestAbonnement,
   createTestSettings,
   createTestClient,

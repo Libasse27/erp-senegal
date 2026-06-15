@@ -83,7 +83,7 @@ const envoyerRappels = async () => {
         // Email de rappel (non bloquant)
         const admin = await User.findById(company.adminUser).select('email firstName');
         if (admin?.email) {
-          const forfaitNom = abo.forfaitId?.nom || '';
+          const forfaitNom = abo.planSnapshot?.nom || '';
           const dateFin    = company.subscriptionEndDate
             ? new Date(company.subscriptionEndDate).toLocaleDateString('fr-SN', { day: '2-digit', month: 'long', year: 'numeric' })
             : '';

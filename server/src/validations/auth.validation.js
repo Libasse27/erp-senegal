@@ -96,10 +96,9 @@ const registerSaaS = Joi.object({
   companyEmail: Joi.string().trim().email().allow('').optional(),
   website: Joi.string().trim().allow('').optional(),
 
-  // Forfait
-  forfaitCode: Joi.string().valid('STANDARD', 'PROFESSIONNEL', 'COMPLET').required().messages({
-    'any.only': 'Forfait invalide. Choisissez STANDARD, PROFESSIONNEL ou COMPLET.',
-    'any.required': 'Le forfait est requis',
+  // Plan (code vérifié en DB par le controller — pas de hardcoding ici)
+  planCode: Joi.string().uppercase().trim().required().messages({
+    'any.required': 'Le code du plan est requis (ex: STANDARD, PROFESSIONNEL, COMPLET)',
   }),
   periodicite: Joi.string().valid('MENSUEL', 'ANNUEL').default('MENSUEL'),
 });

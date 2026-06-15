@@ -23,17 +23,17 @@ let companyA, companyB;
 let userA, tokenA;
 let userB, tokenB;
 
-const creerAbonnementActif = async (company, forfaitId) => {
-  const abonnement = await createTestAbonnement(company._id, forfaitId, {
+const creerAbonnementActif = async (company, planId) => {
+  const abonnement = await createTestAbonnement(company._id, planId, {
     statut:    'ACTIF',
     dateDebut: new Date(),
     dateFin:   new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     montant:   15000,
   });
   await Company.findByIdAndUpdate(company._id, {
-    status:            'active',
+    status:            'ACTIVE',
     abonnementActifId: abonnement._id,
-    forfaitId,
+    planId,
   });
   return abonnement;
 };
@@ -50,7 +50,7 @@ beforeEach(async () => {
   const forfait = await createTestForfait({
     code: 'STANDARD',
     nom: 'Standard',
-    modulesInclus: ['GESCOM', 'FACTURATION', 'STOCK'],
+    modules: ['GESCOM', 'FACTURATION', 'STOCK'],
   });
 
   // Abonnements actifs requis par subscriptionGuard

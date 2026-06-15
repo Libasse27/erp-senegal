@@ -3,7 +3,7 @@ const mongoose    = require('mongoose');
 const PaiementSaaS = require('../models/PaiementSaaS');
 const Abonnement  = require('../models/Abonnement');
 const Company     = require('../models/Company');
-const Forfait     = require('../models/Forfait');
+const Plan        = require('../models/Plan');
 const { AppError } = require('../middlewares/errorHandler');
 const logger      = require('../config/logger');
 const usageService = require('../services/usageService');
@@ -51,9 +51,9 @@ const activerAbonnement = async (paiement, session) => {
   await Company.findByIdAndUpdate(
     paiement.entrepriseId,
     {
-      status:              'active',
+      status:              'ACTIVE',
       abonnementActifId:   abonnement._id,
-      forfaitId:           abonnement.forfaitId,
+      planId:              abonnement.planId,
       subscriptionEndDate: abonnement.dateFin,
     },
     { session }
@@ -66,11 +66,12 @@ const activerAbonnement = async (paiement, session) => {
     try {
       const { sendSubscriptionActivatedEmail } = require('../services/emailService');
       const User    = require('../models/User');
-      const company = await Company.findById(paiement.entrepriseId).populate('forfaitId');
+      const company = await Company.findById(paiement.entrepriseId).populate('planId');
       if (!company?.adminUser) return;
       const admin   = await User.findById(company.adminUser).select('email firstName');
       if (!admin?.email) return;
-      const forfaitNom = (await Forfait.findById(abonnement.forfaitId).select('nom'))?.nom || '';
+      const forfaitNom = abonnement.planSnapshot?.nom
+        || (await Plan.findById(abonnement.planId).select('nom'))?.nom || '';
       const dateFin    = abonnement.dateFin
         ? new Date(abonnement.dateFin).toLocaleDateString('fr-SN', { day: '2-digit', month: 'long', year: 'numeric' })
         : '';
@@ -107,7 +108,7 @@ const initierPaiement = async (req, res, next) => {
     const abonnement = await Abonnement.findOne({
       _id:          abonnementId,
       entrepriseId: companyId,
-    }).populate('forfaitId').session(session);
+    }).populate('planId').session(session);
 
     if (!abonnement) return next(new AppError('Abonnement introuvable ou non autorisé', 404));
     if (abonnement.statut === 'ACTIF') {
@@ -140,7 +141,7 @@ const initierPaiement = async (req, res, next) => {
 
     const reference  = genererReference();
     const montant    = abonnement.montant;
-    const forfait    = abonnement.forfaitId;
+    const forfait    = abonnement.planSnapshot || abonnement.planId;
     const description = `Abonnement ${forfait ? forfait.nom : ''} — ${abonnement.periodicite} — ${company.name}`;
 
     const callbackUrl = `${FRONTEND_URL}/abonnement/confirmation`;
@@ -327,7 +328,7 @@ const listerPaiements = async (req, res, next) => {
 
     const paiements = await PaiementSaaS.find(filter)
       .populate('entrepriseId', 'name status')
-      .populate('abonnementId', 'periodicite statut forfaitId')
+      .populate('abonnementId', 'periodicite statut planId planSnapshot')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit));
@@ -418,9 +419,9 @@ const getUsageSaas = async (req, res, next) => {
       Company.findById(companyId)
         .populate({
           path: 'abonnementActifId',
-          populate: { path: 'forfaitId', select: 'code nom prixMensuel prixAnnuel modulesInclus limites ordre' },
+          populate: { path: 'planId', select: 'code nom tarifs modules limites ordreAffichage' },
         })
-        .select('status subscriptionEndDate forfaitId abonnementActifId name'),
+        .select('status subscriptionEndDate planId abonnementActifId name'),
     ]);
 
     res.json({

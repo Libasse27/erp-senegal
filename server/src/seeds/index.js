@@ -14,7 +14,7 @@ const Settings = require('../models/Settings');
 const AuditLog = require('../models/AuditLog');
 
 // SaaS Models
-const Forfait = require('../models/Forfait');
+const Plan = require('../models/Plan');
 const Abonnement = require('../models/Abonnement');
 
 // Phase 2 Models
@@ -45,7 +45,7 @@ const getRolesData = require('./roles.seed');
 const getUsersData = require('./users.seed');
 const getCompanyData = require('./company.seed');
 const getSettingsData = require('./settings.seed');
-const getForfaitsData = require('./forfaits.seed');
+const getPlansData = require('./plans.seed');
 const getClientsData = require('./clients.seed');
 const getFournisseursData = require('./fournisseurs.seed');
 const { getCategoriesData, getProductsData } = require('./products.seed');
@@ -71,7 +71,7 @@ const seed = async () => {
       Company.deleteMany({}),
       Settings.deleteMany({}),
       AuditLog.deleteMany({}),
-      Forfait.deleteMany({}),
+      Plan.deleteMany({}),
       Abonnement.deleteMany({}),
       Client.deleteMany({}),
       Fournisseur.deleteMany({}),
@@ -93,15 +93,15 @@ const seed = async () => {
     console.log('Collections nettoyees.\n');
 
     // ════════════════════════════════════════════
-    // SAAS — Forfaits (avant tout le reste)
+    // SAAS — Plans (avant tout le reste)
     // ════════════════════════════════════════════
-    console.log('Creation des forfaits SaaS...');
-    const forfaitsData = getForfaitsData();
-    const forfaits = await Forfait.insertMany(forfaitsData);
-    console.log(`${forfaits.length} forfaits crees (Standard / Professionnel / Complet).`);
+    console.log('Creation des plans SaaS...');
+    const plansData = getPlansData();
+    const plans = await Plan.insertMany(plansData);
+    console.log(`${plans.length} plans crees (Standard / Professionnel / Complet).`);
 
-    const forfaitMap = new Map();
-    forfaits.forEach((f) => forfaitMap.set(f.code, f));
+    const planMap = new Map();
+    plans.forEach((p) => planMap.set(p.code, p));
 
     // ════════════════════════════════════════════
     // PHASE 1 — Fondations
@@ -125,13 +125,13 @@ const seed = async () => {
 
     // 4. Entreprise demo — creer AVANT les utilisateurs pour avoir l'ID
     console.log('\nCreation de l\'entreprise demo...');
-    const forfaitPro = forfaitMap.get('PROFESSIONNEL');
+    const planPro = planMap.get('PROFESSIONNEL');
     const companyData = getCompanyData();
     const company = await Company.create({
       ...companyData,
-      status: 'active',
+      status: 'ACTIVE',
       plan: 'PROFESSIONNEL',
-      forfaitId: forfaitPro._id,
+      planId: planPro._id,
       subscriptionStartDate: new Date('2026-01-01'),
       subscriptionEndDate: new Date('2027-01-01'),
     });
@@ -158,15 +158,27 @@ const seed = async () => {
 
     // 6. Abonnement actif pour l'entreprise demo
     console.log('\nCreation de l\'abonnement demo...');
+    const planSnapshot = {
+      code:     planPro.code,
+      nom:      planPro.nom,
+      tarifs:   planPro.tarifs,
+      limites:  planPro.limites,
+      modules:  planPro.modules,
+      features: planPro.features,
+      version:  planPro.version || 1,
+      snapshotAt: new Date(),
+    };
     const abonnement = await Abonnement.create({
       entrepriseId: company._id,
-      forfaitId: forfaitPro._id,
+      planId: planPro._id,
+      planSnapshot,
       periodicite: 'ANNUEL',
       dateDebut: new Date('2026-01-01'),
       dateFin: new Date('2027-01-01'),
-      montant: forfaitPro.prixAnnuel,
+      montant: planPro.tarifs.annuel,
       statut: 'ACTIF',
       renouvellementAuto: true,
+      historique: [{ action: 'creation', nouveauPlan: planPro.code, note: 'Seed demo' }],
       createdBy: superAdminUser._id,
     });
     // Lier l'abonnement actif a l'entreprise
@@ -292,7 +304,7 @@ const seed = async () => {
     console.log('\n=== Seeding multi-tenant termine avec succes ===');
     console.log(`\nResume:`);
     console.log(`  SaaS:`);
-    console.log(`    - ${forfaits.length} forfaits (Standard/Professionnel/Complet)`);
+    console.log(`    - ${plans.length} plans (Standard/Professionnel/Complet)`);
     console.log(`    - 1 abonnement demo PROFESSIONNEL/ANNUEL`);
     console.log(`  Phase 1:`);
     console.log(`    - ${permissions.length} permissions`);

@@ -28,7 +28,7 @@ const mongoose = require('mongoose');
 
 const User       = require('../src/models/User');
 const Company    = require('../src/models/Company');
-const Forfait    = require('../src/models/Forfait');
+const Plan       = require('../src/models/Plan');
 const Abonnement = require('../src/models/Abonnement');
 const Settings   = require('../src/models/Settings');
 
@@ -108,10 +108,10 @@ const rollback = async () => {
   const aboRes = await Abonnement.collection.deleteMany({});
   console.log(`  ${aboRes.deletedCount} Abonnement(s) supprimé(s)`);
 
-  // 4. Supprimer les Forfaits
-  console.log('\n▶ 4/6 — Suppression des Forfaits SaaS...');
-  const forfaitRes = await Forfait.collection.deleteMany({});
-  console.log(`  ${forfaitRes.deletedCount} Forfait(s) supprimé(s)`);
+  // 4. Supprimer les Plans
+  console.log('\n▶ 4/6 — Suppression des Plans SaaS...');
+  const planRes = await Plan.collection.deleteMany({});
+  console.log(`  ${planRes.deletedCount} Plan(s) supprimé(s)`);
 
   // 5. Supprimer le super_admin créé par la migration
   console.log('\n▶ 5/6 — Suppression du super admin...');
@@ -135,7 +135,7 @@ const rollback = async () => {
     // Reset abonnementActifId et forfaitId sur les entreprises
     await Company.collection.updateMany(
       {},
-      { $unset: { abonnementActifId: '', forfaitId: '' }, $set: { status: 'pending_payment', plan: 'STANDARD' } }
+      { $unset: { abonnementActifId: '', planId: '' }, $set: { status: 'EN_ATTENTE_PAIEMENT', plan: 'STANDARD' } }
     );
   }
 

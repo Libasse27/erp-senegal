@@ -24,13 +24,13 @@ const mongoose = require('mongoose');
 const Company     = require('../src/models/Company');
 const User        = require('../src/models/User');
 const Role        = require('../src/models/Role');
-const Forfait     = require('../src/models/Forfait');
+const Plan        = require('../src/models/Plan');
 const Abonnement  = require('../src/models/Abonnement');
 
 const DEMO_EMAIL    = process.env.DEMO_ADMIN_EMAIL    || 'admin@ndakaru.sn';
 const DEMO_PASSWORD = process.env.DEMO_ADMIN_PASSWORD || 'Admin@Demo2026!';
 const COMPANY_NAME  = 'Ndakaru SARL';
-const FORFAIT_CODE  = 'PROFESSIONNEL';
+const PLAN_CODE     = 'PROFESSIONNEL';
 
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/erp-gescom';
@@ -48,14 +48,14 @@ const seed = async () => {
     console.log('║      Seed Démo — Ndakaru SARL                ║');
     console.log('╚══════════════════════════════════════════════╝\n');
 
-    // ── Vérifier que le forfait existe ────────────────────────────────────────
-    const forfait = await Forfait.findOne({ code: FORFAIT_CODE });
-    if (!forfait) {
-      console.error(`❌ Forfait "${FORFAIT_CODE}" introuvable.`);
+    // ── Vérifier que le plan existe ───────────────────────────────────────────
+    const plan = await Plan.findOne({ code: PLAN_CODE });
+    if (!plan) {
+      console.error(`❌ Plan "${PLAN_CODE}" introuvable.`);
       console.error('   Lancez d\'abord : npm run seed:saas');
       process.exit(1);
     }
-    console.log(`✅ Forfait trouvé : ${forfait.nom} (${fmt(forfait.prixMensuel)} FCFA/mois)`);
+    console.log(`✅ Plan trouvé : ${plan.nom} (${fmt(plan.tarifs.mensuel)} FCFA/mois)`);
 
     // ── Rôle admin ────────────────────────────────────────────────────────────
     const adminRole = await Role.findOne({ name: 'admin' });
@@ -79,9 +79,9 @@ const seed = async () => {
         sector: 'Commerce général',
         employeeCount: 8,
         currency: 'XOF',
-        forfaitId: forfait._id,
-        plan: FORFAIT_CODE,
-        status: 'active',
+        planId: plan._id,
+        plan: PLAN_CODE,
+        status: 'ACTIVE',
         fiscalInfo: { tvaRate: 18, isSubjectToTVA: true, fiscalRegime: 'reel_normal' },
       });
       console.log(`✅ Entreprise créée : ${company.name} (${company._id})`);
@@ -123,13 +123,20 @@ const seed = async () => {
       const fin   = new Date();
       fin.setDate(fin.getDate() + 30);
 
+      const planSnapshot = {
+        code: plan.code, nom: plan.nom,
+        tarifs: plan.tarifs, limites: plan.limites,
+        modules: plan.modules, features: plan.features,
+        version: plan.version || 1, snapshotAt: new Date(),
+      };
       abonnement = await Abonnement.create({
         entrepriseId: company._id,
-        forfaitId: forfait._id,
+        planId: plan._id,
+        planSnapshot,
         periodicite: 'MENSUEL',
         dateDebut: debut,
         dateFin: fin,
-        montant: forfait.prixMensuel,
+        montant: plan.tarifs.mensuel,
         statut: 'ACTIF',
         autoRenouvellement: false,
       });
@@ -137,7 +144,7 @@ const seed = async () => {
       // Mettre à jour Company avec l'abonnement actif
       await Company.findByIdAndUpdate(company._id, {
         abonnementActifId: abonnement._id,
-        status: 'active',
+        status: 'ACTIVE',
         subscriptionEndDate: fin,
       });
 
@@ -155,8 +162,8 @@ const seed = async () => {
     console.log(`  Email      : ${DEMO_EMAIL}`);
     console.log(`  Mot de passe: ${DEMO_PASSWORD}`);
     console.log(`  Entreprise : ${COMPANY_NAME}`);
-    console.log(`  Forfait    : ${forfait.nom} (${fmt(forfait.prixMensuel)} FCFA/mois)`);
-    console.log(`  Modules    : ${forfait.modulesInclus.join(', ')}`);
+    console.log(`  Plan       : ${plan.nom} (${fmt(plan.tarifs.mensuel)} FCFA/mois)`);
+    console.log(`  Modules    : ${plan.modules.join(', ')}`);
     console.log(`  URL        : http://localhost:3000/login\n`);
 
     process.exit(0);

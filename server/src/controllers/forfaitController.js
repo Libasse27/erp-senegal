@@ -1,101 +1,74 @@
-const Forfait = require('../models/Forfait');
+/**
+ * ForfaitController — alias rétrocompatibilité vers le modèle Plan.
+ * La route /api/forfaits pointe ici ; /api/plans est la nouvelle route principale.
+ */
+const Plan = require('../models/Plan');
 const { AppError } = require('../middlewares/errorHandler');
 
-/**
- * @desc    Liste publique des forfaits actifs (pour la page d'inscription)
- * @route   GET /api/forfaits
- * @access  Public
- */
 const listForfaits = async (_req, res, next) => {
   try {
-    const forfaits = await Forfait.find({ actif: true })
-      .sort({ ordre: 1, prixMensuel: 1 })
+    const plans = await Plan.find({ actif: true, visible: true })
+      .sort({ ordreAffichage: 1, 'tarifs.mensuel': 1 })
       .select('-createdBy -modifiedBy -__v');
 
-    res.json({
-      success: true,
-      data: forfaits,
-    });
+    res.json({ success: true, data: plans });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Detail d'un forfait
- * @route   GET /api/forfaits/:code
- * @access  Public
- */
 const getForfait = async (req, res, next) => {
   try {
-    const forfait = await Forfait.findOne({
+    const plan = await Plan.findOne({
       code: req.params.code.toUpperCase(),
       actif: true,
     });
 
-    if (!forfait) {
-      return next(new AppError('Forfait introuvable.', 404));
-    }
+    if (!plan) return next(new AppError('Forfait introuvable.', 404));
 
-    res.json({ success: true, data: forfait });
+    res.json({ success: true, data: plan });
   } catch (error) {
     next(error);
   }
 };
 
-// ── Administration Super-Admin ────────────────────────────────────────────────
-
-/**
- * @desc    Creer un forfait (super_admin)
- * @route   POST /api/admin/forfaits
- * @access  Private / super_admin
- */
+// Gardés pour compatibilité routes admin — créations/modifications via Plan
 const createForfait = async (req, res, next) => {
   try {
-    const forfait = await Forfait.create({ ...req.body, createdBy: req.user._id });
-    res.status(201).json({ success: true, data: forfait });
+    const plan = await Plan.create({ ...req.body, createdBy: req.user._id });
+    res.status(201).json({ success: true, data: plan });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Modifier un forfait (super_admin)
- * @route   PUT /api/admin/forfaits/:id
- * @access  Private / super_admin
- */
 const updateForfait = async (req, res, next) => {
   try {
-    const forfait = await Forfait.findByIdAndUpdate(
+    const plan = await Plan.findByIdAndUpdate(
       req.params.id,
-      { ...req.body, modifiedBy: req.user._id },
+      { ...req.body, modifiedBy: req.user._id, $inc: { version: 1 } },
       { new: true, runValidators: true }
     );
 
-    if (!forfait) return next(new AppError('Forfait introuvable.', 404));
+    if (!plan) return next(new AppError('Forfait introuvable.', 404));
 
-    res.json({ success: true, data: forfait });
+    res.json({ success: true, data: plan });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Desactiver un forfait (super_admin — soft disable)
- * @route   DELETE /api/admin/forfaits/:id
- * @access  Private / super_admin
- */
 const deleteForfait = async (req, res, next) => {
   try {
-    const forfait = await Forfait.findByIdAndUpdate(
+    const plan = await Plan.findByIdAndUpdate(
       req.params.id,
-      { actif: false, modifiedBy: req.user._id },
+      { actif: false, visible: false, modifiedBy: req.user._id },
       { new: true }
     );
 
-    if (!forfait) return next(new AppError('Forfait introuvable.', 404));
+    if (!plan) return next(new AppError('Forfait introuvable.', 404));
 
-    res.json({ success: true, message: 'Forfait desactive avec succes.' });
+    res.json({ success: true, message: 'Forfait désactivé avec succès.' });
   } catch (error) {
     next(error);
   }
