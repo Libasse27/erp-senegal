@@ -45,6 +45,11 @@ const options = {
       { name: 'Dashboard', description: 'KPIs temps réel' },
       { name: 'Administration', description: 'Utilisateurs, entreprise, paramètres' },
       { name: 'Super Admin', description: 'Gestion plateforme SaaS (scope PLATFORM uniquement)' },
+      { name: 'Budget & Prévisions', description: 'Planification budgétaire, lignes budgétaires, comparaison budget vs réalisé' },
+      { name: 'CRM — Opportunités', description: 'Pipeline commercial, opportunités de vente, conversion en devis' },
+      { name: 'CRM — Activités', description: 'Activités commerciales (appels, réunions, emails) liées aux opportunités' },
+      { name: 'RH — Employés', description: 'Gestion des employés, bulletins de paie, écritures SYSCOHADA payroll' },
+      { name: 'RH — Congés', description: 'Demandes de congé, approbation, calcul jours ouvrables' },
     ],
     components: {
       securitySchemes: {

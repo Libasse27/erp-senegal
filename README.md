@@ -27,6 +27,11 @@ Couvre la gestion commerciale, comptable, financière et opérationnelle — con
 - Comptes bancaires multiples
 - Tableau de bord KPIs temps réel (Socket.io)
 
+### Nouveaux modules (Phases 38-41)
+- **Budget & Prévisions** — Planification budgétaire (produits / charges) avec comparaison budget vs réalisé par période et catégorie
+- **CRM — Pipeline Commercial** — Opportunités de vente, pipeline kanban 6 étapes (prospect → gagné/perdu), activités (appels, réunions…), conversion en devis
+- **RH Simplifié** — Gestion des employés (CDI/CDD/Stage), congés avec approbation, bulletins de paie, génération écritures SYSCOHADA (D.661/C.421/C.431/C.447)
+
 ### Architecture SaaS Multi-Tenant
 - **3 forfaits** : Standard · Professionnel · Complet (tarifs FCFA)
 - Inscription libre avec sélection du forfait
