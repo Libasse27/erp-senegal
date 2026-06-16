@@ -146,6 +146,7 @@ const {
   confirmerSimulation,
   getUsageSaas,
 } = require('../controllers/paiementSaasController');
+const { validerCoupon } = require('../controllers/couponController');
 
 // ── Webhooks PSP — publics, pas d'auth (le PSP appelle depuis ses serveurs) ──
 // Le corps brut est capturé par le middleware rawBody défini dans app.js
@@ -156,6 +157,9 @@ router.use(protect);
 
 // Métriques d'usage et abonnement actif
 router.get('/usage', getUsageSaas);
+
+// Vérification coupon avant initiation (company admin)
+router.post('/valider-coupon', authorizeRoles('admin', 'super_admin'), validerCoupon);
 
 // Initier un paiement (admin entreprise ou super_admin)
 router.post(

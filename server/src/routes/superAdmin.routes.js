@@ -37,6 +37,13 @@ const {
   getPlanStats,
 } = require('../controllers/planController');
 
+const {
+  listerCoupons,
+  creerCoupon,
+  mettreAJourCoupon,
+  supprimerCoupon,
+} = require('../controllers/couponController');
+
 const { protect } = require('../middlewares/auth');
 const platformGuard = require('../middlewares/platformGuard');
 const validate = require('../middlewares/validate');
@@ -49,6 +56,11 @@ const {
   createPlan: createPlanSchema,
   updatePlan: updatePlanSchema,
 } = require('../validations/superAdmin.validation');
+
+const {
+  createCoupon: createCouponSchema,
+  updateCoupon: updateCouponSchema,
+} = require('../validations/coupon.validation');
 const audit = require('../middlewares/audit');
 
 // Toutes les routes super admin exigent : JWT valide + scope PLATFORM
@@ -105,5 +117,11 @@ router.put('/plans/:id', validate(updatePlanSchema), audit('plans', 'update'), u
 router.delete('/plans/:id',                       audit('plans', 'delete'), deletePlan);
 router.get('/plans/:id/stats',                    getPlanStats);
 router.post('/plans/:id/migrate-subscribers',     audit('plans', 'update'), migrateSubscribers);
+
+// ── Gestion des Coupons SaaS ─────────────────────────────────────────────────
+router.get('/coupons',                           listerCoupons);
+router.post('/coupons', validate(createCouponSchema), audit('coupons', 'create'), creerCoupon);
+router.put('/coupons/:id', validate(updateCouponSchema), audit('coupons', 'update'), mettreAJourCoupon);
+router.delete('/coupons/:id', audit('coupons', 'delete'), supprimerCoupon);
 
 module.exports = router;

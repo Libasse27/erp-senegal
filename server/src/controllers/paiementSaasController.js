@@ -4,9 +4,12 @@ const PaiementSaaS = require('../models/PaiementSaaS');
 const Abonnement  = require('../models/Abonnement');
 const Company     = require('../models/Company');
 const Plan        = require('../models/Plan');
+const Coupon      = require('../models/Coupon');
 const { AppError } = require('../middlewares/errorHandler');
 const logger      = require('../config/logger');
 const usageService = require('../services/usageService');
+const { creerInvoiceEtTransaction } = require('../services/invoiceService');
+const { provisionnerNouvelleCompany } = require('../services/provisioningService');
 
 const waveProvider       = require('../services/payment/WaveProvider');
 const orangeMoneyProvider = require('../services/payment/OrangeMoneyProvider');
@@ -59,7 +62,17 @@ const activerAbonnement = async (paiement, session) => {
     { session }
   );
 
+  // Invoice + Transaction financière (dans la même transaction MongoDB)
+  try {
+    await creerInvoiceEtTransaction(paiement, abonnement, session);
+  } catch (err) {
+    logger.warn(`[SaaS] Invoice non créée pour ref=${paiement.reference} : ${err.message}`);
+  }
+
   logger.info(`[SaaS] Abonnement activé — company=${paiement.entrepriseId} | ref=${paiement.reference}`);
+
+  // Provisioning Settings si company nouvelle (non bloquant)
+  setImmediate(() => provisionnerNouvelleCompany(paiement.entrepriseId));
 
   // Email de confirmation d'activation (non bloquant, hors transaction)
   setImmediate(async () => {
@@ -95,7 +108,7 @@ const initierPaiement = async (req, res, next) => {
   session.startTransaction();
 
   try {
-    const { abonnementId, methode } = req.body;
+    const { abonnementId, methode, couponCode } = req.body;
     const companyId = req.companyId || (req.user && req.user.companyId);
 
     if (!abonnementId) return next(new AppError('abonnementId requis', 400));
@@ -139,8 +152,44 @@ const initierPaiement = async (req, res, next) => {
     const company = await Company.findById(companyId).session(session);
     if (!company) return next(new AppError('Entreprise introuvable', 404));
 
-    const reference  = genererReference();
-    const montant    = abonnement.montant;
+    const reference = genererReference();
+    let montant     = abonnement.montant;
+    let montantOriginal = null;
+    let montantRemise   = 0;
+    let couponId        = null;
+
+    // ── Coupon promo (optionnel) ─────────────────────────────────────────────
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode.trim().toUpperCase() }).session(session);
+
+      if (!coupon || !coupon.estValide) {
+        await session.abortTransaction();
+        return next(new AppError('Code promo invalide ou expiré.', 400));
+      }
+
+      // Vérifier l'éligibilité du plan
+      if (coupon.plansEligibles.length > 0) {
+        const planCode = abonnement.planSnapshot?.code;
+        if (!planCode || !coupon.plansEligibles.includes(planCode)) {
+          await session.abortTransaction();
+          return next(new AppError(`Ce coupon n'est pas applicable à ce plan.`, 400));
+        }
+      }
+
+      // Vérifier l'éligibilité de la périodicité
+      if (coupon.periodicitesEligibles.length > 0 && !coupon.periodicitesEligibles.includes(abonnement.periodicite)) {
+        await session.abortTransaction();
+        return next(new AppError(`Ce coupon n'est pas applicable à la périodicité ${abonnement.periodicite}.`, 400));
+      }
+
+      const remise = coupon.calculerRemise(montant);
+      montantOriginal = montant;
+      montantRemise   = remise;
+      montant         = montant - remise;
+      couponId        = coupon._id;
+
+      await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usagesActuels: 1 } }, { session });
+    }
     const forfait    = abonnement.planSnapshot || abonnement.planId;
     const description = `Abonnement ${forfait ? forfait.nom : ''} — ${abonnement.periodicite} — ${company.name}`;
 
@@ -150,14 +199,17 @@ const initierPaiement = async (req, res, next) => {
     // Créer le paiement EN_ATTENTE
     const [paiement] = await PaiementSaaS.create(
       [{
-        entrepriseId:  companyId,
-        abonnementId:  abonnement._id,
+        entrepriseId:    companyId,
+        abonnementId:    abonnement._id,
         montant,
-        devise:        'XOF',
+        montantOriginal,
+        montantRemise,
+        couponId,
+        devise:          'XOF',
         methode,
         reference,
-        statut:        'EN_ATTENTE',
-        createdBy:     req.user ? req.user._id : undefined,
+        statut:          'EN_ATTENTE',
+        createdBy:       req.user ? req.user._id : undefined,
       }],
       { session }
     );
@@ -189,6 +241,9 @@ const initierPaiement = async (req, res, next) => {
         checkoutUrl,
         transactionId,
         montant,
+        montantOriginal,
+        montantRemise,
+        couponApplique: couponId ? true : false,
         devise: 'XOF',
         methode,
         expireAt,

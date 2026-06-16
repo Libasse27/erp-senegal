@@ -66,6 +66,11 @@ const paiementSaasSchema = new mongoose.Schema(
     webhookSignature:  { type: String, select: false },
     webhookReceivedAt: { type: Date, default: null },
 
+    // ── Coupon appliqué ───────────────────────────────────────────────────────
+    couponId:        { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon', default: null },
+    montantOriginal: { type: Number, default: null },  // montant avant remise
+    montantRemise:   { type: Number, default: 0 },     // remise appliquée
+
     notes:     { type: String, trim: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },

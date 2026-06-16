@@ -72,6 +72,11 @@ const platformSettingSchema = new mongoose.Schema(
       siteweb:       { type: String, default: 'https://gescom.sn' },
     },
 
+    // ── Compteurs atomiques (numérotation) ───────────────────────────────────
+    compteurs: {
+      invoices: { type: Number, default: 0 },
+    },
+
     modifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   {
