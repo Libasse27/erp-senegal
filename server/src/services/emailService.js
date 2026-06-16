@@ -513,6 +513,48 @@ const sendEcheanceRappelEmail = async (email, { clientName, factures, companyNam
   logger.info(`Email rappel échéance envoyé à ${email} (${factures.length} facture(s))`);
 };
 
+const sendGracePeriodStartEmail = async (email, { firstName, companyName, planNom, joursGrace, graceEndsAt, renewUrl }) => {
+  const html = baseLayout('Période de grâce — action requise', `
+    <h2>Votre abonnement a expiré</h2>
+    <p>Bonjour ${firstName},</p>
+    <p>L'abonnement <strong>${planNom}</strong> de <strong>${companyName}</strong> a expiré.
+    Vous bénéficiez d'une <strong>période de grâce de ${joursGrace} jours</strong> pour renouveler votre abonnement.</p>
+    <div class="card">
+      <table>
+        <tr><td>Entreprise</td><td>${companyName}</td></tr>
+        <tr><td>Plan</td><td>${planNom}</td></tr>
+        <tr><td>Grâce jusqu'au</td><td><strong>${graceEndsAt}</strong></td></tr>
+        <tr><td>Statut</td><td><span class="badge badge-orange">En période de grâce</span></td></tr>
+      </table>
+    </div>
+    <p>Renouvelez maintenant pour éviter toute interruption de service.</p>
+    <a href="${renewUrl}" class="btn">Renouveler mon abonnement</a>
+  `);
+
+  await sendEmail({
+    to: email,
+    subject: `[ERP Sénégal] Période de grâce — renouvelez ${companyName} avant le ${graceEndsAt}`,
+    html,
+  });
+};
+
+const sendTrialExpiredEmail = async (email, { firstName, companyName, planUrl }) => {
+  const html = baseLayout('Essai gratuit terminé', `
+    <h2>Votre essai gratuit est terminé</h2>
+    <p>Bonjour ${firstName},</p>
+    <p>La période d'essai gratuit de <strong>${companyName}</strong> est arrivée à son terme.</p>
+    <p>Choisissez un plan adapté à votre activité pour continuer à profiter de toutes les fonctionnalités de l'ERP.</p>
+    <a href="${planUrl}" class="btn">Voir nos plans</a>
+    <p style="font-size:13px;color:#6b7280;">Vos données sont conservées pendant 30 jours après la fin de l'essai.</p>
+  `);
+
+  await sendEmail({
+    to: email,
+    subject: `[ERP Sénégal] Essai gratuit terminé — choisissez un plan pour ${companyName}`,
+    html,
+  });
+};
+
 module.exports = {
   sendEmail,
   sendResetPasswordEmail,
@@ -524,4 +566,6 @@ module.exports = {
   sendRenewalReminderEmail,
   sendSubscriptionExpiredEmail,
   sendSubscriptionActivatedEmail,
+  sendGracePeriodStartEmail,
+  sendTrialExpiredEmail,
 };

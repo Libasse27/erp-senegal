@@ -78,6 +78,9 @@ const abonnementSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Date de fin de la période de grâce (calculée lors de la transition ACTIF→EN_PERIODE_GRACE)
+    graceEndsAt: { type: Date, default: null },
+
     // Historique des événements (upgrade, downgrade, renouvellement…)
     historique: { type: [historiqueEntrySchema], default: [] },
 

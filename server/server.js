@@ -47,6 +47,7 @@ initNotificationService(io);
 
 // Jobs planifiés SaaS
 const subscriptionExpiry      = require('./src/jobs/subscriptionExpiry');
+const gracePeriodJob          = require('./src/jobs/gracePeriodJob');
 const renewalReminder         = require('./src/jobs/renewalReminder');
 const echeanceRappel          = require('./src/jobs/echeanceRappel');
 const factureRecurrente       = require('./src/jobs/factureRecurrente');
@@ -125,7 +126,8 @@ const startServer = async () => {
       logger.info(`API disponible sur http://localhost:${PORT}/api`);
 
       // Démarrer les crons SaaS après écoute du serveur
-      subscriptionExpiry.demarrer();
+      subscriptionExpiry.demarrer();  // 00h05 — ACTIF→grace, ESSAI→EN_ATTENTE
+      gracePeriodJob.demarrer();      // 00h10 — EN_PERIODE_GRACE→EXPIRE
       renewalReminder.demarrer();
       echeanceRappel.demarrer();
       factureRecurrente.demarrer();
