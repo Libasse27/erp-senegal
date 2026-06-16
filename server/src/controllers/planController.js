@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Plan = require('../models/Plan');
 const Abonnement = require('../models/Abonnement');
 const { AppError } = require('../middlewares/errorHandler');
@@ -174,4 +175,52 @@ const migrateSubscribers = async (req, res, next) => {
   }
 };
 
-module.exports = { listPlans, getPlan, listAllPlans, createPlan, updatePlan, deletePlan, migrateSubscribers };
+/**
+ * @desc    Statistiques d'un plan : abonnés, revenus MRR/ARR
+ * @route   GET /api/super-admin/plans/:id/stats
+ * @access  Private / super_admin
+ */
+const getPlanStats = async (req, res, next) => {
+  try {
+    const plan = await Plan.findById(req.params.id);
+    if (!plan) return next(new AppError('Plan introuvable.', 404));
+
+    const planObjId = new mongoose.Types.ObjectId(req.params.id);
+
+    const [totalAbonnes, abonnesActifs, abonnesEssai, revenueAgg] = await Promise.all([
+      Abonnement.countDocuments({ planId: planObjId }),
+      Abonnement.countDocuments({ planId: planObjId, statut: 'ACTIF' }),
+      Abonnement.countDocuments({ planId: planObjId, statut: 'ESSAI' }),
+      Abonnement.aggregate([
+        { $match: { planId: planObjId, statut: 'ACTIF' } },
+        {
+          $group: {
+            _id: '$periodicite',
+            totalMontant: { $sum: '$montant' },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    // Calculer MRR (Monthly Recurring Revenue) en XOF
+    let mrr = 0;
+    for (const row of revenueAgg) {
+      if (row._id === 'MENSUEL') mrr += row.totalMontant;
+      if (row._id === 'ANNUEL')  mrr += Math.round(row.totalMontant / 12);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        plan:     { _id: plan._id, code: plan.code, nom: plan.nom, version: plan.version },
+        abonnes:  { total: totalAbonnes, actifs: abonnesActifs, essai: abonnesEssai },
+        revenus:  { mrr, arr: mrr * 12, devise: 'XOF', detail: revenueAgg },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { listPlans, getPlan, listAllPlans, createPlan, updatePlan, deletePlan, migrateSubscribers, getPlanStats };

@@ -28,6 +28,15 @@ const {
   getCompaniesOverview,
 } = require('../controllers/superAdminController');
 
+const {
+  listAllPlans,
+  createPlan,
+  updatePlan,
+  deletePlan,
+  migrateSubscribers,
+  getPlanStats,
+} = require('../controllers/planController');
+
 const { protect } = require('../middlewares/auth');
 const platformGuard = require('../middlewares/platformGuard');
 const validate = require('../middlewares/validate');
@@ -37,6 +46,8 @@ const {
   createCompany,
   updateCompanyAdmin: updateCompanyAdminSchema,
   suspendCompany: suspendCompanySchema,
+  createPlan: createPlanSchema,
+  updatePlan: updatePlanSchema,
 } = require('../validations/superAdmin.validation');
 const audit = require('../middlewares/audit');
 
@@ -86,5 +97,13 @@ router.put('/companies/:id', validate(updateCompanyAdminSchema), audit('company'
 router.post('/companies/:id/suspend', validate(suspendCompanySchema), audit('company', 'update'), suspendCompany);
 router.post('/companies/:id/activate', audit('company', 'update'), activateCompany);
 router.delete('/companies/:id', audit('company', 'delete'), deleteCompanyAdmin);
+
+// ── Gestion des Plans SaaS ───────────────────────────────────────────────────
+router.get('/plans',                              listAllPlans);
+router.post('/plans', validate(createPlanSchema), audit('plans', 'create'), createPlan);
+router.put('/plans/:id', validate(updatePlanSchema), audit('plans', 'update'), updatePlan);
+router.delete('/plans/:id',                       audit('plans', 'delete'), deletePlan);
+router.get('/plans/:id/stats',                    getPlanStats);
+router.post('/plans/:id/migrate-subscribers',     audit('plans', 'update'), migrateSubscribers);
 
 module.exports = router;

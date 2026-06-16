@@ -81,6 +81,64 @@ const suspendCompanySchema = Joi.object({
   }),
 });
 
+// ── Gestion des Plans SaaS (Super Admin) ─────────────────────────────────────
+
+const MODULES_VALIDES = [
+  'GESCOM', 'FACTURATION', 'STOCK', 'COMPTABILITE',
+  'VENTES', 'REPORTING', 'PAIE', 'API', 'RH', 'CRM',
+];
+
+const tarifsSchema = Joi.object({
+  mensuel: Joi.number().min(0).required().messages({
+    'any.required': 'Le tarif mensuel est requis.',
+    'number.min':   'Le tarif mensuel ne peut pas être négatif.',
+  }),
+  annuel: Joi.number().min(0).required().messages({
+    'any.required': 'Le tarif annuel est requis.',
+    'number.min':   'Le tarif annuel ne peut pas être négatif.',
+  }),
+  devise: Joi.string().valid('XOF', 'EUR', 'USD').default('XOF'),
+});
+
+const limitesSchema = Joi.object({
+  maxUtilisateurs: Joi.number().integer().min(-1).default(3)
+    .messages({ 'number.min': 'Utilisez -1 pour illimité ou une valeur ≥ 1.' }),
+  maxStockageMo:   Joi.number().integer().min(1).default(1024),
+  maxFacturesMois: Joi.number().integer().min(-1).default(100)
+    .messages({ 'number.min': 'Utilisez -1 pour illimité ou une valeur ≥ 1.' }),
+});
+
+const featuresSchema = Joi.object({
+  supportPrioritaire: Joi.boolean().default(false),
+  apiAccess:          Joi.boolean().default(false),
+  multiEtablissement: Joi.boolean().default(false),
+});
+
+const createPlanSchema = Joi.object({
+  code: Joi.string().trim().uppercase().alphanum().min(2).max(20).required().messages({
+    'any.required': 'Le code du plan est requis (ex: STANDARD).',
+    'string.alphanum': 'Le code ne doit contenir que des lettres et chiffres.',
+  }),
+  nom: Joi.string().trim().min(2).max(100).required().messages({
+    'any.required': 'Le nom du plan est requis.',
+  }),
+  description:      Joi.string().trim().max(500).allow('').optional(),
+  tarifs:           tarifsSchema.required(),
+  limites:          limitesSchema.optional(),
+  modules:          Joi.array().items(Joi.string().valid(...MODULES_VALIDES)).optional()
+    .messages({ 'any.only': `Module invalide. Valeurs acceptées : ${MODULES_VALIDES.join(', ')}.` }),
+  features:         featuresSchema.optional(),
+  essaiGratuitJours: Joi.number().integer().min(0).max(90).default(0),
+  visible:          Joi.boolean().default(true),
+  actif:            Joi.boolean().default(true),
+  ordreAffichage:   Joi.number().integer().min(0).default(0),
+});
+
+// Le code est immuable après création — on l'exclut de updatePlan
+const updatePlanSchema = createPlanSchema
+  .fork(['code', 'tarifs', 'nom'], (field) => field.optional())
+  .min(1);
+
 module.exports = {
   resetPassword: resetPasswordSchema,
   purgeLogs: purgeLogsSchema,
@@ -88,4 +146,6 @@ module.exports = {
   createCompany: createCompanySchema,
   updateCompanyAdmin: updateCompanyAdminSchema,
   suspendCompany: suspendCompanySchema,
+  createPlan: createPlanSchema,
+  updatePlan: updatePlanSchema,
 };
