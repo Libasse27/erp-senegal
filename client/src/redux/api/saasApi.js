@@ -4,7 +4,7 @@ export const saasApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // ── Forfaits (public) ────────────────────────────────────────────────────
     getForfaits: builder.query({
-      query: () => '/forfaits',
+      query: () => '/plans',
       providesTags: ['Forfait'],
       transformResponse: (res) => res.data || [],
     }),

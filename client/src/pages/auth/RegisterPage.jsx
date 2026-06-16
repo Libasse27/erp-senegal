@@ -8,53 +8,34 @@ import {
   FiUsers, FiZap, FiAward,
 } from 'react-icons/fi';
 import { useRegisterSaaSMutation } from '../../redux/api/authApi';
+import { useGetForfaitsQuery } from '../../redux/api/saasApi';
 
-// ─── Données forfaits ─────────────────────────────────────────────────────────
+// ─── Config UI par code de plan (icônes, couleurs, badge "Recommandé") ────────
 
-const FORFAITS = [
-  {
-    code: 'STANDARD',
-    nom: 'Standard',
-    icon: FiZap,
-    couleur: '#059669',
-    couleurBg: '#ecfdf5',
-    couleurBorder: '#a7f3d0',
-    description: 'Idéal pour les TPE et petits commerces',
-    prixMensuel: 15000,
-    prixAnnuel: 150000,
-    maxUsers: '3 utilisateurs',
-    modules: ['Gestion commerciale', 'Facturation', 'Gestion des stocks'],
-    populaire: false,
-  },
-  {
-    code: 'PROFESSIONNEL',
-    nom: 'Professionnel',
-    icon: FiStar,
-    couleur: '#1a56db',
-    couleurBg: '#eff6ff',
-    couleurBorder: '#93c5fd',
-    description: 'Pour les PME en croissance',
-    prixMensuel: 35000,
-    prixAnnuel: 350000,
-    maxUsers: '10 utilisateurs',
-    modules: ['Gestion commerciale', 'Facturation', 'Stocks', 'Comptabilité SYSCOHADA', 'Reporting'],
-    populaire: true,
-  },
-  {
-    code: 'COMPLET',
-    nom: 'Complet',
-    icon: FiAward,
-    couleur: '#7c3aed',
-    couleurBg: '#f5f3ff',
-    couleurBorder: '#c4b5fd',
-    description: 'Solution tout-en-un pour entreprises établies',
-    prixMensuel: 75000,
-    prixAnnuel: 750000,
-    maxUsers: 'Utilisateurs illimités',
-    modules: ['Tout Professionnel', 'Paie', 'Accès API', 'Support prioritaire'],
-    populaire: false,
-  },
-];
+const PLAN_UI_CONFIG = {
+  STANDARD:      { icon: FiZap,   couleur: '#059669', couleurBg: '#ecfdf5', couleurBorder: '#a7f3d0', populaire: false },
+  PROFESSIONNEL: { icon: FiStar,  couleur: '#1a56db', couleurBg: '#eff6ff', couleurBorder: '#93c5fd', populaire: true  },
+  COMPLET:       { icon: FiAward, couleur: '#7c3aed', couleurBg: '#f5f3ff', couleurBorder: '#c4b5fd', populaire: false },
+};
+
+const MODULE_LABELS = {
+  GESCOM:       'Gestion commerciale',
+  FACTURATION:  'Facturation & Devis',
+  STOCK:        'Gestion des stocks',
+  VENTES:       'Gestion des ventes',
+  COMPTABILITE: 'Comptabilité SYSCOHADA',
+  REPORTING:    'Rapports & Analytique',
+  MULTIDEVISE:  'Multi-devise',
+  API:          'Accès API',
+  PAIE:         'Gestion de la paie',
+};
+
+const formatMaxUsers = (limites) => {
+  if (!limites?.maxUtilisateurs) return '';
+  return limites.maxUtilisateurs === -1
+    ? 'Utilisateurs illimités'
+    : `${limites.maxUtilisateurs} utilisateur${limites.maxUtilisateurs > 1 ? 's' : ''}`;
+};
 
 const LEGAL_FORMS = ['SARL', 'SA', 'SAS', 'SASU', 'SNC', 'EI', 'GIE', 'Autre'];
 
@@ -144,6 +125,7 @@ const InputIcon = ({ icon: Icon, children, error }) => (
 const RegisterPage = () => {
   const navigate = useNavigate();
   const [registerSaaS, { isLoading }] = useRegisterSaaSMutation();
+  const { data: plans = [], isLoading: plansLoading } = useGetForfaitsQuery();
 
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
@@ -159,8 +141,8 @@ const RegisterPage = () => {
     // Étape 2 — Entreprise
     companyName: '', legalForm: '', sector: '', ninea: '', rccm: '',
     address: '', city: 'Dakar', companyPhone: '', companyEmail: '', website: '',
-    // Étape 3 — Forfait
-    forfaitCode: 'PROFESSIONNEL',
+    // Étape 3 — Plan
+    planCode: 'PROFESSIONNEL',
   });
 
   const set = (field) => (e) => {
@@ -199,7 +181,7 @@ const RegisterPage = () => {
       companyPhone: form.companyPhone.trim() || undefined,
       companyEmail: form.companyEmail.trim() || undefined,
       website: form.website.trim() || undefined,
-      forfaitCode: form.forfaitCode,
+      planCode: form.planCode,
       periodicite,
     };
 
@@ -220,7 +202,7 @@ const RegisterPage = () => {
     }
   };
 
-  const forfaitSelectionne = FORFAITS.find((f) => f.code === form.forfaitCode);
+  const planSelectionne = plans.find((p) => p.code === form.planCode);
 
   // ── Écran succès ────────────────────────────────────────────────────────────
   if (success) {
@@ -238,7 +220,7 @@ const RegisterPage = () => {
             </p>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.5rem', lineHeight: 1.7 }}>
               Votre entreprise <strong>{success.company?.name}</strong> a été créée avec le forfait{' '}
-              <strong style={{ color: '#1a56db' }}>{forfaitSelectionne?.nom}</strong>.
+              <strong style={{ color: '#1a56db' }}>{success.paiement?.plan?.nom || planSelectionne?.nom}</strong>.
               Finalisez votre inscription en effectuant le paiement.
             </p>
 
@@ -250,7 +232,7 @@ const RegisterPage = () => {
                 {fmt(success.paiement?.montant)} <span style={{ fontSize: '1rem', fontWeight: 500 }}>FCFA</span>
               </div>
               <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
-                {success.paiement?.periodicite === 'ANNUEL' ? 'par an' : 'par mois'} • {forfaitSelectionne?.nom}
+                {success.paiement?.periodicite === 'ANNUEL' ? 'par an' : 'par mois'} • {success.paiement?.plan?.nom || planSelectionne?.nom}
               </div>
             </div>
 
@@ -531,48 +513,58 @@ const RegisterPage = () => {
                   </button>
                 </div>
 
-                {/* Cartes forfait */}
+                {/* Cartes plan */}
                 <div style={styles.forfaitGrid}>
-                  {FORFAITS.map((f) => {
-                    const Icon = f.icon;
-                    const prix = periodicite === 'ANNUEL' ? f.prixAnnuel : f.prixMensuel;
-                    const selected = form.forfaitCode === f.code;
+                  {plansLoading ? (
+                    <div style={{ textAlign: 'center', padding: '1.5rem', color: '#9ca3af', fontSize: '0.875rem' }}>
+                      <span style={{ ...styles.spinner, borderTopColor: '#1a56db', margin: '0 auto 0.5rem', display: 'block' }} />
+                      Chargement des plans...
+                    </div>
+                  ) : plans.map((plan) => {
+                    const ui = PLAN_UI_CONFIG[plan.code] || PLAN_UI_CONFIG.STANDARD;
+                    const Icon = ui.icon;
+                    const prix = periodicite === 'ANNUEL' ? (plan.tarifs?.annuel ?? 0) : (plan.tarifs?.mensuel ?? 0);
+                    const selected = form.planCode === plan.code;
+                    const maxUsers = formatMaxUsers(plan.limites);
+                    const moduleLabels = (plan.modules || []).map((m) => MODULE_LABELS[m] || m);
                     return (
                       <button
-                        key={f.code}
+                        key={plan.code}
                         type="button"
-                        onClick={() => setForm((prev) => ({ ...prev, forfaitCode: f.code }))}
+                        onClick={() => setForm((prev) => ({ ...prev, planCode: plan.code }))}
                         style={{
                           ...styles.forfaitCard,
-                          ...(selected ? { ...styles.forfaitCardSelected, borderColor: f.couleur, backgroundColor: f.couleurBg } : {}),
-                          ...(f.populaire && !selected ? styles.forfaitCardPopulaire : {}),
+                          ...(selected ? { ...styles.forfaitCardSelected, borderColor: ui.couleur, backgroundColor: ui.couleurBg } : {}),
+                          ...(ui.populaire && !selected ? styles.forfaitCardPopulaire : {}),
                         }}
                       >
-                        {f.populaire && (
-                          <div style={{ ...styles.populareBadge, backgroundColor: f.couleur }}>
+                        {ui.populaire && (
+                          <div style={{ ...styles.populareBadge, backgroundColor: ui.couleur }}>
                             Recommandé
                           </div>
                         )}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                          <div style={{ ...styles.forfaitIcon, backgroundColor: f.couleurBg, color: f.couleur }}>
+                          <div style={{ ...styles.forfaitIcon, backgroundColor: ui.couleurBg, color: ui.couleur }}>
                             <Icon size={18} />
                           </div>
-                          <span style={{ fontWeight: 700, fontSize: '1rem', color: '#111827' }}>{f.nom}</span>
-                          {selected && <FiCheck size={16} color={f.couleur} style={{ marginLeft: 'auto' }} />}
+                          <span style={{ fontWeight: 700, fontSize: '1rem', color: '#111827' }}>{plan.nom}</span>
+                          {selected && <FiCheck size={16} color={ui.couleur} style={{ marginLeft: 'auto' }} />}
                         </div>
-                        <p style={styles.forfaitDesc}>{f.description}</p>
+                        {plan.description && <p style={styles.forfaitDesc}>{plan.description}</p>}
                         <div style={{ marginBottom: '10px' }}>
-                          <span style={{ fontSize: '1.4rem', fontWeight: 800, color: f.couleur }}>{fmt(prix)}</span>
+                          <span style={{ fontSize: '1.4rem', fontWeight: 800, color: ui.couleur }}>{fmt(prix)}</span>
                           <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}> FCFA / {periodicite === 'ANNUEL' ? 'an' : 'mois'}</span>
                         </div>
-                        <div style={styles.forfaitUsers}>
-                          <FiUsers size={13} />
-                          <span>{f.maxUsers}</span>
-                        </div>
+                        {maxUsers && (
+                          <div style={styles.forfaitUsers}>
+                            <FiUsers size={13} />
+                            <span>{maxUsers}</span>
+                          </div>
+                        )}
                         <ul style={styles.moduleList}>
-                          {f.modules.map((m) => (
+                          {moduleLabels.map((m) => (
                             <li key={m} style={styles.moduleItem}>
-                              <FiCheck size={12} color={f.couleur} style={{ flexShrink: 0 }} />
+                              <FiCheck size={12} color={ui.couleur} style={{ flexShrink: 0 }} />
                               <span>{m}</span>
                             </li>
                           ))}
@@ -583,21 +575,21 @@ const RegisterPage = () => {
                 </div>
 
                 {/* Récapitulatif */}
-                {forfaitSelectionne && (
+                {planSelectionne && (
                   <div style={styles.recap}>
                     <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '6px' }}>Récapitulatif</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                       <div>
-                        <span style={{ fontWeight: 600, color: '#111827' }}>{forfaitSelectionne.nom}</span>
+                        <span style={{ fontWeight: 600, color: '#111827' }}>{planSelectionne.nom}</span>
                         <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}> · {periodicite === 'ANNUEL' ? 'Annuel' : 'Mensuel'}</span>
                       </div>
                       <span style={{ fontWeight: 700, color: '#1a56db', fontSize: '1.1rem' }}>
-                        {fmt(periodicite === 'ANNUEL' ? forfaitSelectionne.prixAnnuel : forfaitSelectionne.prixMensuel)} FCFA
+                        {fmt(periodicite === 'ANNUEL' ? (planSelectionne.tarifs?.annuel ?? 0) : (planSelectionne.tarifs?.mensuel ?? 0))} FCFA
                       </span>
                     </div>
                     {periodicite === 'ANNUEL' && (
                       <p style={{ fontSize: '0.75rem', color: '#059669', margin: '4px 0 0', fontWeight: 500 }}>
-                        Économie : {fmt(forfaitSelectionne.prixMensuel * 12 - forfaitSelectionne.prixAnnuel)} FCFA par rapport au mensuel
+                        Économie : {fmt((planSelectionne.tarifs?.mensuel ?? 0) * 12 - (planSelectionne.tarifs?.annuel ?? 0))} FCFA par rapport au mensuel
                       </p>
                     )}
                   </div>

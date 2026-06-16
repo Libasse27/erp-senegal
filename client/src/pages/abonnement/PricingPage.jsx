@@ -26,10 +26,10 @@ const PricingPage = () => {
   const { data: forfaits = [], isLoading } = useGetForfaitsQuery();
   const { data: usage } = useGetUsageSaasQuery();
 
-  const forfaitActifCode = usage?.abonnement?.forfaitId?.code;
+  const forfaitActifCode = usage?.abonnement?.planId?.code ?? usage?.abonnement?.planSnapshot?.code;
 
   const handleSouscrire = (forfait) => {
-    navigate('/abonnement/paiement', { state: { forfaitCode: forfait.code, forfaitId: forfait._id } });
+    navigate('/abonnement/paiement', { state: { planCode: forfait.code, planId: forfait._id } });
   };
 
   if (isLoading) return (
@@ -73,8 +73,8 @@ const PricingPage = () => {
           const colors = FORFAIT_COLORS[code] || FORFAIT_COLORS.STANDARD;
           const Icon   = FORFAIT_ICONS[code] || FiZap;
           const prix   = periode === 'annuel'
-            ? Math.round((forfait.prixAnnuel || forfait.prixMensuel * 10) / 12)
-            : forfait.prixMensuel || 0;
+            ? Math.round((forfait.tarifs?.annuel ?? (forfait.tarifs?.mensuel ?? 0) * 12) / 12)
+            : forfait.tarifs?.mensuel ?? 0;
           const isActuel = code === forfaitActifCode;
 
           return (
@@ -99,7 +99,7 @@ const PricingPage = () => {
                 <span style={styles.periode}> / mois</span>
                 {periode === 'annuel' && (
                   <p style={styles.prixAnnuelNote}>
-                    Facturé {(forfait.prixAnnuel || forfait.prixMensuel * 10).toLocaleString('fr-SN')} FCFA / an
+                    Facturé {(forfait.tarifs?.annuel ?? (forfait.tarifs?.mensuel ?? 0) * 12).toLocaleString('fr-SN')} FCFA / an
                   </p>
                 )}
               </div>
@@ -130,7 +130,7 @@ const PricingPage = () => {
               {/* Modules */}
               <div style={styles.modulesSection}>
                 <p style={styles.modulesTitle}>Modules inclus</p>
-                {(forfait.modulesInclus || []).map((m) => (
+                {(forfait.modules || []).map((m) => (
                   <div key={m} style={styles.moduleRow}>
                     <FiCheck size={14} color={colors.accent} />
                     <span>{MODULE_LABELS[m] || m}</span>
