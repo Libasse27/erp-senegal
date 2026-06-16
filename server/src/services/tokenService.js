@@ -1,5 +1,13 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const jwtConfig = require('../config/jwt');
+
+/**
+ * Hash un token pour stockage sécurisé en DB (jamais de plaintext).
+ * @param {string} token
+ * @returns {string} sha256 hex
+ */
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 /**
  * Generer un access token JWT
@@ -74,11 +82,44 @@ const clearRefreshTokenCookie = (res) => {
   });
 };
 
+/**
+ * Génère un token de challenge MFA (5 min) — ne donne accès à rien sauf /auth/mfa/verify.
+ * @param {string} userId
+ * @param {Object} payload — scope, companyId, roleName (seront recopiés dans le vrai access token)
+ * @returns {string}
+ */
+const generateMfaChallengeToken = (userId, payload = {}) => {
+  return jwt.sign(
+    { id: userId, mfaChallenge: true, ...payload },
+    jwtConfig.accessToken.secret,
+    { expiresIn: '5m' }
+  );
+};
+
+/**
+ * Vérifie un token de challenge MFA et s'assure qu'il porte bien le flag mfaChallenge.
+ * @param {string} token
+ * @returns {Object} payload décodé
+ * @throws {Error} si invalide / expiré / mauvais type
+ */
+const verifyMfaChallengeToken = (token) => {
+  const decoded = jwt.verify(token, jwtConfig.accessToken.secret);
+  if (!decoded.mfaChallenge) {
+    const err = new Error('Token de challenge MFA invalide.');
+    err.name = 'JsonWebTokenError';
+    throw err;
+  }
+  return decoded;
+};
+
 module.exports = {
+  hashToken,
   generateAccessToken,
   generateRefreshToken,
   verifyAccessToken,
   verifyRefreshToken,
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
+  generateMfaChallengeToken,
+  verifyMfaChallengeToken,
 };

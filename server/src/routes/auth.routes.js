@@ -141,6 +141,7 @@ const {
   forgotPassword,
   resetPassword,
 } = require('../controllers/authController');
+const { setupMfa, enableMfa, disableMfa, verifyMfa } = require('../controllers/mfaController');
 const { protect } = require('../middlewares/auth');
 const { authorizeRoles } = require('../middlewares/rbac');
 const { authLimiter } = require('../middlewares/rateLimiter');
@@ -172,5 +173,15 @@ router.post(
   register
 );
 router.post('/logout', protect, logout);
+
+// ── MFA (TOTP) ───────────────────────────────────────────────────────────────
+
+// Public : vérification du code TOTP dans le flux de connexion challenge
+router.post('/mfa/verify', authLimiter, verifyMfa);
+
+// Privé : gestion du secret TOTP de l'utilisateur connecté
+router.post('/mfa/setup',   protect, setupMfa);
+router.post('/mfa/enable',  protect, enableMfa);
+router.post('/mfa/disable', protect, disableMfa);
 
 module.exports = router;

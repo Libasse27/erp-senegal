@@ -54,7 +54,8 @@ const userSchema = new mongoose.Schema(
     lastLogin: { type: Date },
 
     // ── Auth tokens ───────────────────────────────────────────────────────────
-    refreshToken: { type: String, select: false },
+    refreshToken:     { type: String, select: false }, // conservé pour compat. — stocke sha256(token)
+    refreshTokenHash: { type: String, select: false }, // one-use rotation : sha256 du refresh token courant
     resetPasswordToken: String,
     resetPasswordExpire: Date,
 

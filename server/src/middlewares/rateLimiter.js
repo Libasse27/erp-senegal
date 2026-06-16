@@ -16,6 +16,7 @@ const limiter = rateLimit({
 const authLimiter = rateLimit({
   windowMs: 15 * 60_000,
   max: 10,
+  skip: () => process.env.NODE_ENV === 'test',
   message: {
     success: false,
     message: 'Trop de tentatives de connexion. Veuillez reessayer dans 15 minutes.',

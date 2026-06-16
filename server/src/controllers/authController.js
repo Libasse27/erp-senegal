@@ -6,11 +6,13 @@ const Role = require('../models/Role');
 const Plan = require('../models/Plan');
 const { AppError } = require('../middlewares/errorHandler');
 const {
+  hashToken,
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
+  generateMfaChallengeToken,
 } = require('../services/tokenService');
 const { sendResetPasswordEmail } = require('../services/emailService');
 const logger = require('../config/logger');
@@ -213,7 +215,7 @@ const registerSaaS = async (req, res, next) => {
 };
 
 /**
- * @desc    Connexion utilisateur
+ * @desc    Connexion utilisateur (avec verrouillage et challenge MFA)
  * @route   POST /api/auth/login
  * @access  Public
  */
@@ -221,61 +223,76 @@ const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Trouver l'utilisateur avec le mot de passe
     const user = await User.findOne({ email })
-      .select('+password +refreshToken')
-      .populate({
-        path: 'role',
-        populate: { path: 'permissions' },
-      });
+      .select('+password +refreshToken +refreshTokenHash +tentativesEchouees +verrouilleJusqua +mfaEnabled +mfaSecret')
+      .populate({ path: 'role', populate: { path: 'permissions' } });
 
-    if (!user) {
+    // Message générique — pas de divulgation d'existence de compte
+    if (!user || !user.isActive) {
       return next(new AppError('Email ou mot de passe incorrect.', 401));
     }
 
-    if (!user.isActive) {
-      return next(new AppError('Votre compte a ete desactive. Contactez un administrateur.', 401));
+    // Compte verrouillé après trop d'échecs
+    if (user.estVerrouille) {
+      const minutesRestantes = Math.ceil((user.verrouilleJusqua - Date.now()) / 60000);
+      return next(
+        new AppError(
+          `Compte temporairement verrouillé. Réessayez dans ${minutesRestantes} minute(s).`,
+          423
+        )
+      );
     }
 
-    // Verifier le mot de passe
+    // Vérifier le mot de passe
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      await user.enregistrerEchecConnexion();
+      logger.warn(`Echec connexion: ${email} (tentative ${user.tentativesEchouees + 1})`);
       return next(new AppError('Email ou mot de passe incorrect.', 401));
     }
 
-    // Construire le payload JWT enrichi (scope + companyId pour le tenant middleware)
+    // Réinitialiser le compteur d'échecs après succès
+    await user.reinitialiserEchecs();
+
     const tokenPayload = {
-      scope: user.scope || SCOPE.ENTREPRISE,
+      scope:     user.scope || SCOPE.ENTREPRISE,
       companyId: user.companyId ? user.companyId.toString() : null,
-      roleName: user.role?.name || null,
+      roleName:  user.role?.name || null,
     };
 
-    const accessToken = generateAccessToken(user._id, tokenPayload);
+    // ── MFA activé : émettre un challenge token à usage unique ───────────────
+    if (user.mfaEnabled) {
+      const challengeToken = generateMfaChallengeToken(user._id, tokenPayload);
+      logger.info(`MFA challenge emis: ${user.email}`);
+      return res.json({
+        success: true,
+        message: 'Code MFA requis.',
+        data: { mfaRequired: true, challengeToken },
+      });
+    }
+
+    // ── Connexion normale ─────────────────────────────────────────────────────
+    const accessToken  = generateAccessToken(user._id, tokenPayload);
     const refreshToken = generateRefreshToken(user._id, { scope: tokenPayload.scope });
 
-    // Sauvegarder le refresh token en DB
-    user.refreshToken = refreshToken;
+    // Stocker le hash — jamais le token en clair
+    user.refreshTokenHash = hashToken(refreshToken);
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
 
     setRefreshTokenCookie(res, refreshToken);
 
-    user.password = undefined;
-    user.refreshToken = undefined;
+    user.password         = undefined;
+    user.refreshToken     = undefined;
+    user.refreshTokenHash = undefined;
 
-    // Cible de redirection selon le perimetre
     const redirectTo = user.scope === SCOPE.PLATFORM ? '/super-admin' : '/dashboard';
-
     logger.info(`Connexion reussie: ${user.email} [scope=${tokenPayload.scope}]`);
 
     res.json({
       success: true,
       message: 'Connexion reussie',
-      data: {
-        user,
-        accessToken,
-        redirectTo,
-      },
+      data: { user, accessToken, redirectTo },
     });
   } catch (error) {
     next(error);
@@ -283,9 +300,12 @@ const login = async (req, res, next) => {
 };
 
 /**
- * @desc    Rafraichir le token d'acces
+ * @desc    Rafraîchir le token d'accès avec rotation one-use
  * @route   POST /api/auth/refresh-token
- * @access  Public (avec cookie)
+ * @access  Public (cookie httpOnly)
+ *
+ * Chaque appel invalide l'ancien refresh token et en émet un nouveau.
+ * Si le même token est utilisé deux fois → 401 (détection de vol).
  */
 const refreshTokenHandler = async (req, res, next) => {
   try {
@@ -295,37 +315,56 @@ const refreshTokenHandler = async (req, res, next) => {
       return next(new AppError('Aucun refresh token fourni.', 401));
     }
 
-    // Verifier le refresh token
-    const decoded = verifyRefreshToken(refreshToken);
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(refreshToken);
+    } catch {
+      return next(new AppError('Refresh token invalide ou expiré. Veuillez vous reconnecter.', 401));
+    }
 
-    // Trouver l'utilisateur (avec role pour roleName dans le payload)
-    const user = await User.findById(decoded.id).select('+refreshToken').populate('role');
+    const user = await User.findById(decoded.id)
+      .select('+refreshToken +refreshTokenHash')
+      .populate('role');
 
-    if (!user || user.refreshToken !== refreshToken) {
+    if (!user || !user.isActive) {
       return next(new AppError('Refresh token invalide.', 401));
     }
 
-    if (!user.isActive) {
-      return next(new AppError('Votre compte a ete desactive.', 401));
+    // Comparer avec le hash stocké (one-use : si hash ne correspond pas → token déjà consommé ou volé)
+    const incomingHash = hashToken(refreshToken);
+    const storedHash   = user.refreshTokenHash || (user.refreshToken && user.refreshToken.length === 64 ? user.refreshToken : null);
+
+    if (!storedHash || storedHash !== incomingHash) {
+      // Token déjà utilisé ou inexistant — révoquer toutes les sessions par précaution
+      user.refreshTokenHash = null;
+      user.refreshToken     = null;
+      await user.save({ validateBeforeSave: false });
+      logger.warn(`Refresh token réutilisé ou inconnu pour userId=${user._id} — sessions révoquées`);
+      return next(new AppError('Session invalide. Veuillez vous reconnecter.', 401));
     }
 
-    // Regenerer l'access token en preservant scope + companyId (critiques pour platformGuard et tenantMiddleware)
-    const newAccessToken = generateAccessToken(user._id, {
-      scope: decoded.scope || user.scope || SCOPE.ENTREPRISE,
+    // ── Rotation : générer de nouveaux tokens ─────────────────────────────────
+    const tokenPayload = {
+      scope:     decoded.scope || user.scope || SCOPE.ENTREPRISE,
       companyId: user.companyId ? user.companyId.toString() : null,
-      roleName: user.role?.name || null,
-    });
+      roleName:  user.role?.name || null,
+    };
+
+    const newAccessToken  = generateAccessToken(user._id, tokenPayload);
+    const newRefreshToken = generateRefreshToken(user._id, { scope: tokenPayload.scope });
+
+    // Invalider l'ancien et stocker le hash du nouveau
+    user.refreshTokenHash = hashToken(newRefreshToken);
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    setRefreshTokenCookie(res, newRefreshToken);
 
     res.json({
       success: true,
-      data: {
-        accessToken: newAccessToken,
-      },
+      data: { accessToken: newAccessToken },
     });
   } catch (error) {
-    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-      return next(new AppError('Refresh token invalide ou expire. Veuillez vous reconnecter.', 401));
-    }
     next(error);
   }
 };
@@ -337,8 +376,8 @@ const refreshTokenHandler = async (req, res, next) => {
  */
 const logout = async (req, res, next) => {
   try {
-    // Invalider le refresh token en DB
-    await User.findByIdAndUpdate(req.user._id, { refreshToken: null });
+    // Invalider le refresh token et son hash en DB
+    await User.findByIdAndUpdate(req.user._id, { refreshToken: null, refreshTokenHash: null });
 
     // Supprimer le cookie
     clearRefreshTokenCookie(res);
