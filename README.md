@@ -33,12 +33,13 @@ Couvre la gestion commerciale, comptable, financière et opérationnelle — con
 - **RH Simplifié** — Gestion des employés (CDI/CDD/Stage), congés avec approbation, bulletins de paie, génération écritures SYSCOHADA (D.661/C.421/C.431/C.447)
 
 ### Architecture SaaS Multi-Tenant
-- **3 forfaits** : Standard · Professionnel · Complet (tarifs FCFA)
-- Inscription libre avec sélection du forfait
-- Paiement d'activation Wave / Orange Money
+- **3 plans** : Standard · Professionnel · Complet (tarifs FCFA, versionnés)
+- Inscription libre avec sélection du plan et snapshot tarifaire
+- Paiement d'activation Wave / Orange Money · Coupons de réduction
 - Guard d'abonnement par module (`subscriptionGuard`)
 - Isolation complète des données par `companyId`
 - Jobs automatiques : expiration abonnement + rappels de renouvellement
+- **Super Admin MRR/ARR Dashboard** : MRR, ARR, churn, historique 12 mois
 
 ### Sécurité & Compliance
 - RBAC à 8 rôles avec permissions granulaires
@@ -224,8 +225,8 @@ JSON brut : `http://localhost:5000/api-docs.json`
 
 Les routes documentées :
 - `POST /auth/login` — Authentification JWT
-- `POST /auth/register-saas` — Inscription SaaS (entreprise + admin + forfait)
-- `GET /forfaits` — Liste des forfaits (public)
+- `POST /auth/register-saas` — Inscription SaaS (entreprise + admin + plan)
+- `GET /plans` — Liste des plans tarifaires (public)
 - `GET /paiements-saas/usage` — Métriques d'usage et abonnement actif
 - `POST /paiements-saas/initier` — Initier un paiement Wave/Orange Money
 - Et 100+ autres endpoints documentés par module
@@ -297,7 +298,7 @@ erp-commercial-comptable-senegal/
            │
     ┌──────▼──────────────────────────────┐
     │  subscriptionGuard(moduleCode)      │
-    │  → vérifie forfait.modulesInclus    │
+    │  → vérifie planSnapshot.modules     │
     │  → 403 si module non inclus         │
     └──────┬──────────────────────────────┘
            │
@@ -352,7 +353,7 @@ npm run test:saas
 npm run test:unit
 ```
 
-Résultats actuels : **81 tests** passent (SaaS + services).
+Résultats actuels : **414+ tests** passent (SaaS, MRR, plans, coupons, comptabilité, facturation).
 
 ---
 
