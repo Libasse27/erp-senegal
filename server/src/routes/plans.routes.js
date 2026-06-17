@@ -25,13 +25,14 @@ router.get('/', listPlans);
  * @swagger
  * /plans/{code}:
  *   get:
- *     summary: Détail d'un plan par son code (ex: STANDARD)
+ *     summary: "Détail d'un plan par son code (ex: STANDARD)"
  *     tags: [Plans SaaS]
  *     parameters:
  *       - in: path
  *         name: code
  *         required: true
- *         schema: { type: string }
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
  *         description: Plan trouvé
