@@ -163,6 +163,7 @@ const SuperAdminAuditPage = lazy(() => import('./pages/super-admin/SuperAdminAud
 const SuperAdminCompaniesPage = lazy(() => import('./pages/super-admin/SuperAdminCompaniesPage'));
 const MrrDashboardPage        = lazy(() => import('./pages/super-admin/MrrDashboardPage'));
 const PlatformSettingsPage    = lazy(() => import('./pages/super-admin/PlatformSettingsPage'));
+const SAInvoicesPage          = lazy(() => import('./pages/super-admin/SAInvoicesPage'));
 const FacturesSaasPage        = lazy(() => import('./pages/abonnement/FacturesSaasPage'));
 
 // Loading fallback component
@@ -350,6 +351,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
             <Route path="/super-admin/mrr"              element={<MrrDashboardPage />} />
             <Route path="/super-admin/settings"         element={<PlatformSettingsPage />} />
+            <Route path="/super-admin/factures"         element={<SAInvoicesPage />} />
           </Route>
         </Route>
       </Route>

@@ -9,6 +9,7 @@
     "seed": "node src/seeds/index.js",
     "seed:saas": "node scripts/seed-saas.js",
     "seed:demo": "node scripts/seed-demo.js",
+    "seed:saas-demo": "node scripts/seed-saas-demo.js",
     "migrate:multitenant": "node scripts/migrate-to-multitenant.js",
     "check:integrity": "node scripts/check-integrity.js",
     "check:integrity:fix": "node scripts/check-integrity.js --fix",

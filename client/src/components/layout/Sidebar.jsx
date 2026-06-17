@@ -179,6 +179,7 @@ const navItems = [
   { path: '/super-admin/sauvegardes',    label: 'Sauvegardes',          icon: FiArchive,      roles: ['super_admin'] },
   { path: '/super-admin/audit',          label: "Audit (SA)",           icon: FiAlertTriangle,roles: ['super_admin'] },
   { path: '/super-admin/mrr',             label: 'MRR / ARR',            icon: FiTrendingUp,   roles: ['super_admin'] },
+  { path: '/super-admin/factures',        label: 'Factures SaaS (SA)',   icon: FiFileText,     roles: ['super_admin'] },
   { path: '/super-admin/settings',        label: 'Paramètres plateforme', icon: FiSettings,     roles: ['super_admin'] },
 ];
 
