@@ -165,8 +165,9 @@ const navItems = [
   { path: '/admin/audit',        label: "Journal d'Audit",     icon: FiFileText, roles: ['admin', 'super_admin'] },
 
   { section: 'ABONNEMENT', enterpriseOnly: true },
-  { path: '/abonnement', label: 'Mon Abonnement', icon: FiStar,      roles: ['admin'], enterpriseOnly: true },
-  { path: '/pricing',    label: 'Changer de forfait', icon: FiLayers, roles: ['admin'], enterpriseOnly: true },
+  { path: '/abonnement',          label: 'Mon Abonnement',    icon: FiStar,      roles: ['admin'], enterpriseOnly: true },
+  { path: '/abonnement/factures', label: 'Factures SaaS',     icon: FiFileText,  roles: ['admin'], enterpriseOnly: true },
+  { path: '/pricing',             label: 'Changer de forfait', icon: FiLayers,   roles: ['admin'], enterpriseOnly: true },
 
   { section: 'SUPER ADMIN', superAdminOnly: true },
   { path: '/super-admin',                label: 'Tableau de bord SA',   icon: FiShield,       roles: ['super_admin'] },
@@ -177,7 +178,8 @@ const navItems = [
   { path: '/super-admin/logs',           label: 'Journaux système',     icon: FiFileText,     roles: ['super_admin'] },
   { path: '/super-admin/sauvegardes',    label: 'Sauvegardes',          icon: FiArchive,      roles: ['super_admin'] },
   { path: '/super-admin/audit',          label: "Audit (SA)",           icon: FiAlertTriangle,roles: ['super_admin'] },
-  { path: '/super-admin/mrr',            label: 'MRR / ARR',            icon: FiTrendingUp,   roles: ['super_admin'] },
+  { path: '/super-admin/mrr',             label: 'MRR / ARR',            icon: FiTrendingUp,   roles: ['super_admin'] },
+  { path: '/super-admin/settings',        label: 'Paramètres plateforme', icon: FiSettings,     roles: ['super_admin'] },
 ];
 
 const Sidebar = () => {

@@ -61,6 +61,9 @@ const forfaitsRoutes = require('./forfaits.routes');
 // SaaS — Paiements abonnements
 const paiementsSaasRoutes = require('./paiements-saas.routes');
 
+// SaaS — Factures d'abonnement (vue entreprise)
+const invoicesSaasRoutes = require('./invoices-saas.routes');
+
 // Budget & Prévisions
 const budgetRoutes = require('./budget.routes');
 
@@ -137,6 +140,9 @@ router.use('/forfaits', forfaitsRoutes);
 
 // === SaaS — Paiements abonnements ===
 router.use('/paiements-saas', paiementsSaasRoutes);
+
+// === SaaS — Factures d'abonnement (vue entreprise) ===
+router.use('/invoices-saas', invoicesSaasRoutes);
 
 // === Budget & Prévisions ===
 router.use('/budgets', budgetRoutes);

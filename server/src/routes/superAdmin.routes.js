@@ -45,6 +45,8 @@ const {
 } = require('../controllers/couponController');
 
 const { getMrrStats, getMrrHistorique } = require('../controllers/mrrController');
+const { getPlatformSettings, updatePlatformSettings } = require('../controllers/platformSettingController');
+const { toutesLesFactures, statsFactures } = require('../controllers/invoiceSaasController');
 
 const { protect } = require('../middlewares/auth');
 const platformGuard = require('../middlewares/platformGuard');
@@ -292,6 +294,75 @@ router.get('/mrr/historique', getMrrHistorique);
  *       200:
  *         description: Coupon supprimé
  */
+// ── Paramètres de la plateforme ──────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /super-admin/platform-settings:
+ *   get:
+ *     summary: Lire les paramètres globaux de la plateforme
+ *     tags: [Super Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Paramètres singleton de la plateforme
+ *   put:
+ *     summary: Modifier les paramètres globaux de la plateforme
+ *     tags: [Super Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Champs partiels — seuls les champs envoyés sont modifiés
+ *     responses:
+ *       200:
+ *         description: Paramètres mis à jour
+ */
+router.get('/platform-settings', getPlatformSettings);
+router.put('/platform-settings', audit('platform', 'update'), updatePlatformSettings);
+
+// ── Factures SaaS (vue Super Admin) ─────────────────────────────────────────
+
+/**
+ * @swagger
+ * /super-admin/invoices/stats:
+ *   get:
+ *     summary: Statistiques des factures SaaS par statut
+ *     tags: [Factures SaaS]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Totaux par statut (EMISE, PAYEE, ANNULEE)
+ *
+ * /super-admin/invoices:
+ *   get:
+ *     summary: Liste toutes les factures SaaS (toutes entreprises)
+ *     tags: [Factures SaaS]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: statut
+ *         schema:
+ *           type: string
+ *           enum: [EMISE, PAYEE, ANNULEE]
+ *       - in: query
+ *         name: entrepriseId
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Liste paginée de toutes les factures
+ */
+router.get('/invoices/stats', statsFactures);
+router.get('/invoices',        toutesLesFactures);
+
 router.get('/coupons',                           listerCoupons);
 router.post('/coupons', validate(createCouponSchema), audit('coupons', 'create'), creerCoupon);
 router.put('/coupons/:id', validate(updateCouponSchema), audit('coupons', 'update'), mettreAJourCoupon);

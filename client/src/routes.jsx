@@ -161,7 +161,9 @@ const SystemLogsPage = lazy(() => import('./pages/super-admin/SystemLogsPage'));
 const BackupManagementPage = lazy(() => import('./pages/super-admin/BackupManagementPage'));
 const SuperAdminAuditPage = lazy(() => import('./pages/super-admin/SuperAdminAuditPage'));
 const SuperAdminCompaniesPage = lazy(() => import('./pages/super-admin/SuperAdminCompaniesPage'));
-const MrrDashboardPage = lazy(() => import('./pages/super-admin/MrrDashboardPage'));
+const MrrDashboardPage        = lazy(() => import('./pages/super-admin/MrrDashboardPage'));
+const PlatformSettingsPage    = lazy(() => import('./pages/super-admin/PlatformSettingsPage'));
+const FacturesSaasPage        = lazy(() => import('./pages/abonnement/FacturesSaasPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -332,6 +334,7 @@ const AppRoutes = () => {
           {/* Abonnement SaaS */}
           <Route path="/abonnement"              element={<AbonnementPage />} />
           <Route path="/abonnement/paiement"     element={<PaiementSaasPage />} />
+          <Route path="/abonnement/factures"     element={<FacturesSaasPage />} />
           <Route path="/abonnement-expire"       element={<SubscriptionExpiredPage />} />
           <Route path="/pricing"                 element={<PricingPage />} />
 
@@ -345,7 +348,8 @@ const AppRoutes = () => {
             <Route path="/super-admin/logs" element={<SystemLogsPage />} />
             <Route path="/super-admin/sauvegardes" element={<BackupManagementPage />} />
             <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
-            <Route path="/super-admin/mrr" element={<MrrDashboardPage />} />
+            <Route path="/super-admin/mrr"              element={<MrrDashboardPage />} />
+            <Route path="/super-admin/settings"         element={<PlatformSettingsPage />} />
           </Route>
         </Route>
       </Route>

@@ -119,6 +119,30 @@ export const superAdminApi = apiSlice.injectEndpoints({
       invalidatesTags: ['Company'],
     }),
 
+    // ── Paramètres de la plateforme ───────────────────────────────────────────
+    getPlatformSettings: builder.query({
+      query: () => '/super-admin/platform-settings',
+      providesTags: ['PlatformSettings'],
+      transformResponse: (res) => res.data,
+    }),
+    updatePlatformSettings: builder.mutation({
+      query: (body) => ({ url: '/super-admin/platform-settings', method: 'PUT', body }),
+      invalidatesTags: ['PlatformSettings'],
+      transformResponse: (res) => res.data,
+    }),
+
+    // ── Factures SaaS (vue Super Admin) ──────────────────────────────────────
+    getSaasInvoices: builder.query({
+      query: (params = {}) => ({ url: '/super-admin/invoices', params }),
+      providesTags: ['InvoiceSaaS'],
+      transformResponse: (res) => res,
+    }),
+    getSaasInvoiceStats: builder.query({
+      query: () => '/super-admin/invoices/stats',
+      providesTags: ['InvoiceSaaS'],
+      transformResponse: (res) => res.data,
+    }),
+
     // ── MRR / ARR ─────────────────────────────────────────────────────────────
     getMrrStats: builder.query({
       query: () => '/super-admin/mrr/stats',
@@ -159,4 +183,8 @@ export const {
   useDeleteCompanyAdminMutation,
   useGetMrrStatsQuery,
   useGetMrrHistoriqueQuery,
+  useGetPlatformSettingsQuery,
+  useUpdatePlatformSettingsMutation,
+  useGetSaasInvoicesQuery,
+  useGetSaasInvoiceStatsQuery,
 } = superAdminApi;
