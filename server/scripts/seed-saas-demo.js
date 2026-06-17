@@ -27,8 +27,8 @@ const Company        = require('../src/models/Company');
 const User           = require('../src/models/User');
 const Plan           = require('../src/models/Plan');
 const Abonnement     = require('../src/models/Abonnement');
-const PaiementSaas   = require('../src/models/PaiementSaas');
-const InvoiceSaas    = require('../src/models/InvoiceSaas');
+const PaiementSaas   = require('../src/models/PaiementSaaS');
+const InvoiceSaas    = require('../src/models/Invoice');
 
 let Role;
 try { Role = require('../src/models/Role'); } catch (_) { Role = null; }
@@ -118,7 +118,7 @@ async function upsertAdmin(company, adminRole) {
     role:      adminRole?._id || undefined,
     companyId: company._id,
     isActive:  true,
-    scope:     'COMPANY',
+    scope:     'ENTREPRISE',
   });
   log(`Admin "${ADMIN_EMAIL}" créé (mot de passe : ${ADMIN_PASSWORD}).`);
   return user;
@@ -165,16 +165,15 @@ async function upsertPaiement(company, abo) {
   if (paiement) { log('Paiement SaaS déjà présent.'); return paiement; }
 
   paiement = await PaiementSaas.create({
-    entrepriseId:   company._id,
-    abonnementId:   abo._id,
-    montant:        35000,
-    devise:         'XOF',
-    methodePaiement:'WAVE',
-    statut:         'REUSSI',
-    reference:      `WAVE-DEMO-${Date.now()}`,
-    datePaiement:   new Date(),
-    periodicite:    'MENSUEL',
-    metadata:       { source: 'seed-demo' },
+    entrepriseId: company._id,
+    abonnementId: abo._id,
+    montant:      35000,
+    devise:       'XOF',
+    methode:      'WAVE',
+    statut:       'REUSSI',
+    reference:    `WAVE-DEMO-${Date.now()}`,
+    datePaiement: new Date(),
+    metadata:     { source: 'seed-demo' },
   });
   log('PaiementSaaS REUSSI créé.');
   return paiement;
@@ -196,21 +195,17 @@ async function upsertInvoice(company, abo, paiement) {
     dateEcheance: new Date(now.getTime() + 30 * 24 * 3600 * 1000),
     lignes: [
       {
-        description: `Abonnement Plan Professionnel — ${now.toLocaleDateString('fr-SN', { month: 'long', year: 'numeric' })}`,
-        quantite:    1,
+        description:  `Abonnement Plan Professionnel — ${now.toLocaleDateString('fr-SN', { month: 'long', year: 'numeric' })}`,
+        quantite:     1,
         prixUnitaire: 35000,
-        tva:         18,
-        montantHT:   35000,
-        montantTVA:  6300,
-        montantTTC:  41300,
+        montantHT:    35000,
       },
     ],
-    totalHT:   35000,
-    totalTVA:  6300,
-    totalTTC:  41300,
-    statut:    'PAYEE',
-    datePaiement: now,
-    metadata: { source: 'seed-demo' },
+    totalHT:  35000,
+    taxes:    6300,
+    totalTTC: 41300,
+    devise:   'XOF',
+    statut:   'PAYEE',
   });
   log(`Facture SaaS PAYEE créée : ${numero}`);
   return invoice;
