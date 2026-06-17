@@ -118,6 +118,18 @@ export const superAdminApi = apiSlice.injectEndpoints({
       query: (id) => ({ url: `/super-admin/companies/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Company'],
     }),
+
+    // ── MRR / ARR ─────────────────────────────────────────────────────────────
+    getMrrStats: builder.query({
+      query: () => '/super-admin/mrr/stats',
+      providesTags: ['MrrStats'],
+      transformResponse: (res) => res.data,
+    }),
+    getMrrHistorique: builder.query({
+      query: () => '/super-admin/mrr/historique',
+      providesTags: ['MrrStats'],
+      transformResponse: (res) => res.data,
+    }),
   }),
 });
 
@@ -145,4 +157,6 @@ export const {
   useSuspendCompanyMutation,
   useActivateCompanyMutation,
   useDeleteCompanyAdminMutation,
+  useGetMrrStatsQuery,
+  useGetMrrHistoriqueQuery,
 } = superAdminApi;

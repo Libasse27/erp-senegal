@@ -44,6 +44,8 @@ const {
   supprimerCoupon,
 } = require('../controllers/couponController');
 
+const { getMrrStats, getMrrHistorique } = require('../controllers/mrrController');
+
 const { protect } = require('../middlewares/auth');
 const platformGuard = require('../middlewares/platformGuard');
 const validate = require('../middlewares/validate');
@@ -117,6 +119,10 @@ router.put('/plans/:id', validate(updatePlanSchema), audit('plans', 'update'), u
 router.delete('/plans/:id',                       audit('plans', 'delete'), deletePlan);
 router.get('/plans/:id/stats',                    getPlanStats);
 router.post('/plans/:id/migrate-subscribers',     audit('plans', 'update'), migrateSubscribers);
+
+// ── MRR / ARR ────────────────────────────────────────────────────────────────
+router.get('/mrr/stats',      getMrrStats);
+router.get('/mrr/historique', getMrrHistorique);
 
 // ── Gestion des Coupons SaaS ─────────────────────────────────────────────────
 router.get('/coupons',                           listerCoupons);

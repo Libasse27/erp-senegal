@@ -177,6 +177,7 @@ const navItems = [
   { path: '/super-admin/logs',           label: 'Journaux système',     icon: FiFileText,     roles: ['super_admin'] },
   { path: '/super-admin/sauvegardes',    label: 'Sauvegardes',          icon: FiArchive,      roles: ['super_admin'] },
   { path: '/super-admin/audit',          label: "Audit (SA)",           icon: FiAlertTriangle,roles: ['super_admin'] },
+  { path: '/super-admin/mrr',            label: 'MRR / ARR',            icon: FiTrendingUp,   roles: ['super_admin'] },
 ];
 
 const Sidebar = () => {
