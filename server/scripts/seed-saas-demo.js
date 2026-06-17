@@ -17,11 +17,15 @@
 
 'use strict';
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+// Cherche .env dans server/ puis à la racine du projet
+const path = require('path');
+const dotenv = require('dotenv');
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+if (!process.env.MONGO_URI && !process.env.MONGODB_URI) {
+  dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
+}
 
 const mongoose = require('mongoose');
-const bcrypt   = require('bcryptjs');
-
 // ── Import modèles ─────────────────────────────────────────────────────────────
 const Company        = require('../src/models/Company');
 const User           = require('../src/models/User');
@@ -35,7 +39,7 @@ try { Role = require('../src/models/Role'); } catch (_) { Role = null; }
 
 // ── Config ──────────────────────────────────────────────────────────────────────
 
-const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/erp-senegal';
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/erp_senegal';
 
 const ADMIN_EMAIL    = 'demo-admin@ndakaru.sn';
 const ADMIN_PASSWORD = 'Admin@Demo2026!';
@@ -108,12 +112,11 @@ async function upsertAdmin(company, adminRole) {
   let user = await User.findOne({ email: ADMIN_EMAIL });
   if (user) { log(`Admin "${ADMIN_EMAIL}" déjà présent.`); return user; }
 
-  const hash = await bcrypt.hash(ADMIN_PASSWORD, 12);
   user = await User.create({
     firstName: 'Ibrahima',
     lastName:  'Diallo',
     email:     ADMIN_EMAIL,
-    password:  hash,
+    password:  ADMIN_PASSWORD,
     phone:     '+221776543210',
     role:      adminRole?._id || undefined,
     companyId: company._id,
